@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import type { ItemType } from '../items/items'
-import { IconPen, IconPhone, IconSticky, IconTrash } from './icons'
+import { IconPen, IconPhone, IconPlus, IconSticky, IconTrash } from './icons'
 
 export type Tool = 'select' | 'draw'
 
@@ -22,6 +23,8 @@ export function BottomBar({
   onDelete,
   onToggleMobile,
 }: BottomBarProps) {
+  const [addOpen, setAddOpen] = useState(false)
+
   return (
     <div className="chrome chrome-bottom" data-testid="bottom-bar">
         <div className="pill glass tools-pill" data-testid="tools-pill" aria-label="Tools">
@@ -53,6 +56,20 @@ export function BottomBar({
           >
             <IconPen />
             <span className="sr-only">Draw</span>
+          </button>
+        </div>
+
+        <div className="pill glass" aria-label="Add">
+          <button
+            type="button"
+            className={`pill-btn add-btn${addOpen ? ' is-open' : ''}`}
+            title={addOpen ? 'Close' : 'Add'}
+            aria-pressed={addOpen}
+            data-testid="add-toggle"
+            onClick={() => setAddOpen((prev) => !prev)}
+          >
+            <IconPlus />
+            <span className="sr-only">{addOpen ? 'Close' : 'Add'}</span>
           </button>
         </div>
 
