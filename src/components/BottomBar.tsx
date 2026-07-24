@@ -1,5 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ItemType } from '../items/items'
+import {
+  searchViz,
+  VIZ_CATALOG,
+  VIZ_CATEGORIES,
+  type VizDef,
+} from '../viz/catalog'
 import {
   IconPen,
   IconPhone,
@@ -8,6 +14,7 @@ import {
   IconSticky,
   IconTrash,
 } from './icons'
+import { VizSketch } from './VizSketch'
 
 export type Tool = 'select' | 'draw'
 
@@ -16,7 +23,8 @@ type BottomBarProps = {
   hasSelection: boolean
   showMobile: boolean
   onToolChange: (tool: Tool) => void
-  onInsert: (type: Exclude<ItemType, 'ink'>) => void
+  onInsert: (type: Exclude<ItemType, 'ink' | 'chart'>) => void
+  onInsertViz: (viz: VizDef) => void
   onDelete: () => void
   onToggleMobile: () => void
 }
@@ -27,6 +35,7 @@ export function BottomBar({
   showMobile,
   onToolChange,
   onInsert,
+  onInsertViz,
   onDelete,
   onToggleMobile,
 }: BottomBarProps) {
@@ -41,6 +50,31 @@ export function BottomBar({
       searchRef.current?.focus()
     }
   }, [addOpen])
+
+  const searching = query.trim().length > 0
+  const results = useMemo(
+    () => (searching ? searchViz(query) : VIZ_CATALOG),
+    [query, searching],
+  )
+
+  const insertViz = (viz: VizDef) => {
+    onInsertViz(viz)
+    setAddOpen(false)
+  }
+
+  const renderTile = (viz: VizDef) => (
+    <button
+      key={viz.id}
+      type="button"
+      role="listitem"
+      className="viz-tile"
+      title={`${viz.name} — ${viz.category}`}
+      onClick={() => insertViz(viz)}
+    >
+      <VizSketch kind={viz.sketch} className="viz-tile-sketch" />
+      <span className="viz-tile-name">{viz.name}</span>
+    </button>
+  )
 
   return (
     <div
@@ -83,23 +117,52 @@ export function BottomBar({
           {/* Bar of the T: anchored to the stem so side pills never move;
               the row's animated padding reserves its height (no overlap) */}
           <div className="add-t-bar" inert={!addOpen}>
-            <div className="add-search-card">
-              <IconSearch size={15} />
-              <input
-                ref={searchRef}
-                className="add-input"
-                value={query}
-                placeholder="Search widgets"
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape') {
-                    // First Escape clears the query; second closes the bar.
-                    e.stopPropagation()
-                    if (query) setQuery('')
-                    else setAddOpen(false)
-                  }
-                }}
-              />
+            <div className="add-catalog">
+              <div className="viz-list" role="list">
+                {searching ? (
+                  results.length > 0 ? (
+                    <div className="viz-grid">{results.map(renderTile)}</div>
+                  ) : (
+                    <div className="viz-empty">
+                      No visualization matches “{query.trim()}”
+                    </div>
+                  )
+                ) : (
+                  VIZ_CATEGORIES.map((category) => (
+                    <section className="viz-section" key={category}>
+                      <div className="viz-section-head">{category}</div>
+                      <div className="viz-grid">
+                        {VIZ_CATALOG.filter((v) => v.category === category).map(
+                          renderTile,
+                        )}
+                      </div>
+                    </section>
+                  ))
+                )}
+              </div>
+              <div className="add-search-row">
+                <IconSearch size={15} />
+                <input
+                  ref={searchRef}
+                  className="add-input"
+                  value={query}
+                  placeholder={`Search ${VIZ_CATALOG.length} visualizations`}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      // First Escape clears the query; second closes the bar.
+                      e.stopPropagation()
+                      if (query) setQuery('')
+                      else setAddOpen(false)
+                    }
+                  }}
+                />
+                {searching && (
+                  <span className="viz-count">
+                    {results.length} of {VIZ_CATALOG.length}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 

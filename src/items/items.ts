@@ -13,7 +13,7 @@ import {
   type Point,
 } from '../camera/camera'
 
-export type ItemType = 'text' | 'sticky' | 'note' | 'table' | 'ink'
+export type ItemType = 'text' | 'sticky' | 'note' | 'table' | 'chart' | 'ink'
 
 export type BaseItem = {
   id: string
@@ -28,6 +28,20 @@ export type TextItem = BaseItem & { type: 'text'; text: string }
 export type StickyItem = BaseItem & { type: 'sticky'; text: string; color: string }
 export type NoteItem = BaseItem & { type: 'note'; text: string }
 export type TableItem = BaseItem & { type: 'table'; cells: string[][] }
+export type ChartKind =
+  | 'bar'
+  | 'line'
+  | 'area'
+  | 'pie'
+  | 'donut'
+  | 'scatter'
+  | 'heat'
+  | 'stat'
+  | 'table'
+  | 'map'
+  | 'flow'
+/** Placeholder slot for a future visualization — no data, just reserved space. */
+export type ChartItem = BaseItem & { type: 'chart'; kind: ChartKind; title: string }
 export type InkItem = BaseItem & {
   type: 'ink'
   /** Points relative to (x, y). */
@@ -36,7 +50,7 @@ export type InkItem = BaseItem & {
   strokeWidth: number
 }
 
-export type Item = TextItem | StickyItem | NoteItem | TableItem | InkItem
+export type Item = TextItem | StickyItem | NoteItem | TableItem | ChartItem | InkItem
 
 export const STICKY_COLORS = ['#ffe066', '#ffd6e0', '#c3f0ca', '#cde6ff', '#e6d9ff']
 
@@ -48,8 +62,24 @@ export function nextItemId(): string {
   return `item-${idCounter}-${Math.random().toString(36).slice(2, 8)}`
 }
 
+/** Placeholder for a catalog visualization, centered on `at`. */
+export function createVizItem(at: Point, kind: ChartKind, title: string): ChartItem {
+  const w = 320
+  const h = 220
+  return {
+    id: nextItemId(),
+    type: 'chart',
+    x: at.x - w / 2,
+    y: at.y - h / 2,
+    w,
+    h,
+    kind,
+    title,
+  }
+}
+
 /** Create a default item of `type` centered on the world point `at`. */
-export function createItem(type: Exclude<ItemType, 'ink'>, at: Point, seed = 0): Item {
+export function createItem(type: Exclude<ItemType, 'ink' | 'chart'>, at: Point, seed = 0): Item {
   const id = nextItemId()
   switch (type) {
     case 'text': {
