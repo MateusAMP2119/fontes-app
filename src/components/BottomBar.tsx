@@ -77,30 +77,32 @@ export function BottomBar({
         </div>
 
         <div className={`add-t${addOpen ? ' is-open' : ''}`} data-testid="add-morph">
-          {/* Bar of the T: floats centered above the stem, wider than it */}
+          {/* Bar of the T: unfolds in-flow above the stem, pushing the board */}
           <div className="add-t-bar" inert={!addOpen}>
-            <div className="add-search-card">
-              <IconSearch size={15} />
-              <input
-                ref={searchRef}
-                className="add-input"
-                value={query}
-                placeholder="Search widgets"
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape') {
-                    // First Escape clears the query; second closes the bar.
-                    e.stopPropagation()
-                    if (query) setQuery('')
-                    else setAddOpen(false)
-                  }
-                }}
-              />
+            <div className="add-t-clip">
+              <div className="add-search-card">
+                <IconSearch size={15} />
+                <input
+                  ref={searchRef}
+                  className="add-input"
+                  value={query}
+                  placeholder="Search widgets"
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      // First Escape clears the query; second closes the bar.
+                      e.stopPropagation()
+                      if (query) setQuery('')
+                      else setAddOpen(false)
+                    }
+                  }}
+                />
+              </div>
             </div>
           </div>
 
-          {/* Stem of the T */}
-          <div className="pill glass">
+          {/* Stem of the T — fuses into the bar's underside while open */}
+          <div className="pill glass add-stem">
             <button
               type="button"
               className={`pill-btn add-btn${addOpen ? ' is-open' : ''}`}

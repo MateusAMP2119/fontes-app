@@ -164,10 +164,11 @@
   flex-shrink: 0;
 }
 
-/* Bottom taskbar row — centered tools */
+/* Bottom taskbar row — centered tools, bottom-aligned so the add T
+   grows upward from the shared baseline */
 .chrome-bottom {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
   gap: 8px;
   padding: 10px 16px 16px;
@@ -758,39 +759,36 @@
   color: var(--accent);
 }
 
-/* —— Add T: stem pill below, wide search bar floating above it ——
-   The bar unfolds out of the stem: it rises 10px into place with the
-   sidebar's curve while fading in. Transient chrome — Escape or the ×
-   dismisses it; it may sit over the board while open. */
+/* —— Add T: stem pill below, search bar connected directly on top ——
+   Everything in flow, one z-plane: the bar unfolds (grid-rows 0fr → 1fr)
+   and widens out of the stem inside the bottom chrome row, so opening
+   pushes the board up — nothing ever overlaps. */
 .add-t {
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .add-t-bar {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  width: min(560px, calc(100vw - 48px));
-  opacity: 0;
-  visibility: hidden;
-  transform: translate(-50%, 10px);
+  display: grid;
+  grid-template-rows: 0fr;
+  width: 44px;
   transition:
-    opacity 180ms ease,
-    transform 240ms cubic-bezier(0.32, 0.72, 0.28, 1),
-    visibility 0s 240ms;
+    grid-template-rows 240ms cubic-bezier(0.32, 0.72, 0.28, 1),
+    width 240ms cubic-bezier(0.32, 0.72, 0.28, 1);
 }
 
 .add-t.is-open .add-t-bar {
-  opacity: 1;
-  visibility: visible;
-  transform: translate(-50%, 0);
-  transition:
-    opacity 180ms ease 40ms,
-    transform 240ms cubic-bezier(0.32, 0.72, 0.28, 1) 40ms,
-    visibility 0s;
+  grid-template-rows: 1fr;
+  width: min(560px, calc(100vw - 48px));
 }
 
-/* Bar surface — same porcelain as every other card */
+.add-t-clip {
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Bar surface — porcelain card whose underside the stem plugs into */
 .add-search-card {
   display: flex;
   align-items: center;
@@ -802,6 +800,28 @@
   border: 1px solid var(--surface-border);
   box-shadow: var(--surface-shadow);
   color: var(--ink-tertiary);
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.add-t.is-open .add-search-card {
+  opacity: 1;
+  transition: opacity 200ms ease 60ms;
+}
+
+/* While open the stem loses its top corners and border and tucks 1px
+   under the bar, reading as one connected T shape */
+.add-stem {
+  transition:
+    border-radius 200ms ease,
+    margin-top 200ms ease;
+}
+
+.add-t.is-open .add-stem {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-top-color: transparent;
+  margin-top: -1px;
 }
 
 .add-input {
