@@ -76,9 +76,11 @@ export function BottomBar({
       className={`chrome chrome-bottom${addOpen ? ' has-bar' : ''}`}
       data-testid="bottom-bar"
     >
-      {/* Pill tiles surround the T: wrapping rows, everything visible, no scroll */}
-      <div className="viz-cloud" inert={!addOpen}>
-        <div className="viz-cloud-clip">
+      {/* Enveloping catalog: one card, centered on the page, floating over
+          the board. The search bar stays where it was — in the T below. */}
+      <div className={`add-envelope${addOpen ? ' is-open' : ''}`} inert={!addOpen}>
+        <div className="add-scrim" onClick={() => setAddOpen(false)} />
+        <div className="add-panel" role="dialog" aria-label="Visualization catalog">
           <div className="viz-cloud-tiles" role="list">
             {results.length > 0 ? (
               results.map(renderTile)
