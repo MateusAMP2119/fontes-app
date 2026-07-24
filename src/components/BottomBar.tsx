@@ -43,7 +43,10 @@ export function BottomBar({
   }, [addOpen])
 
   return (
-    <div className="chrome chrome-bottom" data-testid="bottom-bar">
+    <div
+      className={`chrome chrome-bottom${addOpen ? ' has-bar' : ''}`}
+      data-testid="bottom-bar"
+    >
         <div className="pill glass tools-pill" data-testid="tools-pill" aria-label="Tools">
           <button
             type="button"
@@ -77,27 +80,26 @@ export function BottomBar({
         </div>
 
         <div className={`add-t${addOpen ? ' is-open' : ''}`} data-testid="add-morph">
-          {/* Bar of the T: unfolds in-flow above the stem, pushing the board */}
+          {/* Bar of the T: anchored to the stem so side pills never move;
+              the row's animated padding reserves its height (no overlap) */}
           <div className="add-t-bar" inert={!addOpen}>
-            <div className="add-t-clip">
-              <div className="add-search-card">
-                <IconSearch size={15} />
-                <input
-                  ref={searchRef}
-                  className="add-input"
-                  value={query}
-                  placeholder="Search widgets"
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Escape') {
-                      // First Escape clears the query; second closes the bar.
-                      e.stopPropagation()
-                      if (query) setQuery('')
-                      else setAddOpen(false)
-                    }
-                  }}
-                />
-              </div>
+            <div className="add-search-card">
+              <IconSearch size={15} />
+              <input
+                ref={searchRef}
+                className="add-input"
+                value={query}
+                placeholder="Search widgets"
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    // First Escape clears the query; second closes the bar.
+                    e.stopPropagation()
+                    if (query) setQuery('')
+                    else setAddOpen(false)
+                  }
+                }}
+              />
             </div>
           </div>
 

@@ -165,13 +165,20 @@
 }
 
 /* Bottom taskbar row — centered tools, bottom-aligned so the add T
-   grows upward from the shared baseline */
+   grows upward from the shared baseline. When the T's bar is open the
+   row reserves its height via padding, keeping the no-overlap contract
+   without the bar living in the flex line (side pills stay put). */
 .chrome-bottom {
   display: flex;
   align-items: flex-end;
   justify-content: center;
   gap: 8px;
   padding: 10px 16px 16px;
+  transition: padding-top 240ms cubic-bezier(0.32, 0.72, 0.28, 1);
+}
+
+.chrome-bottom.has-bar {
+  padding-top: 53px;
 }
 
 /* Shared pill */
@@ -764,28 +771,37 @@
    and widens out of the stem inside the bottom chrome row, so opening
    pushes the board up — nothing ever overlaps. */
 .add-t {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  position: relative;
 }
 
+/* Anchored above the stem: no clip (shadow breathes), no flex-line
+   presence (side pills never move). Grows out of the stem via width +
+   a short rise; the row's padding reservation keeps it off the board. */
 .add-t-bar {
-  display: grid;
-  grid-template-rows: 0fr;
+  position: absolute;
+  bottom: calc(100% - 1px);
+  left: 50%;
   width: 44px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, 6px);
   transition:
-    grid-template-rows 240ms cubic-bezier(0.32, 0.72, 0.28, 1),
-    width 240ms cubic-bezier(0.32, 0.72, 0.28, 1);
+    width 240ms cubic-bezier(0.32, 0.72, 0.28, 1),
+    opacity 160ms ease,
+    transform 240ms cubic-bezier(0.32, 0.72, 0.28, 1),
+    visibility 0s 240ms;
 }
 
 .add-t.is-open .add-t-bar {
-  grid-template-rows: 1fr;
   width: min(560px, calc(100vw - 48px));
-}
-
-.add-t-clip {
-  overflow: hidden;
-  min-height: 0;
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+  transition:
+    width 240ms cubic-bezier(0.32, 0.72, 0.28, 1),
+    opacity 160ms ease 40ms,
+    transform 240ms cubic-bezier(0.32, 0.72, 0.28, 1),
+    visibility 0s;
 }
 
 /* Bar surface — porcelain card whose underside the stem plugs into */
@@ -800,13 +816,6 @@
   border: 1px solid var(--surface-border);
   box-shadow: var(--surface-shadow);
   color: var(--ink-tertiary);
-  opacity: 0;
-  transition: opacity 160ms ease;
-}
-
-.add-t.is-open .add-search-card {
-  opacity: 1;
-  transition: opacity 200ms ease 60ms;
 }
 
 /* While open the stem loses its top corners and border and tucks 1px
