@@ -758,48 +758,60 @@
   color: var(--accent);
 }
 
-/* —— Add pill: one capsule that stretches into a search bar ——
-   No shell crossfade — the pill keeps its own surface throughout and
-   just grows wider, the input riding along inside it. */
-.add-pill {
-  min-width: 0;
-  transition: min-width 240ms cubic-bezier(0.32, 0.72, 0.28, 1);
+/* —— Add T: stem pill below, wide search bar floating above it ——
+   The bar unfolds out of the stem: it rises 10px into place with the
+   sidebar's curve while fading in. Transient chrome — Escape or the ×
+   dismisses it; it may sit over the board while open. */
+.add-t {
+  position: relative;
 }
 
-.add-pill.is-open {
-  min-width: min(420px, calc(100vw - 48px));
+.add-t-bar {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  width: min(560px, calc(100vw - 48px));
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-50%, 10px);
+  transition:
+    opacity 180ms ease,
+    transform 240ms cubic-bezier(0.32, 0.72, 0.28, 1),
+    visibility 0s 240ms;
 }
 
-/* Borderless input inside the capsule; width follows the pill's growth.
-   width/padding are zeroed closed so the placeholder's intrinsic width
-   can't hold the pill open. */
+.add-t.is-open .add-t-bar {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+  transition:
+    opacity 180ms ease 40ms,
+    transform 240ms cubic-bezier(0.32, 0.72, 0.28, 1) 40ms,
+    visibility 0s;
+}
+
+/* Bar surface — same porcelain as every other card */
+.add-search-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 44px;
+  padding: 0 12px 0 14px;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--surface-shadow);
+  color: var(--ink-tertiary);
+}
+
 .add-input {
-  flex: 1 1 0px;
-  width: 0;
+  flex: 1;
   min-width: 0;
-  height: var(--hit);
-  padding: 0;
   border: none;
   background: transparent;
   outline: none;
   font-size: 13px;
   color: var(--ink);
-  opacity: 0;
-  visibility: hidden;
-  transition:
-    padding 240ms cubic-bezier(0.32, 0.72, 0.28, 1),
-    opacity 140ms ease,
-    visibility 0s 140ms;
-}
-
-.add-pill.is-open .add-input {
-  padding: 0 10px 0 6px;
-  opacity: 1;
-  visibility: visible;
-  transition:
-    padding 240ms cubic-bezier(0.32, 0.72, 0.28, 1),
-    opacity 200ms ease 70ms,
-    visibility 0s;
 }
 
 .add-input::placeholder {

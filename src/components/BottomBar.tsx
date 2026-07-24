@@ -4,6 +4,7 @@ import {
   IconPen,
   IconPhone,
   IconPlus,
+  IconSearch,
   IconSticky,
   IconTrash,
 } from './icons'
@@ -75,37 +76,43 @@ export function BottomBar({
           </button>
         </div>
 
-        <div
-          className={`pill glass add-pill${addOpen ? ' is-open' : ''}`}
-          data-testid="add-morph"
-        >
-          <button
-            type="button"
-            className={`pill-btn add-btn${addOpen ? ' is-open' : ''}`}
-            title={addOpen ? 'Close' : 'Add'}
-            aria-pressed={addOpen}
-            data-testid="add-toggle"
-            onClick={() => setAddOpen((prev) => !prev)}
-          >
-            <IconPlus />
-            <span className="sr-only">{addOpen ? 'Close' : 'Add'}</span>
-          </button>
-          <input
-            ref={searchRef}
-            className="add-input"
-            value={query}
-            placeholder="Search widgets"
-            inert={!addOpen}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') {
-                // First Escape clears the query; second closes the bar.
-                e.stopPropagation()
-                if (query) setQuery('')
-                else setAddOpen(false)
-              }
-            }}
-          />
+        <div className={`add-t${addOpen ? ' is-open' : ''}`} data-testid="add-morph">
+          {/* Bar of the T: floats centered above the stem, wider than it */}
+          <div className="add-t-bar" inert={!addOpen}>
+            <div className="add-search-card">
+              <IconSearch size={15} />
+              <input
+                ref={searchRef}
+                className="add-input"
+                value={query}
+                placeholder="Search widgets"
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    // First Escape clears the query; second closes the bar.
+                    e.stopPropagation()
+                    if (query) setQuery('')
+                    else setAddOpen(false)
+                  }
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Stem of the T */}
+          <div className="pill glass">
+            <button
+              type="button"
+              className={`pill-btn add-btn${addOpen ? ' is-open' : ''}`}
+              title={addOpen ? 'Close' : 'Add'}
+              aria-pressed={addOpen}
+              data-testid="add-toggle"
+              onClick={() => setAddOpen((prev) => !prev)}
+            >
+              <IconPlus />
+              <span className="sr-only">{addOpen ? 'Close' : 'Add'}</span>
+            </button>
+          </div>
         </div>
 
         <div className="pill glass" aria-label="Device frames">
