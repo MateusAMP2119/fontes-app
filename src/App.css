@@ -866,14 +866,17 @@
 /* Concave fillets where the stem meets the bar: quarter-circle cutouts
    painted in surface color, so the joint reads as one molded shape
    instead of square shoulders against a rounded bar */
+/* Inverted-corner squares at the joint — the system's 12px radius,
+   just concave. Boxes are 8px wide (the exact gap to the flanking
+   pills); the 12px circle center sits 4px outside the box, so the
+   visible slice is a true 12px curve with zero spillover. */
 .add-stem::before,
 .add-stem::after {
   content: '';
   position: absolute;
   top: 1px;
-  /* Must fit inside the 8px gap to the flanking pills — no spillover */
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 12px;
   opacity: 0;
   pointer-events: none;
   transition: opacity 140ms ease;
@@ -881,12 +884,12 @@
 
 .add-stem::before {
   right: 100%;
-  background: radial-gradient(circle 6px at 0 100%, transparent 5.5px, var(--surface) 6px);
+  background: radial-gradient(circle 12px at -4px 100%, transparent 11.5px, var(--surface) 12px);
 }
 
 .add-stem::after {
   left: 100%;
-  background: radial-gradient(circle 6px at 100% 100%, transparent 5.5px, var(--surface) 6px);
+  background: radial-gradient(circle 12px at calc(100% + 4px) 100%, transparent 11.5px, var(--surface) 12px);
 }
 
 .add-t.is-open .add-stem::before,
