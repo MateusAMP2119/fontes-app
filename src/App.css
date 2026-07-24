@@ -779,7 +779,7 @@
    a short rise; the row's padding reservation keeps it off the board. */
 .add-t-bar {
   position: absolute;
-  bottom: calc(100% - 1px);
+  bottom: calc(100% - 2px);
   left: 50%;
   width: 44px;
   opacity: 0;
@@ -822,9 +822,12 @@
    flanking pills — the bar connects to the board only through the stem,
    which squares its top and tucks 1px under the bar: a true T. */
 .add-stem {
+  /* Bottom-anchored so the × stays put while the stem grows upward */
+  align-items: flex-end;
   transition:
     height 240ms cubic-bezier(0.32, 0.72, 0.28, 1),
-    border-radius 200ms ease;
+    border-radius 200ms ease,
+    box-shadow 200ms ease;
 }
 
 .add-t.is-open .add-stem {
@@ -832,6 +835,8 @@
   border-top-left-radius: 0;
   border-top-right-radius: 0;
   border-top-color: transparent;
+  /* No own shadow while merged — the bar's shadow owns the silhouette */
+  box-shadow: none;
 }
 
 .add-input {
