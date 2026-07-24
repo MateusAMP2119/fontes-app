@@ -779,7 +779,7 @@
    a short rise; the row's padding reservation keeps it off the board. */
 .add-t-bar {
   position: absolute;
-  bottom: calc(100% - 2px);
+  bottom: calc(100% - 4px);
   left: 50%;
   width: 44px;
   opacity: 0;
