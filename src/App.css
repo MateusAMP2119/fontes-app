@@ -874,9 +874,11 @@
 .add-stem::after {
   content: '';
   position: absolute;
-  top: 1px;
+  /* Reach 3px up into the bar so its bottom border is covered — starting
+     at the border row leaves a DPR-rounding seam */
+  top: -2px;
   width: 8px;
-  height: 12px;
+  height: 15px;
   opacity: 0;
   pointer-events: none;
   transition: opacity 140ms ease;
