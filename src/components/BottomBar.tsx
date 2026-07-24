@@ -1,6 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ItemType } from '../items/items'
-import { IconPen, IconPhone, IconPlus, IconSticky, IconTrash } from './icons'
+import {
+  IconPen,
+  IconPhone,
+  IconPlus,
+  IconSearch,
+  IconSticky,
+  IconTrash,
+} from './icons'
 
 export type Tool = 'select' | 'draw'
 
@@ -24,6 +31,16 @@ export function BottomBar({
   onToggleMobile,
 }: BottomBarProps) {
   const [addOpen, setAddOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const searchRef = useRef<HTMLInputElement>(null)
+
+  // Opening focuses search and starts from a clean query.
+  useEffect(() => {
+    if (addOpen) {
+      setQuery('')
+      searchRef.current?.focus()
+    }
+  }, [addOpen])
 
   return (
     <div className="chrome chrome-bottom" data-testid="bottom-bar">
@@ -59,18 +76,42 @@ export function BottomBar({
           </button>
         </div>
 
-        <div className="pill glass" aria-label="Add">
-          <button
-            type="button"
-            className={`pill-btn add-btn${addOpen ? ' is-open' : ''}`}
-            title={addOpen ? 'Close' : 'Add'}
-            aria-pressed={addOpen}
-            data-testid="add-toggle"
-            onClick={() => setAddOpen((prev) => !prev)}
-          >
-            <IconPlus />
-            <span className="sr-only">{addOpen ? 'Close' : 'Add'}</span>
-          </button>
+        <div className={`add-morph${addOpen ? ' is-open' : ''}`} data-testid="add-morph">
+          <div className="morph-head">
+            <div className="pill glass morph-pill">
+              <button
+                type="button"
+                className={`pill-btn add-btn${addOpen ? ' is-open' : ''}`}
+                title={addOpen ? 'Close' : 'Add'}
+                aria-pressed={addOpen}
+                data-testid="add-toggle"
+                onClick={() => setAddOpen((prev) => !prev)}
+              >
+                <IconPlus />
+                <span className="sr-only">{addOpen ? 'Close' : 'Add'}</span>
+              </button>
+            </div>
+            <div className="add-tools" inert={!addOpen}>
+              <div className="add-search">
+                <IconSearch size={14} />
+                <input
+                  ref={searchRef}
+                  className="add-search-input"
+                  value={query}
+                  placeholder="Search widgets"
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      // First Escape clears the query; second closes the bar.
+                      e.stopPropagation()
+                      if (query) setQuery('')
+                      else setAddOpen(false)
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="pill glass" aria-label="Device frames">

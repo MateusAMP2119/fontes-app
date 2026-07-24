@@ -758,7 +758,108 @@
   color: var(--accent);
 }
 
-/* Center add button — the plus rotates into an × when open */
+/* —— Add morph: the + pill expands into a search bar ——
+   Same shell idiom as the boards panel: transparent wrapper around the
+   pill; opening eases min-width wider, fades in the porcelain surface,
+   the pill goes flat, and the search field reveals in the freed width. */
+.add-morph {
+  --add-w: min(420px, calc(100vw - 48px));
+  border-radius: 12px;
+  min-width: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  box-shadow: none;
+  transition:
+    min-width 240ms cubic-bezier(0.32, 0.72, 0.28, 1),
+    background-color 200ms ease,
+    border-color 200ms ease,
+    box-shadow 200ms ease;
+}
+
+.add-morph.is-open {
+  min-width: var(--add-w);
+  background: var(--surface);
+  border-color: var(--surface-border);
+  box-shadow: var(--surface-shadow);
+}
+
+.add-morph.is-open .morph-pill {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.add-tools {
+  flex: 1 1 0;
+  /* width:0 keeps the fixed-width search from counting toward the shell's
+     intrinsic size — otherwise the shell snaps wide instead of animating. */
+  width: 0;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  padding-right: 6px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-4px);
+  transition:
+    opacity 180ms ease,
+    transform 240ms cubic-bezier(0.32, 0.72, 0.28, 1),
+    visibility 0s 180ms;
+}
+
+.add-morph.is-open .add-tools {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition:
+    opacity 180ms ease 80ms,
+    transform 240ms cubic-bezier(0.32, 0.72, 0.28, 1) 80ms,
+    visibility 0s;
+}
+
+.add-morph:not(.is-open) .add-tools {
+  flex-grow: 0;
+  padding-right: 0;
+}
+
+/* Search field — same dialect as the sidebar's folder input */
+.add-search {
+  /* Fixed final width: revealed by the clip, never stretched mid-morph */
+  flex: none;
+  width: calc(var(--add-w) - 58px);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--canvas);
+  border: 1px solid var(--surface-border);
+  color: var(--ink-tertiary);
+  transition: border-color 140ms ease;
+}
+
+.add-search:focus-within {
+  border-color: var(--accent);
+}
+
+.add-search-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.add-search-input::placeholder {
+  color: var(--ink-tertiary);
+}
+
+/* The plus rotates into an × while open */
 .add-btn svg {
   transition: transform 240ms cubic-bezier(0.32, 0.72, 0.28, 1);
 }
