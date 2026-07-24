@@ -1,11 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ItemType } from '../items/items'
-import {
-  searchViz,
-  VIZ_CATALOG,
-  VIZ_CATEGORIES,
-  type VizDef,
-} from '../viz/catalog'
+import { searchViz, VIZ_CATALOG, type VizDef } from '../viz/catalog'
 import {
   IconPen,
   IconPhone,
@@ -81,6 +76,20 @@ export function BottomBar({
       className={`chrome chrome-bottom${addOpen ? ' has-bar' : ''}`}
       data-testid="bottom-bar"
     >
+      {/* Pill tiles surround the T: wrapping rows, everything visible, no scroll */}
+      <div className="viz-cloud" inert={!addOpen}>
+        <div className="viz-cloud-clip">
+          <div className="viz-cloud-tiles" role="list">
+            {results.length > 0 ? (
+              results.map(renderTile)
+            ) : (
+              <div className="viz-empty">No visualization matches “{query.trim()}”</div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="bottom-row">
         <div className="pill glass tools-pill" data-testid="tools-pill" aria-label="Tools">
           <button
             type="button"
@@ -117,52 +126,28 @@ export function BottomBar({
           {/* Bar of the T: anchored to the stem so side pills never move;
               the row's animated padding reserves its height (no overlap) */}
           <div className="add-t-bar" inert={!addOpen}>
-            <div className="add-catalog">
-              <div className="viz-list" role="list">
-                {searching ? (
-                  results.length > 0 ? (
-                    <div className="viz-grid">{results.map(renderTile)}</div>
-                  ) : (
-                    <div className="viz-empty">
-                      No visualization matches “{query.trim()}”
-                    </div>
-                  )
-                ) : (
-                  VIZ_CATEGORIES.map((category) => (
-                    <section className="viz-section" key={category}>
-                      <div className="viz-section-head">{category}</div>
-                      <div className="viz-grid">
-                        {VIZ_CATALOG.filter((v) => v.category === category).map(
-                          renderTile,
-                        )}
-                      </div>
-                    </section>
-                  ))
-                )}
-              </div>
-              <div className="add-search-row">
-                <IconSearch size={15} />
-                <input
-                  ref={searchRef}
-                  className="add-input"
-                  value={query}
-                  placeholder={`Search ${VIZ_CATALOG.length} visualizations`}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Escape') {
-                      // First Escape clears the query; second closes the bar.
-                      e.stopPropagation()
-                      if (query) setQuery('')
-                      else setAddOpen(false)
-                    }
-                  }}
-                />
-                {searching && (
-                  <span className="viz-count">
-                    {results.length} of {VIZ_CATALOG.length}
-                  </span>
-                )}
-              </div>
+            <div className="add-search-card">
+              <IconSearch size={15} />
+              <input
+                ref={searchRef}
+                className="add-input"
+                value={query}
+                placeholder={`Search ${VIZ_CATALOG.length} visualizations`}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') {
+                    // First Escape clears the query; second closes the bar.
+                    e.stopPropagation()
+                    if (query) setQuery('')
+                    else setAddOpen(false)
+                  }
+                }}
+              />
+              {searching && (
+                <span className="viz-count">
+                  {results.length} of {VIZ_CATALOG.length}
+                </span>
+              )}
             </div>
           </div>
 
@@ -194,6 +179,7 @@ export function BottomBar({
             <IconPhone />
             <span className="sr-only">Mobile frame</span>
           </button>
+        </div>
       </div>
     </div>
   )
