@@ -871,8 +871,9 @@
   content: '';
   position: absolute;
   top: 1px;
-  width: 10px;
-  height: 10px;
+  /* Must fit inside the 8px gap to the flanking pills — no spillover */
+  width: 6px;
+  height: 6px;
   opacity: 0;
   pointer-events: none;
   transition: opacity 140ms ease;
@@ -880,12 +881,12 @@
 
 .add-stem::before {
   right: 100%;
-  background: radial-gradient(circle 10px at 0 100%, transparent 9.5px, var(--surface) 10px);
+  background: radial-gradient(circle 6px at 0 100%, transparent 5.5px, var(--surface) 6px);
 }
 
 .add-stem::after {
   left: 100%;
-  background: radial-gradient(circle 10px at 100% 100%, transparent 9.5px, var(--surface) 10px);
+  background: radial-gradient(circle 6px at 100% 100%, transparent 5.5px, var(--surface) 6px);
 }
 
 .add-t.is-open .add-stem::before,
