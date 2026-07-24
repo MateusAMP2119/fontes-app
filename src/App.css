@@ -853,16 +853,43 @@
   color: var(--ink-tertiary);
 }
 
-/* The plus rotates into an × while open */
+/* The plus rotates into an × while open — flat like the sidebar toggle,
+   no tinted chip sitting inside the merged surface */
 .add-btn svg {
   transition: transform 240ms cubic-bezier(0.32, 0.72, 0.28, 1);
 }
 
-.add-btn.is-open {
-  background: rgba(62, 142, 247, 0.12);
-  color: var(--accent);
-}
-
 .add-btn.is-open svg {
   transform: rotate(45deg);
+}
+
+/* Concave fillets where the stem meets the bar: quarter-circle cutouts
+   painted in surface color, so the joint reads as one molded shape
+   instead of square shoulders against a rounded bar */
+.add-stem::before,
+.add-stem::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  width: 10px;
+  height: 10px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 140ms ease;
+}
+
+.add-stem::before {
+  right: 100%;
+  background: radial-gradient(circle 10px at 0 100%, transparent 9.5px, var(--surface) 10px);
+}
+
+.add-stem::after {
+  left: 100%;
+  background: radial-gradient(circle 10px at 100% 100%, transparent 9.5px, var(--surface) 10px);
+}
+
+.add-t.is-open .add-stem::before,
+.add-t.is-open .add-stem::after {
+  opacity: 1;
+  transition: opacity 140ms ease 120ms;
 }
