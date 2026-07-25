@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ItemType } from '../items/items'
-import { searchViz, VIZ_CATALOG, type VizDef } from '../viz/catalog'
+import {
+  searchViz,
+  VIZ_CATALOG,
+  VIZ_CATEGORIES,
+  type VizCategory,
+  type VizDef,
+} from '../viz/catalog'
 import {
   IconPen,
   IconPhone,
@@ -36,21 +42,24 @@ export function BottomBar({
 }: BottomBarProps) {
   const [addOpen, setAddOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const [category, setCategory] = useState<'All' | VizCategory>('All')
   const searchRef = useRef<HTMLInputElement>(null)
 
   // Opening focuses search and starts from a clean query.
   useEffect(() => {
     if (addOpen) {
       setQuery('')
+      setCategory('All')
       searchRef.current?.focus()
     }
   }, [addOpen])
 
   const searching = query.trim().length > 0
-  const results = useMemo(
-    () => (searching ? searchViz(query) : VIZ_CATALOG),
-    [query, searching],
-  )
+  const results = useMemo(() => {
+    if (searching) return searchViz(query)
+    if (category === 'All') return VIZ_CATALOG
+    return VIZ_CATALOG.filter((v) => v.category === category)
+  }, [query, searching, category])
 
   const insertViz = (viz: VizDef) => {
     onInsertViz(viz)
@@ -81,6 +90,27 @@ export function BottomBar({
       <div className={`add-envelope${addOpen ? ' is-open' : ''}`} inert={!addOpen}>
         <div className="add-scrim" onClick={() => setAddOpen(false)} />
         <div className="add-panel" role="dialog" aria-label="Visualization catalog">
+          <div className="add-panel-head">
+            <span className="add-panel-title">Visualizations</span>
+          </div>
+          <div className="add-panel-chips" role="tablist">
+            {(['All', ...VIZ_CATEGORIES] as const).map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                role="tab"
+                aria-selected={!searching && category === cat}
+                className={`viz-chip${!searching && category === cat ? ' is-on' : ''}`}
+                onClick={() => {
+                  setCategory(cat)
+                  setQuery('')
+                  searchRef.current?.focus()
+                }}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
           <div className="viz-cloud-tiles" role="list">
             {results.length > 0 ? (
               results.map(renderTile)
