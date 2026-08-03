@@ -1,9 +1,4 @@
-/**
- * Pure item model for the Fontes canvas.
- *
- * All coordinates are world-space. Ink stroke points are stored relative to
- * the item origin (x, y) so moving an item never rewrites its geometry.
- */
+/** Item model. Ink stroke points are relative to the item origin. */
 
 import {
   clamp,

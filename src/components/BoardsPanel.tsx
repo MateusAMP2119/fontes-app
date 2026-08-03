@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import type { Board, Folder, Workspace } from '../workspace/workspace'
 import {
   IconFolder,
@@ -22,10 +22,7 @@ type BoardsPanelProps = {
   onRemoveTag: (boardId: string, tag: string) => void
 }
 
-/**
- * Top-left chrome. Collapsed: sidebar-toggle pill + title pill.
- * Open: the two pills morph into the header of a floating boards card.
- */
+/** Top-left pills; when open they become the header of the boards card. */
 export function BoardsPanel({
   open,
   workspace,
@@ -44,6 +41,14 @@ export function BoardsPanel({
 
   const activeBoard =
     workspace.boards.find((b) => b.id === workspace.activeId) ?? workspace.boards[0]
+
+  // The input can't animate its intrinsic width, so a hidden mirror measures
+  // the name and the sizer transitions to that explicit width.
+  const mirrorRef = useRef<HTMLSpanElement>(null)
+  const [titleWidth, setTitleWidth] = useState<number>()
+  useLayoutEffect(() => {
+    if (mirrorRef.current) setTitleWidth(mirrorRef.current.offsetWidth)
+  }, [activeBoard.name])
 
   const commitFolder = () => {
     if (folderDraft?.trim()) onCreateFolder(folderDraft.trim())
@@ -80,7 +85,7 @@ export function BoardsPanel({
   )
 
   return (
-    <div className="chrome chrome-title" data-testid="title-chip">
+    <div className="chrome-title" data-testid="title-chip">
       <div
         className={`boards-morph${open ? ' is-open' : ''}`}
         data-testid="boards-panel"
@@ -100,7 +105,13 @@ export function BoardsPanel({
           </div>
 
           <div className="pill glass morph-pill title-pill">
-            <label className="title-sizer" data-value={activeBoard.name}>
+            <label
+              className="title-sizer"
+              style={titleWidth ? { width: titleWidth } : undefined}
+            >
+              <span className="title-mirror" aria-hidden="true" ref={mirrorRef}>
+                {activeBoard.name || ' '}
+              </span>
               <span className="sr-only">Board name</span>
               <input
                 type="text"
@@ -121,6 +132,16 @@ export function BoardsPanel({
                 autoComplete="off"
               />
             </label>
+            <button
+              type="button"
+              className="pill-btn"
+              title="New page"
+              data-testid="new-board"
+              onClick={onCreateBoard}
+            >
+              <IconPlus size={17} />
+              <span className="sr-only">New page</span>
+            </button>
           </div>
 
           <div className="morph-head-actions">
@@ -133,17 +154,6 @@ export function BoardsPanel({
             >
               <IconFolderPlus size={17} />
               <span className="sr-only">New folder</span>
-            </button>
-            <button
-              type="button"
-              className="pill-btn"
-              title="New board"
-              data-testid="new-board"
-              tabIndex={open ? 0 : -1}
-              onClick={onCreateBoard}
-            >
-              <IconPlus size={17} />
-              <span className="sr-only">New board</span>
             </button>
           </div>
         </div>

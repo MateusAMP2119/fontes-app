@@ -1,9 +1,4 @@
-/**
- * Pure camera/world transform helpers for the Fontes canvas.
- *
- * Mapping: screen = world * zoom + (x, y)
- * CSS on the world stage: translate(x, y) scale(zoom) with transform-origin 0 0.
- */
+/** Camera transform helpers: screen = world * zoom + (x, y). */
 
 export type Camera = {
   /** Stage translation in screen pixels (after scale origin at 0,0). */

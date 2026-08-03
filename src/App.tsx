@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 import type { Point } from './camera/camera'
 import { createInkItem, createItem, type Item, type ItemType } from './items/items'
 import {
@@ -123,7 +124,7 @@ export default function App() {
     [selectedIds, setItems],
   )
 
-  // —— workspace actions ——
+  // Workspace actions
   const selectBoard = useCallback(
     (id: string) => {
       setWs((prev) => ({ ...prev, activeId: id }))
@@ -193,23 +194,35 @@ export default function App() {
         <TopActions />
       </header>
 
-      <div className="board-content" ref={contentRef}>
-        <div className="stage">
-          <Canvas
-            items={activeBoard.items}
-            selectedIds={selectedIds}
-            editingId={editingId}
-            tool={tool}
-            showMobile={showMobile}
-            onSelectOnly={selectOnly}
-            onToggleSelect={toggleSelect}
-            onSelectMany={setSelectedIds}
-            onDragBy={dragItemsBy}
-            onEdit={setEditingId}
-            onItemChange={updateItem}
-            onStroke={commitStroke}
-          />
-        </div>
+      <div
+        className={`board-content${sidebarOpen ? ' is-shelved' : ''}`}
+        ref={contentRef}
+      >
+        <AnimatePresence initial={false}>
+          <motion.div
+            key={activeBoard.id}
+            className="stage"
+            initial={{ opacity: 0, scale: 0.985, filter: 'blur(6px)' }}
+            animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, scale: 1.015, filter: 'blur(6px)' }}
+            transition={{ duration: 0.32, ease: [0.32, 0.72, 0.28, 1] }}
+          >
+            <Canvas
+              items={activeBoard.items}
+              selectedIds={selectedIds}
+              editingId={editingId}
+              tool={tool}
+              showMobile={showMobile}
+              onSelectOnly={selectOnly}
+              onToggleSelect={toggleSelect}
+              onSelectMany={setSelectedIds}
+              onDragBy={dragItemsBy}
+              onEdit={setEditingId}
+              onItemChange={updateItem}
+              onStroke={commitStroke}
+            />
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       <BottomBar

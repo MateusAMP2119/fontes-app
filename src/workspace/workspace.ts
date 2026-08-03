@@ -1,8 +1,4 @@
-/**
- * Multi-board workspace model: boards live in folders (or loose), carry tags.
- * Pure helpers + localStorage load/save with migration from the single-board
- * v1 format.
- */
+/** Workspace model + localStorage persistence (migrates from v1). */
 
 import type { Item } from '../items/items'
 

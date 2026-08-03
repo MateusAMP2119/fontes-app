@@ -1,6 +1,4 @@
 :root {
-  /* —— Drafting material: white paper, light-blue drawing grid,
-     solid porcelain chrome, one working blue —— */
   --canvas: #fbfcfe;
   --grid-minor: rgba(74, 134, 220, 0.08);
   --grid-major: rgba(74, 134, 220, 0.16);

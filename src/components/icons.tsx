@@ -1,4 +1,4 @@
-/** Simple stroke icons — Freeform / SF Symbols weight */
+/** Inline stroke icons */
 
 const stroke = {
   fill: 'none' as const,
@@ -24,15 +24,6 @@ function Svg({ size = 18, className, children }: IconProps & { children: React.R
   )
 }
 
-export function IconSidebar({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      <rect x="3" y="4" width="18" height="16" rx="2" {...stroke} />
-      <path d="M9 4v16" {...stroke} />
-    </Svg>
-  )
-}
-
 /** Sidebar glyph whose left panel fills in while the boards panel is open. */
 export function IconSidebarToggle({ size, open }: IconProps & { open: boolean }) {
   return (
@@ -52,14 +43,6 @@ export function IconSidebarToggle({ size, open }: IconProps & { open: boolean })
   )
 }
 
-export function IconChevronLeft({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      <path d="M14.5 6L9 12l5.5 6" {...stroke} />
-    </Svg>
-  )
-}
-
 export function IconTrash({ size }: IconProps) {
   return (
     <Svg size={size}>
@@ -70,39 +53,11 @@ export function IconTrash({ size }: IconProps) {
   )
 }
 
-export function IconText({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      <path d="M5 6h14" {...stroke} />
-      <path d="M12 6v13" {...stroke} />
-      <path d="M9 19h6" {...stroke} />
-    </Svg>
-  )
-}
-
 export function IconSticky({ size }: IconProps) {
   return (
     <Svg size={size}>
       <path d="M5 4h10l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z" {...stroke} />
       <path d="M14 4v5h5" {...stroke} />
-    </Svg>
-  )
-}
-
-export function IconNote({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      <rect x="5" y="3" width="14" height="18" rx="2" {...stroke} />
-      <path d="M8 8h8M8 12h8M8 16h5" {...stroke} />
-    </Svg>
-  )
-}
-
-export function IconTable({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      <rect x="4" y="5" width="16" height="14" rx="1.5" {...stroke} />
-      <path d="M4 10h16M4 15h16M10 5v14M14 5v14" {...stroke} />
     </Svg>
   )
 }
@@ -117,26 +72,10 @@ export function IconPen({ size }: IconProps) {
   )
 }
 
-export function IconMinus({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      <path d="M6 12h12" {...stroke} />
-    </Svg>
-  )
-}
-
 export function IconPlus({ size }: IconProps) {
   return (
     <Svg size={size}>
       <path d="M12 6v12M6 12h12" {...stroke} />
-    </Svg>
-  )
-}
-
-export function IconFit({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      <path d="M9 4H5v4M15 4h4v4M9 20H5v-4M15 20h4v-4" {...stroke} />
     </Svg>
   )
 }
@@ -202,15 +141,6 @@ export function IconX({ size }: IconProps) {
   return (
     <Svg size={size}>
       <path d="M7 7l10 10M17 7L7 17" {...stroke} />
-    </Svg>
-  )
-}
-
-export function IconMonitor({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      <rect x="3" y="4.5" width="18" height="12.5" rx="2" {...stroke} />
-      <path d="M9.5 20.5h5M12 17v3.5" {...stroke} />
     </Svg>
   )
 }

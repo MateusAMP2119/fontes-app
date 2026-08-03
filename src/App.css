@@ -1,7 +1,4 @@
-/* —— App layout: chrome lives in real rows, content gets the rest ——
-   Row 1: top bar (boards panel + actions) — grows when the panel opens,
-   pushing the board down instead of covering it.
-   Row 2: board content. Row 3: toolbar. */
+/* Rows: top bar, board content, toolbar */
 .app {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
@@ -21,9 +18,12 @@
 }
 
 .top-bar {
+  position: relative;
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
+  /* the title cluster is absolutely pinned (see .chrome-title), so only
+     the right-side actions remain in flow */
+  justify-content: flex-end;
   gap: 12px;
   padding: 14px 14px 10px;
 }
@@ -31,9 +31,16 @@
 .board-content {
   position: relative;
   min-height: 0;
+  transition: margin-left 240ms cubic-bezier(0.32, 0.72, 0.28, 1);
 }
 
-/* —— Full-bleed freeform stage —— */
+/* Sidebar open: the board keeps its height and morphs its width — the open
+   card's column is reserved by margin, never by squashing the row */
+.board-content.is-shelved {
+  margin-left: 322px;
+}
+
+/* Stage */
 .stage {
   position: absolute;
   inset: 0;
@@ -93,10 +100,7 @@
   pointer-events: none;
 }
 
-/* —— Chrome rows (in flow, not overlays) —— */
-
-/* —— Drafting chrome surface: solid porcelain, hairline border,
-   squared corners, exact shadows —— */
+/* Shared chrome surface */
 .glass {
   border-radius: 12px;
   background: var(--surface);
@@ -104,8 +108,13 @@
   box-shadow: var(--surface-shadow);
 }
 
-/* Top-left: sidebar pill + self-sizing title pill */
+/* Top-left pills — pinned out of the header's flow so the open boards card
+   overlays the board instead of growing the top row and squashing it */
 .chrome-title {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 30;
   display: flex;
   align-items: flex-start;
   gap: 8px;
@@ -116,20 +125,22 @@
   padding: 4px 6px;
 }
 
-/* Width-hugging input: hidden ::after mirror sets the track size,
-   the input overlays it in the same grid cell. Font + padding must match. */
+/* Width-hugging input: a hidden mirror span sets the track size and the
+   input overlays it. Font + padding must match. Width is measured in JS
+   and set explicitly so it can morph instead of snapping. */
 .title-sizer {
   display: inline-grid;
   align-items: center;
   max-width: 18rem;
+  transition: width 240ms cubic-bezier(0.32, 0.72, 0.28, 1);
 }
 
-.title-sizer::after {
-  content: attr(data-value) ' ';
+.title-mirror {
   grid-area: 1 / 1;
+  justify-self: start;
+  width: max-content;
   visibility: hidden;
   white-space: pre;
-  overflow: hidden;
   font-size: 13px;
   font-weight: 510;
   letter-spacing: -0.01em;
@@ -156,7 +167,7 @@
   background: var(--hover);
 }
 
-/* Top-right: collaborate / pages / share */
+/* Top-right actions */
 .chrome-top-right {
   display: flex;
   align-items: center;
@@ -164,7 +175,7 @@
   flex-shrink: 0;
 }
 
-/* Bottom taskbar row — centered tools on a shared baseline */
+/* Bottom toolbar */
 .chrome-bottom {
   display: flex;
   flex-direction: column;
@@ -217,7 +228,7 @@
   transform: scale(0.92);
 }
 
-/* Selected tool — same soft tint as every other selected state, never a glow */
+/* Selected tool */
 .pill-btn.is-active {
   background: rgba(62, 142, 247, 0.12);
   color: var(--accent);
@@ -235,7 +246,7 @@
   }
 }
 
-/* —— Canvas items —— */
+/* Canvas items */
 .item {
   position: absolute;
   border-radius: 6px;
@@ -271,7 +282,7 @@
   border-color: rgba(62, 142, 247, 0.65);
 }
 
-/* Dragging: lift the item, deepen its shadow, follow the hand */
+/* Dragging */
 .item.is-dragging {
   z-index: 3;
   cursor: grabbing;
@@ -414,10 +425,7 @@
   cursor: pointer;
 }
 
-/* —— Boards panel: the two top-left pills morph into one card ——
-   Collapsed: wrapper is invisible, each pill carries its own glass surface.
-   Open: wrapper becomes the surface, pills go flat and read as its header,
-   the list unfolds below (0fr → 1fr) while min-width eases the card wider. */
+/* Boards panel: the top-left pills morph into one card when open */
 .boards-morph {
   border-radius: 12px;
   min-width: 0;
@@ -438,7 +446,7 @@
   box-shadow: var(--surface-shadow);
 }
 
-/* Toggle glyph: left panel fills in while open, growing from its left edge */
+/* Toggle glyph fill animates in while open */
 .sidebar-toggle-fill {
   opacity: 0;
   transform: scaleX(0);
@@ -454,15 +462,12 @@
   transform: none;
 }
 
+/* The head keeps its closed geometry when open — same gap, so the title and
+   its plus button never move; only the surfaces morph */
 .morph-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  transition: gap 240ms cubic-bezier(0.32, 0.72, 0.28, 1);
-}
-
-.boards-morph.is-open .morph-head {
-  gap: 0;
 }
 
 .morph-pill {
@@ -698,11 +703,10 @@
   font-weight: 590;
 }
 
-/* —— Device frames: blank dashboard targets —— */
+/* Device frames */
 .device-frames {
   position: absolute;
-  /* Sides match the pills' visual edges: 15px left (top-bar 14px padding
-     + the boards-morph wrapper's 1px transparent border), 14px right */
+  /* Sides match the pills' visual edges */
   inset: 2px 14px 6px 15px;
   display: flex;
   align-items: stretch;
@@ -710,7 +714,7 @@
   pointer-events: none;
 }
 
-/* Desktop fills all available space; the animating mobile width squeezes it */
+/* Desktop fills remaining space */
 .frame-pc {
   flex: 1;
   min-width: 0;
@@ -745,15 +749,6 @@
   border-width: 1px;
   opacity: 1;
   transform: none;
-}
-
-/* Toolbar divider + frame visibility buttons */
-.pill-divider {
-  width: 1px;
-  height: 18px;
-  margin: 0 2px;
-  background: var(--divider);
-  flex-shrink: 0;
 }
 
 .frame-btn.is-on {
