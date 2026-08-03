@@ -3,6 +3,8 @@ import {
   useRef,
   useState,
   type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+  type RefObject,
 } from 'react'
 import type { Point } from '../camera/camera'
 import { inkPath, type Item } from '../items/items'
@@ -22,6 +24,12 @@ type CanvasProps = {
   onEdit: (id: string | null) => void
   onItemChange: (item: Item) => void
   onStroke: (points: Point[]) => void
+  /** App measures the PC frame through this when building a dashboard. */
+  frameRef?: RefObject<HTMLDivElement | null>
+  /** Lets App park focus on the board after the composer unmounts. */
+  viewportRef?: RefObject<HTMLDivElement | null>
+  /** Pick-topic mode — rendered as the PC frame's content. */
+  frameContent?: ReactNode
 }
 
 type Rect = { x0: number; y0: number; x1: number; y1: number }
@@ -40,6 +48,9 @@ export function Canvas({
   onEdit,
   onItemChange,
   onStroke,
+  frameRef,
+  viewportRef: externalViewportRef,
+  frameContent,
 }: CanvasProps) {
   const viewportRef = useRef<HTMLDivElement>(null)
   const strokeRef = useRef<Point[] | null>(null)
@@ -132,7 +143,10 @@ export function Canvas({
 
   return (
     <div
-      ref={viewportRef}
+      ref={(el) => {
+        viewportRef.current = el
+        if (externalViewportRef) externalViewportRef.current = el
+      }}
       className={`stage-viewport${tool === 'draw' ? ' is-drawing' : ''}`}
       data-testid="canvas-viewport"
       tabIndex={0}
@@ -145,13 +159,19 @@ export function Canvas({
     >
       <div className="stage-grid" data-testid="canvas-grid" aria-hidden="true" />
 
-      {/* Blank device frames — dashboard targets, widgets come later */}
-      <div
-        className={`device-frames${showMobile ? ' is-split' : ''}`}
-        aria-hidden="true"
-      >
-        <div className="frame-pc" data-testid="frame-pc" />
-        <div className="frame-mobile" data-testid="frame-mobile" />
+      {/* Device frames — the dashboard targets. The PC frame holds
+          pick-topic mode while a board is unclaimed, so aria-hidden sits on
+          the individual frames rather than the wrapper. */}
+      <div className={`device-frames${showMobile ? ' is-split' : ''}`}>
+        <div
+          ref={frameRef}
+          className={`frame-pc${frameContent ? ' has-picker' : ''}`}
+          data-testid="frame-pc"
+          aria-hidden={frameContent ? undefined : true}
+        >
+          {frameContent}
+        </div>
+        <div className="frame-mobile" data-testid="frame-mobile" aria-hidden="true" />
       </div>
 
       <div className="stage-world" data-testid="canvas-world">

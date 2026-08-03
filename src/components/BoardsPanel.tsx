@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react'
-import type { Board, Workspace } from '../workspace/workspace'
+import { UNNAMED_BOARD, type Board, type Workspace } from '../workspace/workspace'
 import {
   IconFolder,
   IconFolderPlus,
@@ -83,33 +83,34 @@ export function BoardsPanel({
           </div>
 
           <div className="pill glass morph-pill title-pill">
-            <label
-              className="title-sizer"
-              style={titleWidth ? { width: titleWidth } : undefined}
-            >
-              <span className="title-mirror" aria-hidden="true" ref={mirrorRef}>
-                {activeBoard.name || ' '}
-              </span>
-              <span className="sr-only">Board name</span>
-              <input
-                type="text"
-                className="project-name-input"
-                data-testid="project-name"
-                value={activeBoard.name}
-                size={1}
-                onChange={(e) => onProjectNameChange(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === 'Escape') {
-                    e.currentTarget.blur()
-                  }
-                }}
-                onBlur={() => {
-                  if (!activeBoard.name.trim()) onProjectNameChange('Untitled')
-                }}
-                spellCheck={false}
-                autoComplete="off"
-              />
-            </label>
+            {/* An unnamed board has nothing to show — the pill collapses to
+                just the new-page button until a topic names it. */}
+            {activeBoard.name && (
+              <label
+                className="title-sizer"
+                style={titleWidth ? { width: titleWidth } : undefined}
+              >
+                <span className="title-mirror" aria-hidden="true" ref={mirrorRef}>
+                  {activeBoard.name}
+                </span>
+                <span className="sr-only">Board name</span>
+                <input
+                  type="text"
+                  className="project-name-input"
+                  data-testid="project-name"
+                  value={activeBoard.name}
+                  size={1}
+                  onChange={(e) => onProjectNameChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === 'Escape') {
+                      e.currentTarget.blur()
+                    }
+                  }}
+                  spellCheck={false}
+                  autoComplete="off"
+                />
+              </label>
+            )}
             <button
               type="button"
               className="pill-btn"
@@ -242,9 +243,9 @@ function BoardRow({ board, active, onSelect }: BoardRowProps) {
           type="button"
           className="board-row-name"
           onClick={onSelect}
-          title={board.name || 'Untitled'}
+          title={board.name || UNNAMED_BOARD}
         >
-          {board.name || 'Untitled'}
+          {board.name || UNNAMED_BOARD}
         </button>
       </div>
     </div>

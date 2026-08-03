@@ -6,6 +6,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import { inkPath, type Item, type TableItem } from '../items/items'
+import { VizBody } from './VizBody'
 
 type ItemViewProps = {
   item: Item
@@ -125,7 +126,8 @@ export function ItemView({
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
       onDoubleClick={(e) => {
-        if (!interactive || item.type === 'ink') return
+        // Ink and widgets have no text editor to enter.
+        if (!interactive || item.type === 'ink' || item.type === 'viz') return
         e.stopPropagation()
         onEdit(item.id)
       }}
@@ -167,6 +169,8 @@ function renderBody(
     }
     case 'table':
       return <TableBody item={item} editing={editing} onChange={onChange} />
+    case 'viz':
+      return <VizBody item={item} />
     case 'ink':
       return (
         <svg

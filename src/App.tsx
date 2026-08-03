@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import type { Point } from './camera/camera'
-import { createInkItem, createItem, type Item, type ItemType } from './items/items'
+import { createInkItem, createItem, type InsertableType, type Item } from './items/items'
 import {
   createBoard,
   createFolder,
@@ -15,7 +15,15 @@ import { BoardsPanel } from './components/BoardsPanel'
 import { BottomBar, type Tool } from './components/BottomBar'
 import { Canvas } from './components/Canvas'
 import { TopActions } from './components/TopActions'
+import { BuildGhost, type GhostRect } from './components/picker/BuildGhost'
+import { TopicComposer } from './components/picker/TopicComposer'
+import { buildDashboard } from './news/dashboard'
+import type { NewsEvent } from './news/events'
+import { measureFrame } from './news/frame'
 import './App.css'
+
+/** A dashboard mid-flight: computed up front, committed when the ghost lands. */
+type Build = { event: NewsEvent; from: GhostRect; items: Item[] }
 
 export default function App() {
   const [ws, setWs] = useState<Workspace>(loadWorkspace)
@@ -24,8 +32,13 @@ export default function App() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [tool, setTool] = useState<Tool>('select')
   const [showMobile, setShowMobile] = useState(false)
+  const [pickerQuery, setPickerQuery] = useState('')
+  const [build, setBuild] = useState<Build | null>(null)
+  const [status, setStatus] = useState('')
   const stickySeed = useRef(0)
   const contentRef = useRef<HTMLDivElement>(null)
+  const frameRef = useRef<HTMLDivElement>(null)
+  const viewportRef = useRef<HTMLDivElement>(null)
 
   const activeBoard = useMemo(
     () => ws.boards.find((b) => b.id === ws.activeId) ?? ws.boards[0],
@@ -65,7 +78,7 @@ export default function App() {
   }, [])
 
   const insertItem = useCallback(
-    (type: Exclude<ItemType, 'ink'>) => {
+    (type: InsertableType) => {
       const item = createItem(type, centerPoint(), stickySeed.current)
       if (type === 'sticky') stickySeed.current += 1
       setItems((prev) => [...prev, item])
@@ -145,6 +158,53 @@ export default function App() {
     setWs((prev) => ({ ...prev, folders: [...prev.folders, createFolder(name)] }))
   }, [])
 
+  // Pick-topic mode
+  /**
+   * A creation affordance, not an empty state: once a board has a topic it
+   * never comes back, even if every widget is deleted. Re-showing it would
+   * seize a board mid-edit, and there is no undo to escape with.
+   *
+   * The way out without picking a topic is the toolbar — inserting anything
+   * puts an item on the board, which retires the composer.
+   */
+  const showPicker = activeBoard.topicId == null && activeBoard.items.length === 0
+
+  /** Compute the whole dashboard now; the ghost is just the travel time. */
+  const startBuild = useCallback((event: NewsEvent, from: DOMRect) => {
+    const frame = frameRef.current
+    const frameRect = frame?.getBoundingClientRect()
+    const items = buildDashboard(event, measureFrame(frame, contentRef.current))
+    setBuild({
+      event,
+      items,
+      from: {
+        left: from.left - (frameRect?.left ?? 0),
+        top: from.top - (frameRect?.top ?? 0),
+        width: from.width,
+        height: from.height,
+      },
+    })
+  }, [])
+
+  const commitBuild = useCallback(
+    (pending: Build) => {
+      updateActiveBoard((b) => ({
+        ...b,
+        topicId: pending.event.id,
+        // Don't clobber a board the user already named.
+        name: b.name.trim() ? b.name : pending.event.title,
+        items: [...b.items, ...pending.items],
+      }))
+      setBuild(null)
+      setPickerQuery('')
+      setStatus(
+        `${pending.event.title} dashboard built. ${pending.items.length} widgets added.`,
+      )
+      viewportRef.current?.focus()
+    },
+    [updateActiveBoard],
+  )
+
   // Keyboard: delete selection, escape closes sidebar / ends editing/selection/draw.
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -154,6 +214,11 @@ export default function App() {
         target.tagName === 'INPUT' ||
         target.tagName === 'TEXTAREA'
       if (e.key === 'Escape') {
+        // The composer clears its query first, then falls through as usual.
+        if (showPicker && !build && pickerQuery) {
+          setPickerQuery('')
+          return
+        }
         if (sidebarOpen) setSidebarOpen(false)
         else if (editingId) setEditingId(null)
         else if (selectedIds.length > 0) setSelectedIds([])
@@ -168,7 +233,16 @@ export default function App() {
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [deleteSelection, editingId, selectedIds, sidebarOpen, tool])
+  }, [
+    build,
+    deleteSelection,
+    editingId,
+    pickerQuery,
+    selectedIds,
+    showPicker,
+    sidebarOpen,
+    tool,
+  ])
 
   return (
     <div className="app" data-testid="app-shell">
@@ -214,6 +288,29 @@ export default function App() {
               onEdit={setEditingId}
               onItemChange={updateItem}
               onStroke={commitStroke}
+              frameRef={frameRef}
+              viewportRef={viewportRef}
+              // Undefined while the board is claimed, so the frame stays the
+              // decorative, aria-hidden surface it was.
+              frameContent={
+                showPicker ? (
+                  <>
+                    <TopicComposer
+                      query={pickerQuery}
+                      onQueryChange={setPickerQuery}
+                      onPick={startBuild}
+                      leaving={build !== null}
+                    />
+                    {build && (
+                      <BuildGhost
+                        event={build.event}
+                        from={build.from}
+                        onDone={() => commitBuild(build)}
+                      />
+                    )}
+                  </>
+                ) : undefined
+              }
             />
           </motion.div>
         </AnimatePresence>
@@ -228,6 +325,11 @@ export default function App() {
         onDelete={deleteSelection}
         onToggleMobile={() => setShowMobile((prev) => !prev)}
       />
+
+      {/* Owned by App so it survives the composer unmounting mid-build */}
+      <div className="sr-only" role="status" aria-live="polite">
+        {status}
+      </div>
     </div>
   )
 }

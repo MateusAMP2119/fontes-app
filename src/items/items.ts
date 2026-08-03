@@ -1,14 +1,17 @@
 /** Item model. Ink stroke points are relative to the item origin. */
 
-import {
-  clamp,
-  MAX_ZOOM,
-  MIN_ZOOM,
-  type Camera,
-  type Point,
-} from '../camera/camera'
+import type { Point } from '../camera/camera'
 
-export type ItemType = 'text' | 'sticky' | 'note' | 'table' | 'ink'
+export type ItemType = 'text' | 'sticky' | 'note' | 'table' | 'viz' | 'ink'
+
+/**
+ * Types the toolbar can insert. Ink comes from strokes, viz from a topic.
+ *
+ * Keep this narrowing: tsconfig has no `strict`, so passing 'viz' to
+ * createItem would fall out of the switch and return undefined — assignable
+ * to Item without strictNullChecks, and a runtime-only failure.
+ */
+export type InsertableType = Exclude<ItemType, 'ink' | 'viz'>
 
 export type BaseItem = {
   id: string
@@ -31,7 +34,33 @@ export type InkItem = BaseItem & {
   strokeWidth: number
 }
 
-export type Item = TextItem | StickyItem | NoteItem | TableItem | InkItem
+export type VizKind = 'header' | 'stat' | 'line' | 'area' | 'bar' | 'donut' | 'headlines'
+
+export type VizMetric =
+  | 'summary'
+  | 'articles'
+  | 'outlets'
+  | 'peak'
+  | 'tone'
+  | 'volume'
+  | 'angles'
+  | 'sources'
+  | 'headlines'
+
+/**
+ * A dashboard widget. Holds no data of its own — `eventId` and `metric`
+ * re-derive the series on every render, which is what keeps the numbers
+ * stable across reloads without persisting them.
+ */
+export type VizItem = BaseItem & {
+  type: 'viz'
+  kind: VizKind
+  title: string
+  eventId: string
+  metric: VizMetric
+}
+
+export type Item = TextItem | StickyItem | NoteItem | TableItem | VizItem | InkItem
 
 export const STICKY_COLORS = ['#ffe066', '#ffd6e0', '#c3f0ca', '#cde6ff', '#e6d9ff']
 
@@ -44,7 +73,7 @@ export function nextItemId(): string {
 }
 
 /** Create a default item of `type` centered on the world point `at`. */
-export function createItem(type: Exclude<ItemType, 'ink'>, at: Point, seed = 0): Item {
+export function createItem(type: InsertableType, at: Point, seed = 0): Item {
   const id = nextItemId()
   switch (type) {
     case 'text': {
@@ -112,6 +141,18 @@ export function createInkItem(worldPoints: Point[], color = '#1d1d1f', strokeWid
   }
 }
 
+export type VizSpec = {
+  kind: VizKind
+  title: string
+  eventId: string
+  metric: VizMetric
+}
+
+/** Widgets are placed from a grid, so they take a box rather than a center. */
+export function createVizItem(spec: VizSpec, at: Bounds): VizItem {
+  return { id: nextItemId(), type: 'viz', ...at, ...spec }
+}
+
 export function moveItem<T extends Item>(item: T, dx: number, dy: number): T {
   return { ...item, x: item.x + dx, y: item.y + dy }
 }
@@ -132,22 +173,6 @@ export function itemsBounds(items: Item[]): Bounds | null {
     maxY = Math.max(maxY, it.y + it.h)
   }
   return { x: minX, y: minY, w: maxX - minX, h: maxY - minY }
-}
-
-/** Camera that fits `bounds` inside `viewport` with `padding` screen px. */
-export function fitCamera(
-  bounds: Bounds,
-  viewport: { width: number; height: number },
-  padding = 80,
-): Camera {
-  const availW = Math.max(viewport.width - padding * 2, 1)
-  const availH = Math.max(viewport.height - padding * 2, 1)
-  const zoom = clamp(Math.min(availW / bounds.w, availH / bounds.h, 1.5), MIN_ZOOM, MAX_ZOOM)
-  return {
-    zoom,
-    x: viewport.width / 2 - (bounds.x + bounds.w / 2) * zoom,
-    y: viewport.height / 2 - (bounds.y + bounds.h / 2) * zoom,
-  }
 }
 
 /** SVG path string for an ink item's (relative) points. */

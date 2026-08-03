@@ -137,6 +137,23 @@ export function IconTag({ size }: IconProps) {
   )
 }
 
+export function IconSearch({ size }: IconProps) {
+  return (
+    <Svg size={size}>
+      <circle cx="10.75" cy="10.75" r="5.75" {...stroke} />
+      <path d="M15 15l4.5 4.5" {...stroke} />
+    </Svg>
+  )
+}
+
+export function IconArrowUp({ size }: IconProps) {
+  return (
+    <Svg size={size}>
+      <path d="M12 19V5M6 11l6-6 6 6" {...stroke} />
+    </Svg>
+  )
+}
+
 export function IconX({ size }: IconProps) {
   return (
     <Svg size={size}>

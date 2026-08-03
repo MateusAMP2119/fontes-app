@@ -1,4 +1,4 @@
-import type { ItemType } from '../items/items'
+import type { InsertableType } from '../items/items'
 import { IconPen, IconPhone, IconSticky, IconTrash } from './icons'
 
 export type Tool = 'select' | 'draw'
@@ -8,7 +8,7 @@ type BottomBarProps = {
   hasSelection: boolean
   showMobile: boolean
   onToolChange: (tool: Tool) => void
-  onInsert: (type: Exclude<ItemType, 'ink'>) => void
+  onInsert: (type: InsertableType) => void
   onDelete: () => void
   onToggleMobile: () => void
 }
