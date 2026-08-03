@@ -8,7 +8,6 @@ export type Board = {
   id: string
   name: string
   folderId: string | null
-  tags: string[]
   items: Item[]
 }
 
@@ -29,7 +28,7 @@ export function nextId(prefix: string): string {
 }
 
 export function createBoard(name = 'Untitled'): Board {
-  return { id: nextId('board'), name, folderId: null, tags: [], items: [] }
+  return { id: nextId('board'), name, folderId: null, items: [] }
 }
 
 export function createFolder(name: string): Folder {
@@ -96,29 +95,6 @@ export function saveWorkspace(ws: Workspace): void {
     localStorage.setItem(WORKSPACE_KEY, JSON.stringify(ws))
   } catch {
     // storage full/unavailable — app still works, just not persisted
-  }
-}
-
-/** Add a tag (trimmed, deduped, case-preserving) to a board. */
-export function addTag(ws: Workspace, boardId: string, tag: string): Workspace {
-  const clean = tag.trim()
-  if (!clean) return ws
-  return {
-    ...ws,
-    boards: ws.boards.map((b) =>
-      b.id === boardId && !b.tags.some((t) => t.toLowerCase() === clean.toLowerCase())
-        ? { ...b, tags: [...b.tags, clean] }
-        : b,
-    ),
-  }
-}
-
-export function removeTag(ws: Workspace, boardId: string, tag: string): Workspace {
-  return {
-    ...ws,
-    boards: ws.boards.map((b) =>
-      b.id === boardId ? { ...b, tags: b.tags.filter((t) => t !== tag) } : b,
-    ),
   }
 }
 

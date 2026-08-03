@@ -1,12 +1,10 @@
 import { useLayoutEffect, useRef, useState } from 'react'
-import type { Board, Folder, Workspace } from '../workspace/workspace'
+import type { Board, Workspace } from '../workspace/workspace'
 import {
   IconFolder,
   IconFolderPlus,
   IconPlus,
   IconSidebarToggle,
-  IconTag,
-  IconX,
 } from './icons'
 
 type BoardsPanelProps = {
@@ -18,8 +16,6 @@ type BoardsPanelProps = {
   onCreateBoard: () => void
   onCreateFolder: (name: string) => void
   onSetBoardFolder: (boardId: string, folderId: string | null) => void
-  onAddTag: (boardId: string, tag: string) => void
-  onRemoveTag: (boardId: string, tag: string) => void
 }
 
 /** Top-left pills; when open they become the header of the boards card. */
@@ -32,12 +28,9 @@ export function BoardsPanel({
   onCreateBoard,
   onCreateFolder,
   onSetBoardFolder,
-  onAddTag,
-  onRemoveTag,
 }: BoardsPanelProps) {
   const [folderDraft, setFolderDraft] = useState<string | null>(null)
-  const [taggingId, setTaggingId] = useState<string | null>(null)
-  const [movingId, setMovingId] = useState<string | null>(null)
+  const [dropFolderId, setDropFolderId] = useState<string | null>(null)
 
   const activeBoard =
     workspace.boards.find((b) => b.id === workspace.activeId) ?? workspace.boards[0]
@@ -55,32 +48,17 @@ export function BoardsPanel({
     setFolderDraft(null)
   }
 
+  const draggedBoardId = (e: React.DragEvent) =>
+    e.dataTransfer.getData('text/plain')
+
   const looseBoards = workspace.boards.filter((b) => b.folderId === null)
 
   const renderBoard = (board: Board) => (
     <BoardRow
       key={board.id}
       board={board}
-      folders={workspace.folders}
       active={board.id === workspace.activeId}
-      tagging={taggingId === board.id}
-      moving={movingId === board.id}
       onSelect={() => onSelectBoard(board.id)}
-      onStartTag={() => {
-        setTaggingId(board.id)
-        setMovingId(null)
-      }}
-      onEndTag={() => setTaggingId(null)}
-      onToggleMove={() => {
-        setMovingId(movingId === board.id ? null : board.id)
-        setTaggingId(null)
-      }}
-      onMove={(folderId) => {
-        onSetBoardFolder(board.id, folderId)
-        setMovingId(null)
-      }}
-      onAddTag={(tag) => onAddTag(board.id, tag)}
-      onRemoveTag={(tag) => onRemoveTag(board.id, tag)}
     />
   )
 
@@ -160,7 +138,21 @@ export function BoardsPanel({
 
         <div className="morph-body" aria-hidden={!open}>
           <div className="morph-body-clip">
-            <div className="morph-list">
+            {/* Dropping on the list background (outside any folder) unfiles the board */}
+            <div
+              className="morph-list"
+              onDragOver={(e) => {
+                e.preventDefault()
+                e.dataTransfer.dropEffect = 'move'
+                setDropFolderId(null)
+              }}
+              onDrop={(e) => {
+                e.preventDefault()
+                const id = draggedBoardId(e)
+                if (id) onSetBoardFolder(id, null)
+                setDropFolderId(null)
+              }}
+            >
               {folderDraft !== null && (
                 <input
                   className="sidebar-folder-input"
@@ -177,7 +169,25 @@ export function BoardsPanel({
               )}
 
               {workspace.folders.map((folder) => (
-                <section className="sidebar-section" key={folder.id}>
+                <section
+                  className={`sidebar-section${
+                    dropFolderId === folder.id ? ' is-drop-target' : ''
+                  }`}
+                  key={folder.id}
+                  onDragOver={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    e.dataTransfer.dropEffect = 'move'
+                    setDropFolderId(folder.id)
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    const id = draggedBoardId(e)
+                    if (id) onSetBoardFolder(id, folder.id)
+                    setDropFolderId(null)
+                  }}
+                >
                   <div className="sidebar-folder-head">
                     <IconFolder size={14} />
                     <span>{folder.name}</span>
@@ -206,43 +216,27 @@ export function BoardsPanel({
 
 type BoardRowProps = {
   board: Board
-  folders: Folder[]
   active: boolean
-  tagging: boolean
-  moving: boolean
   onSelect: () => void
-  onStartTag: () => void
-  onEndTag: () => void
-  onToggleMove: () => void
-  onMove: (folderId: string | null) => void
-  onAddTag: (tag: string) => void
-  onRemoveTag: (tag: string) => void
 }
 
-function BoardRow({
-  board,
-  folders,
-  active,
-  tagging,
-  moving,
-  onSelect,
-  onStartTag,
-  onEndTag,
-  onToggleMove,
-  onMove,
-  onAddTag,
-  onRemoveTag,
-}: BoardRowProps) {
-  const [tagDraft, setTagDraft] = useState('')
-
-  const commitTag = () => {
-    if (tagDraft.trim()) onAddTag(tagDraft)
-    setTagDraft('')
-    onEndTag()
-  }
+function BoardRow({ board, active, onSelect }: BoardRowProps) {
+  const [dragging, setDragging] = useState(false)
 
   return (
-    <div className={`board-row${active ? ' is-active' : ''}`} data-testid="board-row">
+    <div
+      className={`board-row${active ? ' is-active' : ''}${
+        dragging ? ' is-dragging' : ''
+      }`}
+      data-testid="board-row"
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData('text/plain', board.id)
+        e.dataTransfer.effectAllowed = 'move'
+        setDragging(true)
+      }}
+      onDragEnd={() => setDragging(false)}
+    >
       <div className="board-row-line">
         <button
           type="button"
@@ -252,81 +246,7 @@ function BoardRow({
         >
           {board.name || 'Untitled'}
         </button>
-        <div className="board-row-actions">
-          <button
-            type="button"
-            className="board-row-btn"
-            title="Move to folder"
-            onClick={onToggleMove}
-          >
-            <IconFolder size={14} />
-            <span className="sr-only">Move to folder</span>
-          </button>
-          <button
-            type="button"
-            className="board-row-btn"
-            title="Add tag"
-            onClick={onStartTag}
-          >
-            <IconTag size={14} />
-            <span className="sr-only">Add tag</span>
-          </button>
-        </div>
       </div>
-
-      {(board.tags.length > 0 || tagging) && (
-        <div className="board-row-tags">
-          {board.tags.map((tag) => (
-            <button
-              key={tag}
-              type="button"
-              className="tag-chip"
-              title={`Remove tag ${tag}`}
-              onClick={() => onRemoveTag(tag)}
-            >
-              {tag}
-              <IconX size={9} />
-            </button>
-          ))}
-          {tagging && (
-            <input
-              className="tag-input"
-              value={tagDraft}
-              placeholder="tag"
-              autoFocus
-              onChange={(e) => setTagDraft(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') commitTag()
-                if (e.key === 'Escape') onEndTag()
-              }}
-              onBlur={commitTag}
-            />
-          )}
-        </div>
-      )}
-
-      {moving && (
-        <div className="board-row-move">
-          <button
-            type="button"
-            className={`move-option${board.folderId === null ? ' is-current' : ''}`}
-            onClick={() => onMove(null)}
-          >
-            No folder
-          </button>
-          {folders.map((folder) => (
-            <button
-              key={folder.id}
-              type="button"
-              className={`move-option${board.folderId === folder.id ? ' is-current' : ''}`}
-              onClick={() => onMove(folder.id)}
-            >
-              <IconFolder size={13} />
-              {folder.name}
-            </button>
-          ))}
-        </div>
-      )}
     </div>
   )
 }

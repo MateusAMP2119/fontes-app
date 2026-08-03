@@ -3,11 +3,9 @@ import { AnimatePresence, motion } from 'motion/react'
 import type { Point } from './camera/camera'
 import { createInkItem, createItem, type Item, type ItemType } from './items/items'
 import {
-  addTag,
   createBoard,
   createFolder,
   loadWorkspace,
-  removeTag,
   saveWorkspace,
   setBoardFolder,
   type Board,
@@ -185,10 +183,6 @@ export default function App() {
           onCreateFolder={newFolder}
           onSetBoardFolder={(boardId, folderId) =>
             setWs((prev) => setBoardFolder(prev, boardId, folderId))
-          }
-          onAddTag={(boardId, tag) => setWs((prev) => addTag(prev, boardId, tag))}
-          onRemoveTag={(boardId, tag) =>
-            setWs((prev) => removeTag(prev, boardId, tag))
           }
         />
         <TopActions />
