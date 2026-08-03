@@ -1,13 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Point } from './camera/camera'
-import {
-  createInkItem,
-  createItem,
-  createVizItem,
-  type Item,
-  type ItemType,
-} from './items/items'
-import type { VizDef } from './viz/catalog'
+import { createInkItem, createItem, type Item, type ItemType } from './items/items'
 import {
   addTag,
   createBoard,
@@ -73,23 +66,12 @@ export default function App() {
   }, [])
 
   const insertItem = useCallback(
-    (type: Exclude<ItemType, 'ink' | 'chart'>) => {
+    (type: Exclude<ItemType, 'ink'>) => {
       const item = createItem(type, centerPoint(), stickySeed.current)
       if (type === 'sticky') stickySeed.current += 1
       setItems((prev) => [...prev, item])
       setSelectedIds([item.id])
       setEditingId(item.id)
-      setTool('select')
-    },
-    [centerPoint, setItems],
-  )
-
-  const insertViz = useCallback(
-    (viz: VizDef) => {
-      const item = createVizItem(centerPoint(), viz.sketch, viz.name)
-      setItems((prev) => [...prev, item])
-      setSelectedIds([item.id])
-      setEditingId(null)
       setTool('select')
     },
     [centerPoint, setItems],
@@ -236,7 +218,6 @@ export default function App() {
         showMobile={showMobile}
         onToolChange={setTool}
         onInsert={insertItem}
-        onInsertViz={insertViz}
         onDelete={deleteSelection}
         onToggleMobile={() => setShowMobile((prev) => !prev)}
       />

@@ -5,8 +5,7 @@ import {
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
-import { inkPath, type ChartItem, type Item, type TableItem } from '../items/items'
-import { VizSketch } from './VizSketch'
+import { inkPath, type Item, type TableItem } from '../items/items'
 
 type ItemViewProps = {
   item: Item
@@ -126,7 +125,7 @@ export function ItemView({
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
       onDoubleClick={(e) => {
-        if (!interactive || item.type === 'ink' || item.type === 'chart') return
+        if (!interactive || item.type === 'ink') return
         e.stopPropagation()
         onEdit(item.id)
       }}
@@ -168,8 +167,6 @@ function renderBody(
     }
     case 'table':
       return <TableBody item={item} editing={editing} onChange={onChange} />
-    case 'chart':
-      return <ChartPlaceholder item={item} />
     case 'ink':
       return (
         <svg
@@ -190,20 +187,6 @@ function renderBody(
         </svg>
       )
   }
-}
-
-/** Reserved slot for a future visualization — sketches the shape, holds no data. */
-function ChartPlaceholder({ item }: { item: ChartItem }) {
-  return (
-    <div className="item-chart-body">
-      <div className="item-chart-header">
-        <span className="item-chart-title">{item.title}</span>
-      </div>
-      <div className="item-chart-slot">
-        <VizSketch kind={item.kind} className="item-chart-sketch" />
-      </div>
-    </div>
-  )
 }
 
 function placeholderFor(type: 'text' | 'sticky' | 'note'): string {

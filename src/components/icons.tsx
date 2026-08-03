@@ -224,15 +224,6 @@ export function IconPhone({ size }: IconProps) {
   )
 }
 
-export function IconSearch({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      <circle cx="10.5" cy="10.5" r="6" {...stroke} />
-      <path d="M15.2 15.2 20 20" {...stroke} />
-    </Svg>
-  )
-}
-
 export function IconCloud({ size }: IconProps) {
   return (
     <Svg size={size}>
