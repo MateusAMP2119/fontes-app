@@ -1,338 +1,444 @@
 /**
- * Widget bodies. Placeholders with plausible data, not a chart library.
+ * Widget bodies, matching the Figma "Widgets" file: black cards, uppercase
+ * gray labels, monochrome charts, red/green reserved for sentiment.
  *
  * Every number comes from the seeded generators in src/news/series, keyed on
- * the item's eventId + metric, so a widget renders identically forever.
- * The SVG viewBox is derived arithmetically from the item's own w/h minus the
- * chrome paddings below — no measurement, and stroke weights stay honest.
+ * the item's eventId + metric, so a widget renders identically forever. The
+ * variant (default / horizontal / detail) is derived from the item's own
+ * shape at render time — nothing about it is persisted.
  */
 
-import type { VizItem } from '../items/items'
-import { findEvent, type NewsEvent } from '../news/events'
+import type { ReactNode } from 'react'
+import type { VizItem, VizMetric } from '../items/items'
+import { findEvent, type EventCategory, type NewsEvent } from '../news/events'
+import { narrativeImage } from '../news/narrativeImages'
 import {
-  angleSplit,
-  daysBetween,
-  kpi,
-  peakPoint,
-  shortDate,
+  audienceSegment,
+  eventsKpi,
+  eventWeekSeries,
+  evolutionStats,
+  narratives,
+  reachKpi,
+  sentimentSeries,
   sourceBreakdown,
-  sparkValues,
+  sourcesDelta,
   toneSplit,
-  volumeSeries,
+  weekSeries,
+  type WeekPoint,
 } from '../news/series'
-import { Sparkline } from './Sparkline'
 
-/** Mirrors the .item-viz-* padding in App.css. */
-const PAD_X = 14
-const HEADER_H = 34
-const PAD_BOTTOM = 14
+type Variant = 'default' | 'horizontal' | 'detail'
+
+/** Card padding; charts derive their box from item.w/h minus these. */
+const PAD = 16
+const LABEL_H = 26
+
+const LABELS: Partial<Record<VizMetric, string>> = {
+  events: 'Eventos publicados',
+  reach: 'Alcance estimado',
+  sources: 'Fontes ativas',
+  sentiment: 'Análise de sentimentos',
+  evolution: 'Evolução de art. e ev.',
+  coverage: 'Cobertura por fonte',
+  narratives: 'Principais narrativas',
+}
+
+const CATEGORY_PT: Record<EventCategory, string> = {
+  World: 'Mundo',
+  Business: 'Economia',
+  Tech: 'Tecnologia',
+  Science: 'Ciência',
+  Climate: 'Clima',
+  Sport: 'Desporto',
+  Culture: 'Cultura',
+}
 
 export function VizBody({ item }: { item: VizItem }) {
   const event = findEvent(item.eventId)
   if (!event) {
-    return <div className="item-viz-missing">Topic unavailable</div>
+    return <div className="item-viz-missing">Tópico indisponível</div>
   }
-
-  if (item.kind === 'header') return <HeaderBody item={item} event={event} />
-  if (item.kind === 'stat') return <StatBody item={item} event={event} />
-
-  const slotW = Math.max(item.w - PAD_X * 2, 40)
-  const slotH = Math.max(item.h - HEADER_H - PAD_BOTTOM, 32)
-
-  return (
-    <div className="item-viz-body">
-      <div className="item-viz-header">
-        <span className="item-viz-title">{item.title}</span>
-        <span className="item-viz-meta">{metaFor(item, event)}</span>
-      </div>
-      <div className="item-viz-slot">
-        {renderSlot(item, event, slotW, slotH)}
-      </div>
-    </div>
-  )
-}
-
-function renderSlot(item: VizItem, event: NewsEvent, w: number, h: number) {
   switch (item.kind) {
-    case 'line':
-    case 'area':
-      return <TrendChart event={event} w={w} h={h} filled={item.kind === 'area'} />
-    case 'bar':
-      return <SourceBars event={event} h={h} />
-    case 'donut':
-      return <AngleDonut event={event} w={w} h={h} />
-    case 'headlines':
-      return <HeadlineList event={event} h={h} />
+    case 'kpi':
+      return <KpiBody item={item} event={event} />
+    case 'sentiment':
+      return <SentimentBody item={item} event={event} />
+    case 'evolution':
+      return <EvolutionBody item={item} event={event} />
+    case 'coverage':
+      return <CoverageBody item={item} event={event} />
+    case 'narratives':
+      return <NarrativesBody item={item} event={event} />
     default:
       return null
   }
 }
 
-function metaFor(item: VizItem, event: NewsEvent): string {
-  switch (item.kind) {
-    case 'line':
-    case 'area':
-      return `${event.windowDays} days`
-    case 'bar':
-      return `${event.sourceCount.toLocaleString()} outlets`
-    case 'donut':
-      return `${event.angles.length} threads`
-    case 'headlines': {
-      const slotH = Math.max(item.h - HEADER_H - PAD_BOTTOM, 32)
-      const shown = Math.min(
-        event.headlines.length,
-        Math.max(Math.floor(slotH / HEADLINE_ROW_H), 1),
-      )
-      return `${shown} of ${event.articleCount.toLocaleString()}`
-    }
-    default:
-      return ''
-  }
-}
-
-/* —— header —— */
-
-function HeaderBody({ item, event }: { item: VizItem; event: NewsEvent }) {
-  const last = event.headlines[event.headlines.length - 1]
-  const range = `${shortDate(event.startedAt)} – ${shortDate(last?.date ?? event.startedAt)}`
+function shell(item: VizItem, variant: Variant, children: ReactNode, tag?: string) {
   return (
-    <div className="item-viz-body item-viz-headerbody">
-      <span className="item-viz-eyebrow">{event.category}</span>
-      <span className="item-viz-headline">{item.title}</span>
-      <span className="item-viz-summary">{event.summary}</span>
-      <div className="item-viz-chips">
-        <span className="item-viz-chip">{event.region}</span>
-        <span className="item-viz-chip">{range}</span>
-        <span className="item-viz-chip">{event.sourceCount.toLocaleString()} outlets</span>
+    <div className={`viz-card viz-${item.kind} is-${variant}`}>
+      <div className="viz-label-row">
+        <span className="viz-label">{LABELS[item.metric] ?? item.title}</span>
+        {tag && <span className="viz-tag">{tag}</span>}
       </div>
+      {children}
     </div>
   )
 }
 
-/* —— stat —— */
-
-function StatBody({ item, event }: { item: VizItem; event: NewsEvent }) {
-  const stat = kpi(event, item.metric)
-  const showTone = item.metric === 'tone'
+function Delta({ value, suffix }: { value: number; suffix?: string }) {
+  const down = value < 0
   return (
-    <div className="item-viz-body item-viz-statbody">
-      <span className="item-viz-statlabel">{item.title}</span>
-      <span className="item-viz-statvalue">{stat.value}</span>
-      <div className="item-viz-statfoot">
-        <span className="item-viz-statcaption">{stat.caption}</span>
-        {stat.delta !== null && (
-          <span className={`item-viz-delta${stat.delta < 0 ? ' is-down' : ''}`}>
-            {stat.delta < 0 ? '▾' : '▴'} {Math.abs(stat.delta).toFixed(1)}%
+    <span className={`viz-delta${down ? ' is-down' : ''}`}>
+      {down ? '▼' : '▲'} {down ? `−${Math.abs(value)}` : `+${value}`}
+      {suffix ? ` ${suffix}` : ''}
+    </span>
+  )
+}
+
+/* —— kpi (Widgets 1–3: eventos, alcance, fontes) —— */
+
+function KpiBody({ item, event }: { item: VizItem; event: NewsEvent }) {
+  const aspect = item.w / item.h
+  const horizontal = aspect >= 2.1 && item.w >= 360
+  const roomy = !horizontal && item.h >= 170
+
+  if (item.metric === 'events') {
+    const stat = eventsKpi(event)
+    return shell(
+      item,
+      horizontal ? 'horizontal' : roomy ? 'detail' : 'default',
+      <div className="viz-kpi-row">
+        <div className="viz-kpi-main">
+          <span className="viz-number">
+            {stat.events}
+            <Delta value={stat.deltaEvents} />
           </span>
-        )}
-      </div>
-      {showTone ? (
-        <ToneBar event={event} />
-      ) : (
-        <Sparkline
-          className="item-viz-spark"
-          values={sparkValues(event, 14)}
-          width={64}
-          height={16}
-        />
-      )}
-    </div>
-  )
-}
-
-function ToneBar({ event }: { event: NewsEvent }) {
-  const tone = toneSplit(event)
-  return (
-    <div className="item-viz-tonebar">
-      {tone.map((slice, i) => (
-        <span
-          key={slice.label}
-          className="item-viz-toneseg"
-          style={{ flexGrow: slice.value, opacity: 1 - i * 0.3 }}
-          title={`${slice.label} ${Math.round(slice.value * 100)}%`}
-        />
-      ))}
-    </div>
-  )
-}
-
-/* —— trend —— */
-
-function TrendChart({
-  event,
-  w,
-  h,
-  filled,
-}: {
-  event: NewsEvent
-  w: number
-  h: number
-  filled: boolean
-}) {
-  const series = volumeSeries(event)
-  const axisH = 14
-  const chartH = Math.max(h - axisH, 20)
-  const max = Math.max(...series.map((p) => p.value))
-  const stepX = series.length > 1 ? w / (series.length - 1) : w
-  const points = series.map((p, i) => ({
-    x: i * stepX,
-    y: chartH - (p.value / max) * (chartH - 6) - 2,
-    value: p.value,
-  }))
-  const line = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${r2(p.x)} ${r2(p.y)}`).join(' ')
-  const peak = peakPoint(event)
-  const peakIndex = series.findIndex((p) => p.day === peak.day)
-  const peakPt = points[peakIndex] ?? points[0]
-
-  return (
-    <div className="item-viz-chart">
-      <svg viewBox={`0 0 ${w} ${chartH}`} width={w} height={chartH} aria-hidden="true">
-        {[0.25, 0.5, 0.75].map((f) => (
-          <line
-            key={f}
-            x1={0}
-            x2={w}
-            y1={r2(chartH * f)}
-            y2={r2(chartH * f)}
-            stroke="var(--surface-border)"
-            strokeWidth={1}
-          />
-        ))}
-        {filled && (
-          <path
-            d={`${line} L ${r2(w)} ${chartH} L 0 ${chartH} Z`}
-            fill="var(--accent)"
-            opacity={0.14}
-          />
-        )}
-        <path
-          d={line}
-          fill="none"
-          stroke="var(--accent)"
-          strokeWidth={2}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <circle cx={r2(peakPt.x)} cy={r2(peakPt.y)} r={3} fill="var(--accent)" />
-      </svg>
-      <div className="item-viz-axis">
-        <span>{shortDate(series[0].day)}</span>
-        <span className="item-viz-axis-peak">
-          peak {shortDate(peak.day)} · {peak.value.toLocaleString()}
-        </span>
-        <span>{shortDate(series[series.length - 1].day)}</span>
-      </div>
-    </div>
-  )
-}
-
-/* —— bars —— */
-
-function SourceBars({ event, h }: { event: NewsEvent; h: number }) {
-  const rows = sourceBreakdown(event)
-  const visible = rows.slice(0, Math.max(Math.floor(h / 26), 2))
-  const max = visible[0]?.value ?? 1
-  return (
-    <div className="item-viz-bars">
-      {visible.map((row) => (
-        <div key={row.label} className="item-viz-bar">
-          <span className="item-viz-bar-label">{row.label}</span>
-          <span className="item-viz-bar-track">
-            <span
-              className="item-viz-bar-fill"
-              style={{ width: `${Math.max((row.value / max) * 100, 3)}%` }}
-            />
-          </span>
-          <span className="item-viz-bar-value">{row.value.toLocaleString()}</span>
+          {!horizontal && roomy && <p className="viz-detail">{event.summary}</p>}
         </div>
-      ))}
-    </div>
+        {horizontal && (
+          <div className="viz-kpi-side">
+            <span className="viz-side-plain">{stat.articles24h} artigos totais</span>
+            <span className="viz-side-delta">▲ +{stat.deltaEvents} eventos</span>
+            <span className="viz-side-delta">▲ +{stat.deltaArticles} artigos</span>
+          </div>
+        )}
+      </div>,
+      horizontal ? '24h' : undefined,
+    )
+  }
+
+  if (item.metric === 'reach') {
+    const stat = reachKpi(event)
+    return shell(
+      item,
+      horizontal ? 'horizontal' : roomy ? 'detail' : 'default',
+      <div className="viz-kpi-row">
+        <div className="viz-kpi-main">
+          <span className="viz-number">
+            {stat.value}
+            <Delta value={stat.delta} />
+          </span>
+          <span className="viz-segment">{audienceSegment(event)} ⌄</span>
+          {!horizontal && roomy && <p className="viz-detail">{event.summary}</p>}
+        </div>
+        {horizontal && <MiniColumns item={item} points={weekSeries(event)} />}
+      </div>,
+    )
+  }
+
+  // sources — always the plain figure, per the Preview's Padrão card
+  const delta = sourcesDelta(event)
+  return shell(
+    item,
+    horizontal ? 'horizontal' : 'default',
+    <div className="viz-kpi-row">
+      <div className="viz-kpi-main">
+        <span className="viz-number">
+          {event.sourceCount.toLocaleString()}
+          <Delta value={delta} />
+        </span>
+      </div>
+      {horizontal && <MiniColumns item={item} points={weekSeries(event)} />}
+    </div>,
   )
 }
 
-/* —— donut —— */
+/* —— sentiment (Widget 5) —— */
 
-function AngleDonut({ event, w, h }: { event: NewsEvent; w: number; h: number }) {
-  const slices = angleSplit(event)
-  const showLegend = w > 230
-  const size = Math.min(showLegend ? w * 0.46 : w, h)
-  const stroke = Math.max(size * 0.17, 9)
-  const radius = (size - stroke) / 2
-  const circumference = 2 * Math.PI * radius
-  const center = size / 2
-  const top = slices[0]
+function SentimentBody({ item, event }: { item: VizItem; event: NewsEvent }) {
+  const horizontal = item.w / item.h >= 1.9 && item.w >= 420
+  const [pos, neu, neg] = toneSplit(event)
+  const pct = (v: number) => `${Math.round(v * 100)}%`
+  return shell(
+    item,
+    horizontal ? 'horizontal' : 'default',
+    <div className="viz-kpi-row">
+      <div className="viz-kpi-main">
+        <span className="viz-number viz-number-sentiment">{pct(pos.value)} Positivo</span>
+        <div className="viz-tone-rows">
+          <span>
+            <em>{pct(neu.value)}</em> Neutro
+          </span>
+          <span>
+            <em>{pct(neg.value)}</em> Negativo
+          </span>
+        </div>
+      </div>
+      {horizontal && <SentimentColumns item={item} event={event} />}
+    </div>,
+  )
+}
 
-  let offset = 0
-  return (
-    <div className="item-viz-donut">
-      <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} aria-hidden="true">
-        <g transform={`rotate(-90 ${r2(center)} ${r2(center)})`}>
-          {slices.map((slice, i) => {
-            const dash = slice.value * circumference
-            const el = (
-              <circle
-                key={slice.label}
-                cx={r2(center)}
-                cy={r2(center)}
-                r={r2(radius)}
-                fill="none"
-                stroke="var(--accent)"
-                strokeOpacity={1 - i * 0.24}
-                strokeWidth={r2(stroke)}
-                strokeDasharray={`${r2(dash)} ${r2(circumference)}`}
-                strokeDashoffset={r2(-offset)}
-              />
-            )
-            offset += dash
-            return el
-          })}
-        </g>
-        <text
-          x={r2(center)}
-          y={r2(center)}
-          textAnchor="middle"
-          dominantBaseline="central"
-          className="item-viz-donut-value"
-        >
-          {Math.round(top.value * 100)}%
-        </text>
-      </svg>
-      {showLegend && (
-        <ul className="item-viz-legend">
-          {slices.map((slice, i) => (
-            <li key={slice.label}>
-              <span className="item-viz-swatch" style={{ opacity: 1 - i * 0.24 }} />
-              <span className="item-viz-legend-name">{slice.label}</span>
-              <span className="item-viz-legend-value">{Math.round(slice.value * 100)}%</span>
-            </li>
-          ))}
-        </ul>
+/* —— evolution (Widget 6) —— */
+
+function EvolutionBody({ item, event }: { item: VizItem; event: NewsEvent }) {
+  const horizontal = item.w / item.h >= 2.2 && item.w >= 460
+  const stats = evolutionStats(event)
+  return shell(
+    item,
+    horizontal ? 'horizontal' : 'default',
+    <div className="viz-kpi-row">
+      <EvolutionColumns item={item} event={event} wide={horizontal} />
+      {horizontal && (
+        <div className="viz-kpi-side viz-evolution-side">
+          <span className="viz-side-plain">Média</span>
+          <span className="viz-side-strong">{stats.perEvent} artigos / evento</span>
+          <span className="viz-side-plain">{stats.articles.toLocaleString()} artigos</span>
+          <span className="viz-side-plain">{stats.events} eventos</span>
+        </div>
       )}
+    </div>,
+  )
+}
+
+/* —— coverage (Widget 7) —— */
+
+const COVERAGE_ROW_H = 30
+const COVERAGE_FIRST_H = 54
+
+function CoverageBody({ item, event }: { item: VizItem; event: NewsEvent }) {
+  const rows = sourceBreakdown(event)
+  const total = rows.reduce((a, r) => a + r.value, 0)
+  const dayTotal = eventsKpi(event).articles24h
+  const innerH = item.h - PAD * 2 - LABEL_H
+  const count = Math.min(
+    rows.length,
+    Math.max(Math.floor((innerH - COVERAGE_FIRST_H) / COVERAGE_ROW_H) + 1, 2),
+  )
+  const art = (v: number) => Math.max(Math.round((v / total) * dayTotal), 1)
+  return shell(
+    item,
+    'default',
+    <ul className="viz-coverage">
+      {rows.slice(0, count).map((row, i) => (
+        <li key={row.label} className={i === 0 ? 'is-lead' : undefined}>
+          <span className="viz-coverage-name">{row.label}</span>
+          <span className="viz-coverage-count">{art(row.value)} art.</span>
+        </li>
+      ))}
+    </ul>,
+  )
+}
+
+/* —— narratives (Widget 8) —— */
+
+const NARRATIVE_ROW_H = 76
+
+function NarrativesBody({ item, event }: { item: VizItem; event: NewsEvent }) {
+  const rows = narratives(event)
+  const card = item.w / item.h < 1.2
+  const tag = CATEGORY_PT[event.category]
+
+  if (card) {
+    const row = rows[0]
+    return shell(
+      item,
+      'default',
+      <div className="viz-narrative-card">
+        <img src={narrativeImage(event.category, row.imageIndex)} alt="" loading="lazy" />
+        <div className="viz-narrative-meta">
+          <span className="viz-narrative-tag">{tag}</span>
+          <span className="viz-narrative-counts">
+            {row.articles} artigos · {row.fontes} fontes
+          </span>
+        </div>
+        <span className="viz-narrative-title">{row.title}</span>
+        <p className="viz-narrative-summary">{row.summary}</p>
+      </div>,
+    )
+  }
+
+  const innerH = item.h - PAD * 2 - LABEL_H
+  const count = Math.min(rows.length, Math.max(Math.floor(innerH / NARRATIVE_ROW_H), 1))
+  return shell(
+    item,
+    'horizontal',
+    <ul className="viz-narratives">
+      {rows.slice(0, count).map((row, i) => (
+        <li key={row.title}>
+          <img
+            src={narrativeImage(event.category, row.imageIndex + i)}
+            alt=""
+            loading="lazy"
+          />
+          <div className="viz-narrative-text">
+            <span className="viz-narrative-tag">{tag}</span>
+            <span className="viz-narrative-title">{row.title}</span>
+            <p className="viz-narrative-summary">{row.summary}</p>
+            <span className="viz-narrative-counts">
+              {row.articles} artigos&ensp;·&ensp;{row.fontes} fontes
+            </span>
+          </div>
+        </li>
+      ))}
+    </ul>,
+  )
+}
+
+/* —— chart primitives —— */
+
+/** Gray weekday columns, "hoje" in white; sparse labels from the end. */
+function MiniColumns({ item, points }: { item: VizItem; points: WeekPoint[] }) {
+  const w = Math.min(Math.max(item.w * 0.42, 120), 220)
+  const h = Math.max(item.h - PAD * 2 - LABEL_H - 14, 40)
+  const max = Math.max(...points.map((p) => p.value))
+  const gap = 6
+  const barW = (w - gap * (points.length - 1)) / points.length
+  return (
+    <div className="viz-minichart" style={{ width: w }}>
+      <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h} aria-hidden="true">
+        {points.map((p, i) => {
+          const bh = Math.max((p.value / max) * (h - 4), 3)
+          return (
+            <rect
+              key={i}
+              x={r2(i * (barW + gap))}
+              y={r2(h - bh)}
+              width={r2(barW)}
+              height={r2(bh)}
+              rx={1.5}
+              fill={p.today ? 'var(--chart-fg)' : 'var(--chart-dim)'}
+            />
+          )
+        })}
+      </svg>
+      <div className="viz-minichart-axis">
+        {points.map((p, i) => (
+          <span key={i} style={{ width: barW + (i < points.length - 1 ? gap : 0) }}>
+            {(points.length - 1 - i) % 2 === 0 ? p.label : ''}
+          </span>
+        ))}
+      </div>
     </div>
   )
 }
 
-/* —— headlines —— */
-
-/** Tallest a row gets: two clamped title lines, the meta line, and padding. */
-const HEADLINE_ROW_H = 50
-
-function HeadlineList({ event, h }: { event: NewsEvent; h: number }) {
-  const visible = event.headlines.slice(0, Math.max(Math.floor(h / HEADLINE_ROW_H), 1))
+/** Stacked article (gray) over event (white) columns for the evolution card. */
+function EvolutionColumns({
+  item,
+  event,
+  wide,
+}: {
+  item: VizItem
+  event: NewsEvent
+  wide: boolean
+}) {
+  const arts = weekSeries(event)
+  const evs = eventWeekSeries(event)
+  const w = Math.max(wide ? item.w * 0.48 : item.w - PAD * 2, 100)
+  const h = Math.max(item.h - PAD * 2 - LABEL_H - 22, 40)
+  const max = Math.max(...arts.map((p) => p.value))
+  const evMax = Math.max(...evs.map((p) => p.value))
+  const gap = 8
+  const barW = (w - gap * (arts.length - 1)) / arts.length
   return (
-    <ul className="item-viz-headlines">
-      {visible.map((headline) => {
-        const day = daysBetween(event.startedAt, headline.date)
-        return (
-          <li key={headline.title}>
-            <span className="item-viz-headline-title">{headline.title}</span>
-            <span className="item-viz-headline-meta">
-              {headline.source} · {day === 0 ? 'day one' : `day ${day + 1}`}
-            </span>
-          </li>
-        )
-      })}
-    </ul>
+    <div className="viz-minichart viz-evolution-chart" style={{ width: w }}>
+      <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h} aria-hidden="true">
+        {arts.map((p, i) => {
+          const artH = Math.max((p.value / max) * (h - 4), 4)
+          const evH = Math.max((evs[i].value / evMax) * artH * 0.42, 2)
+          const x = r2(i * (barW + gap))
+          return (
+            <g key={i}>
+              <rect
+                x={x}
+                y={r2(h - artH)}
+                width={r2(barW)}
+                height={r2(artH - evH - 1)}
+                rx={1.5}
+                fill={p.today ? 'var(--chart-mid)' : 'var(--chart-dim)'}
+              />
+              <rect
+                x={x}
+                y={r2(h - evH)}
+                width={r2(barW)}
+                height={r2(evH)}
+                rx={1.5}
+                fill="var(--chart-fg)"
+              />
+            </g>
+          )
+        })}
+      </svg>
+      <div className="viz-minichart-axis">
+        {arts.map((p, i) => (
+          <span key={i} style={{ width: barW + (i < arts.length - 1 ? gap : 0) }}>
+            {(arts.length - 1 - i) % 2 === 0 ? p.label : ''}
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/** Green/gray/red stacked daily sentiment columns. */
+function SentimentColumns({ item, event }: { item: VizItem; event: NewsEvent }) {
+  const days = sentimentSeries(event)
+  const w = Math.min(Math.max(item.w * 0.42, 140), 260)
+  const h = Math.max(item.h - PAD * 2 - LABEL_H - 14, 40)
+  const gap = 7
+  const barW = (w - gap * (days.length - 1)) / days.length
+  const seg = 1.5
+  return (
+    <div className="viz-minichart" style={{ width: w }}>
+      <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h} aria-hidden="true">
+        {days.map((d, i) => {
+          const x = r2(i * (barW + gap))
+          const posH = d.positive * (h - seg * 2)
+          const neuH = d.neutral * (h - seg * 2)
+          const negH = d.negative * (h - seg * 2)
+          return (
+            <g key={i}>
+              <rect x={x} y={0} width={r2(barW)} height={r2(posH)} rx={1.5} fill="var(--pos)" />
+              <rect
+                x={x}
+                y={r2(posH + seg)}
+                width={r2(barW)}
+                height={r2(neuH)}
+                rx={1.5}
+                fill="var(--chart-dim)"
+              />
+              <rect
+                x={x}
+                y={r2(posH + seg + neuH + seg)}
+                width={r2(barW)}
+                height={r2(negH)}
+                rx={1.5}
+                fill="var(--neg)"
+              />
+            </g>
+          )
+        })}
+      </svg>
+      <div className="viz-minichart-axis">
+        {days.map((d, i) => (
+          <span key={i} style={{ width: barW + (i < days.length - 1 ? gap : 0) }}>
+            {(days.length - 1 - i) % 2 === 0 ? d.label : ''}
+          </span>
+        ))}
+      </div>
+    </div>
   )
 }
 

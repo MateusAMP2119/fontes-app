@@ -196,3 +196,170 @@ export function sparkValues(ev: NewsEvent, count = 16): number[] {
     return Array.from({ length: count }, (_, i) => series[Math.floor(i * step)].value)
   })
 }
+
+/* —— Figma widget data ————————————————————————————————————————————————— */
+
+/** "14 m", "980 k", "312" — compact pt-style figure with a spaced unit. */
+export function formatCompact(n: number): string {
+  if (n >= 1_000_000) {
+    const m = n / 1_000_000
+    return `${m >= 10 ? Math.round(m) : Math.round(m * 10) / 10} m`
+  }
+  if (n >= 1_000) return `${Math.round(n / 1_000)} k`
+  return String(n)
+}
+
+export type EventsKpi = {
+  /** Published events over the window — the big number. */
+  events: number
+  /** New events in the last 24h — the headline delta. */
+  deltaEvents: number
+  /** Articles in the last 24h — "189 artigos totais". */
+  articles24h: number
+  deltaArticles: number
+}
+
+/** "EVENTOS PUBLICADOS" — event counts derived from the article volume. */
+export function eventsKpi(ev: NewsEvent): EventsKpi {
+  return memo(`${ev.id}:eventsKpi`, () => {
+    const rnd = rngFor(ev.id, 'eventsKpi')
+    const perEvent = 8 + rnd() * 7
+    const events = Math.max(Math.round(ev.articleCount / (perEvent * 10)), 3)
+    const deltaEvents = Math.max(Math.round(events * (0.2 + rnd() * 0.5)), 1)
+    const series = volumeSeries(ev)
+    const articles24h = series[series.length - 1].value
+    const deltaArticles = Math.max(Math.round(articles24h * (0.25 + rnd() * 0.4)), 1)
+    return { events, deltaEvents, articles24h, deltaArticles }
+  })
+}
+
+export type ReachKpi = { value: string; delta: number }
+
+/** "ALCANCE ESTIMADO" — audience reach, articles × seeded multiplier. */
+export function reachKpi(ev: NewsEvent): ReachKpi {
+  return memo(`${ev.id}:reach`, () => {
+    const rnd = rngFor(ev.id, 'reach')
+    const perArticle = 2000 + rnd() * 7000
+    const value = formatCompact(Math.round(ev.articleCount * perArticle))
+    const delta = Math.max(Math.round(ev.articleCount * (0.2 + rnd() * 0.6)), 40)
+    return { value, delta }
+  })
+}
+
+/** "FONTES ATIVAS" delta — new outlets picked up over the last day. */
+export function sourcesDelta(ev: NewsEvent): number {
+  return memo(`${ev.id}:sourcesDelta`, () => {
+    const rnd = rngFor(ev.id, 'sourcesDelta')
+    return Math.max(Math.round(ev.sourceCount * (0.1 + rnd() * 0.5)), 1)
+  })
+}
+
+const SEGMENTS: Record<string, string[]> = {
+  World: ['Leitores internacionais', 'Adultos 25–44', 'Grande Lisboa'],
+  Business: ['Executivos e gestão', 'Investidores particulares', 'PMEs'],
+  Tech: ['Jovens em Fintech', 'Early adopters', 'Profissionais de TI'],
+  Science: ['Comunidade académica', 'Adultos 25–44', 'Professores'],
+  Climate: ['Jovens dos 18 aos 25', 'Ativistas locais', 'Área de Lisboa'],
+  Sport: ['Adeptos 18–34', 'Público desportivo', 'Norte do país'],
+  Culture: ['Público urbano', 'Estudantes', 'Leitores de fim de semana'],
+}
+
+/** The "Jovens em Fintech" sublabel under the reach figure. */
+export function audienceSegment(ev: NewsEvent): string {
+  return memo(`${ev.id}:segment`, () => {
+    const rnd = rngFor(ev.id, 'segment')
+    const pool = SEGMENTS[ev.category] ?? SEGMENTS.World
+    return pool[Math.floor(rnd() * pool.length)]
+  })
+}
+
+const WEEKDAYS_PT = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
+
+export type WeekPoint = { label: string; value: number; today: boolean }
+
+/** Last seven days of volume, weekday-labelled, final bucket "hoje". */
+export function weekSeries(ev: NewsEvent): WeekPoint[] {
+  return memo(`${ev.id}:week`, () => {
+    const series = volumeSeries(ev)
+    const tail = series.slice(-7)
+    return tail.map((p, i) => {
+      const [y, m, d] = p.day.split('-').map(Number)
+      const weekday = new Date(Date.UTC(y, m - 1, d)).getUTCDay()
+      const today = i === tail.length - 1
+      return { label: today ? 'hoje' : WEEKDAYS_PT[weekday], value: p.value, today }
+    })
+  })
+}
+
+/** Events-per-day companion to weekSeries; sums drive the side stats. */
+export function eventWeekSeries(ev: NewsEvent): WeekPoint[] {
+  return memo(`${ev.id}:eventWeek`, () => {
+    const rnd = rngFor(ev.id, 'eventWeek')
+    return weekSeries(ev).map((p) => ({
+      ...p,
+      value: Math.max(Math.round(p.value / (8 + rnd() * 7)), 1),
+    }))
+  })
+}
+
+export type EvolutionStats = { articles: number; events: number; perEvent: number }
+
+/** Side figures for the wide evolution card, computed from the same series. */
+export function evolutionStats(ev: NewsEvent): EvolutionStats {
+  return memo(`${ev.id}:evolutionStats`, () => {
+    const articles = weekSeries(ev).reduce((a, p) => a + p.value, 0)
+    const events = eventWeekSeries(ev).reduce((a, p) => a + p.value, 0)
+    return { articles, events, perEvent: Math.max(Math.round(articles / events), 1) }
+  })
+}
+
+export type SentimentDay = { label: string; positive: number; neutral: number; negative: number }
+
+/** Daily positive/neutral/negative shares, jittered around toneSplit. */
+export function sentimentSeries(ev: NewsEvent): SentimentDay[] {
+  return memo(`${ev.id}:sentimentWeek`, () => {
+    const rnd = rngFor(ev.id, 'sentimentWeek')
+    const [pos, neu, neg] = toneSplit(ev)
+    return weekSeries(ev).map((p) => {
+      const raw = [pos.value, neu.value, neg.value].map((v) =>
+        Math.max(v + (rnd() - 0.5) * 0.18, 0.04),
+      )
+      const sum = raw.reduce((a, b) => a + b, 0)
+      return {
+        label: p.label,
+        positive: raw[0] / sum,
+        neutral: raw[1] / sum,
+        negative: raw[2] / sum,
+      }
+    })
+  })
+}
+
+export type Narrative = {
+  title: string
+  source: string
+  summary: string
+  articles: number
+  fontes: number
+  /** Index into the category's bundled photo pool. */
+  imageIndex: number
+}
+
+/** Rows for the narratives widget — fixture headlines plus seeded counts. */
+export function narratives(ev: NewsEvent): Narrative[] {
+  return memo(`${ev.id}:narratives`, () => {
+    const rnd = rngFor(ev.id, 'narratives')
+    return ev.headlines.map((headline, i) => {
+      const angle = ev.angles[i % ev.angles.length]
+      const source = ev.sources[Math.floor(rnd() * ev.sources.length)]
+      return {
+        title: headline.title,
+        source: headline.source,
+        summary: `Cobertura centrada em ${angle.toLowerCase()}, com ${source} a liderar o volume de artigos.`,
+        articles: 3 + Math.floor(rnd() * 16),
+        fontes: 2 + Math.floor(rnd() * 5),
+        imageIndex: Math.floor(rnd() * 4),
+      }
+    })
+  })
+}

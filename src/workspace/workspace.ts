@@ -78,18 +78,54 @@ function isWorkspace(value: unknown): value is Workspace {
 
 const KNOWN_TYPES = new Set<string>(['text', 'sticky', 'note', 'table', 'viz', 'ink'])
 
+const KNOWN_VIZ_KINDS = new Set<string>(['kpi', 'sentiment', 'evolution', 'coverage', 'narratives'])
+
+/** Pre-redesign viz kinds (and stat metrics) mapped onto the new widget set. */
+const VIZ_MIGRATIONS: Record<string, { kind: string; metric: string } | null> = {
+  'stat:articles': { kind: 'kpi', metric: 'events' },
+  'stat:outlets': { kind: 'kpi', metric: 'sources' },
+  'stat:peak': { kind: 'kpi', metric: 'reach' },
+  'stat:tone': { kind: 'sentiment', metric: 'sentiment' },
+  line: { kind: 'evolution', metric: 'evolution' },
+  area: { kind: 'evolution', metric: 'evolution' },
+  bar: { kind: 'coverage', metric: 'coverage' },
+  donut: { kind: 'sentiment', metric: 'sentiment' },
+  headlines: { kind: 'narratives', metric: 'narratives' },
+  header: null, // no masthead in the new design
+}
+
+/** Ink saved during the short dark-theme stint — invisible on light. */
+const DARK_STINT_INK = '#f5f5f7'
+const INK_COLOR = '#1d1d1f'
+
+function migrateItem(it: Item): Item | null {
+  if (it.type === 'ink' && it.color === DARK_STINT_INK) {
+    return { ...it, color: INK_COLOR }
+  }
+  if (it.type !== 'viz') return it
+  const kind = it.kind as string
+  if (KNOWN_VIZ_KINDS.has(kind)) return it
+  const target = VIZ_MIGRATIONS[`${kind}:${it.metric}`] ?? VIZ_MIGRATIONS[kind]
+  if (!target) return null
+  return { ...it, kind: target.kind, metric: target.metric } as Item
+}
+
 /**
- * Drop items whose type no longer exists. isWorkspace only validates the
- * envelope, and renderBody's switch has no default, so a stale item (the
- * removed 'chart' type, say) would render as an invisible box that is still
- * draggable and still marquee-selectable.
+ * Drop items whose type no longer exists, and remap widgets persisted under
+ * the pre-redesign kinds. isWorkspace only validates the envelope, and
+ * renderBody's switch has no default, so a stale item (the removed 'chart'
+ * type, say) would render as an invisible box that is still draggable and
+ * still marquee-selectable.
  */
 function sanitize(ws: Workspace): Workspace {
   return {
     ...ws,
     boards: ws.boards.map((b) => ({
       ...b,
-      items: (b.items ?? []).filter((it) => it && KNOWN_TYPES.has(it.type)),
+      items: (b.items ?? [])
+        .filter((it) => it && KNOWN_TYPES.has(it.type))
+        .map(migrateItem)
+        .filter((it): it is Item => it !== null),
     })),
   }
 }

@@ -403,53 +403,13 @@
   background: rgba(62, 142, 247, 0.08);
 }
 
-/* Dashboard widgets — same card material as .item-note, with a header rail */
+/* Dashboard widgets — black Figma cards with an internal uppercase label */
 .item-viz {
-  border-radius: 12px;
-  background: #ffffff;
+  border-radius: 5px;
+  background: var(--surface);
+  border: 1px solid var(--surface-border);
   overflow: hidden;
-  box-shadow:
-    0 12px 28px rgba(0, 0, 0, 0.12),
-    0 2px 6px rgba(0, 0, 0, 0.06);
-}
-
-.item-viz-body {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.item-viz-header {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 9px 14px;
-  border-bottom: 1px solid rgba(50, 90, 160, 0.1);
-}
-
-.item-viz-title {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 12.5px;
-  font-weight: 590;
-  letter-spacing: -0.01em;
-  color: var(--ink);
-}
-
-.item-viz-meta {
-  margin-left: auto;
-  flex: none;
-  font-size: 11px;
-  color: var(--ink-tertiary);
-  font-variant-numeric: tabular-nums;
-}
-
-.item-viz-slot {
-  flex: 1;
-  min-height: 0;
-  padding: 0 14px 14px;
+  box-shadow: var(--surface-shadow);
 }
 
 .item-viz svg {
@@ -464,291 +424,355 @@
   color: var(--ink-tertiary);
 }
 
-/* Header widget — the masthead of a built board */
-.item-viz-headerbody {
-  gap: 5px;
-  padding: 14px 18px;
-}
-
-.item-viz-eyebrow {
-  font-size: 10.5px;
-  font-weight: 640;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-
-.item-viz-headline {
-  font-size: 17px;
-  font-weight: 620;
-  letter-spacing: -0.02em;
-  line-height: 1.24;
-  color: var(--ink);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.item-viz-summary {
-  font-size: 12.5px;
-  line-height: 1.42;
-  color: var(--ink-secondary);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.item-viz-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
-  margin-top: auto;
-  padding-top: 6px;
-}
-
-.item-viz-chip {
-  padding: 3px 8px;
-  border-radius: 6px;
-  background: var(--hover);
-  font-size: 11px;
-  font-weight: 510;
-  color: var(--ink-secondary);
-  white-space: nowrap;
-}
-
-/* Stat widget */
-.item-viz-statbody {
-  position: relative;
-  gap: 2px;
-  padding: 12px 14px;
-  justify-content: center;
-}
-
-.item-viz-statlabel {
-  font-size: 11px;
-  font-weight: 640;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink-tertiary);
-}
-
-.item-viz-statvalue {
-  font-size: 28px;
-  font-weight: 620;
-  letter-spacing: -0.025em;
-  line-height: 1.1;
-  color: var(--ink);
-  font-variant-numeric: tabular-nums;
-}
-
-.item-viz-statfoot {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  font-size: 11.5px;
-  color: var(--ink-tertiary);
-}
-
-.item-viz-delta {
-  font-weight: 590;
-  color: var(--pos);
-  font-variant-numeric: tabular-nums;
-}
-
-.item-viz-delta.is-down {
-  color: var(--neg);
-}
-
-/* Pinned so the readout below never has to make room for it */
-.item-viz-spark,
-.item-viz-tonebar {
-  position: absolute;
-  right: 14px;
-  bottom: 12px;
-  width: 64px;
-}
-
-.item-viz-spark {
-  color: var(--accent);
-  opacity: 0.55;
-}
-
-.item-viz-tonebar {
-  display: flex;
-  gap: 2px;
-  height: 6px;
-}
-
-.item-viz-toneseg {
-  border-radius: 3px;
-  background: var(--accent);
-}
-
-/* Trend chart */
-.item-viz-chart {
+.viz-card {
   display: flex;
   flex-direction: column;
   height: 100%;
+  padding: 16px;
 }
 
-.item-viz-axis {
+.viz-label-row {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  align-items: baseline;
   gap: 8px;
-  height: 14px;
+  min-height: 26px;
+}
+
+.viz-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10.5px;
+  font-weight: 590;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-secondary);
+}
+
+.viz-tag {
+  margin-left: auto;
+  flex: none;
   font-size: 10px;
   color: var(--ink-tertiary);
   font-variant-numeric: tabular-nums;
 }
 
-.item-viz-axis-peak {
-  color: var(--accent);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* KPI cards (eventos / alcance / fontes) and shared main+aside row */
+.viz-kpi-row {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 18px;
 }
 
-/* Source bars — HTML, not SVG: outlet names need to ellipsis */
-.item-viz-bars {
+.viz-kpi-main {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 7px;
-  height: 100%;
+  gap: 4px;
 }
 
-.item-viz-bar {
+.viz-number {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11.5px;
-}
-
-.item-viz-bar-label {
-  flex: 0 0 34%;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--ink-secondary);
-}
-
-.item-viz-bar-track {
-  flex: 1;
-  min-width: 0;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--hover);
-}
-
-.item-viz-bar-fill {
-  display: block;
-  height: 100%;
-  border-radius: 3px;
-  background: var(--accent);
-}
-
-.item-viz-bar-value {
-  flex: none;
-  color: var(--ink-tertiary);
-  font-variant-numeric: tabular-nums;
-}
-
-/* Donut */
-.item-viz-donut {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  height: 100%;
-}
-
-.item-viz-donut-value {
-  font-family: var(--sans);
-  font-size: 16px;
-  font-weight: 620;
-  letter-spacing: -0.02em;
-  fill: var(--ink);
-}
-
-.item-viz-legend {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  list-style: none;
-}
-
-.item-viz-legend li {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-}
-
-.item-viz-swatch {
-  flex: none;
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-  background: var(--accent);
-}
-
-.item-viz-legend-name {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--ink-secondary);
-}
-
-.item-viz-legend-value {
-  flex: none;
-  color: var(--ink-tertiary);
-  font-variant-numeric: tabular-nums;
-}
-
-/* Headline list */
-.item-viz-headlines {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  list-style: none;
-}
-
-/* Rows may grow into spare height but never shrink below their content —
-   the row count is already chosen so every row fits at HEADLINE_ROW_H. */
-.item-viz-headlines li {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 1px;
-  flex: 1 1 auto;
-  padding: 5px 0;
-  border-bottom: 1px solid var(--divider);
-}
-
-.item-viz-headlines li:last-child {
-  border-bottom: none;
-}
-
-.item-viz-headline-title {
-  font-size: 12px;
-  font-weight: 510;
-  line-height: 1.3;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 40px;
+  font-weight: 640;
+  letter-spacing: -0.03em;
+  line-height: 1.04;
   color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.viz-card.is-horizontal .viz-number {
+  font-size: 44px;
+}
+
+.viz-number-sentiment {
+  font-size: 27px;
+  letter-spacing: -0.02em;
+}
+
+.viz-delta {
+  flex: none;
+  font-size: 12px;
+  font-weight: 590;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.viz-delta.is-down {
+  color: var(--neg);
+}
+
+.viz-segment {
+  font-size: 12.5px;
+  color: var(--ink-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.viz-detail {
+  margin-top: 6px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--ink-tertiary);
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
-.item-viz-headline-meta {
+.viz-kpi-side {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.viz-side-plain {
+  color: var(--ink-secondary);
+}
+
+.viz-side-delta {
+  color: var(--ink);
+  font-weight: 560;
+}
+
+.viz-side-strong {
+  font-size: 16px;
+  font-weight: 620;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+/* Sentiment readout rows */
+.viz-tone-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12.5px;
+  color: var(--ink-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.viz-tone-rows em {
+  font-style: normal;
+  display: inline-block;
+  min-width: 38px;
+  color: var(--ink-tertiary);
+}
+
+/* Column chart primitives */
+.viz-minichart {
+  flex: none;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.viz-evolution-chart {
+  align-self: flex-end;
+}
+
+.viz-minichart-axis {
+  display: flex;
+  font-size: 9px;
+  color: var(--ink-tertiary);
+}
+
+.viz-minichart-axis span {
+  flex: none;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.viz-evolution-side {
+  gap: 3px;
+}
+
+/* Coverage — ranked source list */
+.viz-coverage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 0;
+  list-style: none;
+  overflow: hidden;
+}
+
+.viz-coverage li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 0;
+  font-size: 12.5px;
+}
+
+.viz-coverage li.is-lead {
+  padding: 8px 0 12px;
+}
+
+.viz-coverage-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-secondary);
+}
+
+.viz-coverage li.is-lead .viz-coverage-name {
+  font-size: 23px;
+  font-weight: 630;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.viz-coverage-count {
+  margin-left: auto;
+  flex: none;
+  color: var(--ink-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.viz-coverage li.is-lead .viz-coverage-count {
+  font-size: 14px;
+  color: var(--ink);
+}
+
+/* Narratives — news rows / card */
+.viz-narratives {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  overflow: hidden;
+}
+
+.viz-narratives li {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  gap: 14px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--divider);
+}
+
+.viz-narratives li:last-child {
+  border-bottom: none;
+}
+
+.viz-narratives img {
+  flex: none;
+  align-self: center;
+  width: 96px;
+  height: 54px;
+  object-fit: cover;
+  border-radius: 3px;
+  filter: saturate(0.55) contrast(1.05);
+}
+
+.viz-narrative-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+.viz-narrative-tag {
+  font-size: 10.5px;
+  font-weight: 590;
+  color: var(--neg);
+}
+
+.viz-narrative-tag::before {
+  content: '●';
+  font-size: 7px;
+  vertical-align: 2px;
+  margin-right: 5px;
+}
+
+.viz-narrative-title {
+  font-size: 13.5px;
+  font-weight: 620;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* List rows keep one summary line so three rows always fit; the card
+   variant opts back into two below */
+.viz-narrative-summary {
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--ink-tertiary);
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.viz-narrative-card .viz-narrative-summary {
+  -webkit-line-clamp: 2;
+}
+
+.viz-narrative-counts {
+  margin-top: 2px;
   font-size: 10.5px;
   color: var(--ink-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.viz-narrative-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.viz-narrative-card img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 3px;
+  filter: saturate(0.55) contrast(1.05);
+}
+
+.viz-narrative-card .viz-narrative-title {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.viz-narrative-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.viz-narrative-meta .viz-narrative-counts {
+  margin-left: auto;
+  margin-top: 0;
 }
 
 /* Ink strokes */

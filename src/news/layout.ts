@@ -17,6 +17,11 @@ export type Slot = {
   span: number
   /** Row units tall — sets the shelf height. */
   rows: number
+  /**
+   * Spans this shelf and the next: the slot's columns are reserved in the
+   * following shelf and its height covers both shelves plus the gutter.
+   */
+  shelves?: 2
 }
 
 const GRID = {
@@ -41,21 +46,35 @@ export function layout(slots: Slot[], frame: Bounds): (Slot & Bounds)[] {
   const cols = wide ? GRID.wideCols : GRID.narrowCols
   const colW = (innerW - gutter * (cols - 1)) / cols
 
-  // 1 — fill a row of columns, wrap when the next slot will not fit.
+  // 1 — fill a row of columns, wrap when the next slot will not fit. A slot
+  // marked `shelves: 2` reserves its column range in the following shelf.
   type Shelf = { placed: { slot: Slot; col: number }[]; rows: number }
   const shelves: Shelf[] = []
+  let reserved: { from: number; to: number }[] = []
+  let nextReserved: { from: number; to: number }[] = []
   let shelf: Shelf = { placed: [], rows: 0 }
   let col = 0
+  const skipReserved = (c: number, span: number): number => {
+    let at = c
+    for (const r of reserved) {
+      if (at < r.to && at + span > r.from) at = r.to
+    }
+    return at
+  }
   for (const slot of slots) {
     const span = spanFor(slot, wide)
-    if (col + span > cols && shelf.placed.length > 0) {
+    let at = skipReserved(col, span)
+    if (at + span > cols && shelf.placed.length > 0) {
       shelves.push(shelf)
       shelf = { placed: [], rows: 0 }
-      col = 0
+      reserved = nextReserved
+      nextReserved = []
+      at = skipReserved(0, span)
     }
-    shelf.placed.push({ slot, col })
+    shelf.placed.push({ slot, col: at })
     shelf.rows = Math.max(shelf.rows, slot.rows)
-    col += span
+    if (slot.shelves === 2 && wide) nextReserved.push({ from: at, to: at + span })
+    col = at + span
   }
   if (shelf.placed.length > 0) shelves.push(shelf)
 
@@ -64,19 +83,23 @@ export function layout(slots: Slot[], frame: Bounds): (Slot & Bounds)[] {
   const avail = innerH - gutter * (shelves.length - 1)
   const rowH = clamp(avail / totalRows, GRID.minRowH, GRID.maxRowH)
 
-  // 3 — place. Everything in a shelf takes the shelf height, so bottoms align.
+  // 3 — place. Everything in a shelf takes the shelf height, so bottoms
+  // align; a two-shelf slot additionally absorbs the next shelf and gutter.
   const out: (Slot & Bounds)[] = []
   let y = innerY
-  for (const s of shelves) {
+  for (let si = 0; si < shelves.length; si += 1) {
+    const s = shelves[si]
     const h = s.rows * rowH
     for (const { slot, col: c } of s.placed) {
       const span = spanFor(slot, wide)
+      const next = shelves[si + 1]
+      const tall = slot.shelves === 2 && wide && next
       out.push({
         ...slot,
         x: Math.round(innerX + c * (colW + gutter)),
         y: Math.round(y),
         w: Math.round(span * colW + (span - 1) * gutter),
-        h: Math.round(h),
+        h: Math.round(tall ? h + gutter + next.rows * rowH : h),
       })
     }
     y += h + gutter

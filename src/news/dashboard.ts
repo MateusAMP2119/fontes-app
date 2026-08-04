@@ -16,34 +16,32 @@ const COMPACT_BELOW = 560
  * because a chart reads fine at a third of its shelf while the header and
  * stat cards have a floor set by their type sizes.
  */
-export function recipe(event: NewsEvent, frame: Bounds): Slot[] {
-  if (frame.w < COMPACT_BELOW) return compactRecipe(event)
+export function recipe(frame: Bounds): Slot[] {
+  if (frame.w < COMPACT_BELOW) return compactRecipe()
   return [
-    { kind: 'header', metric: 'summary', title: event.title, span: 12, rows: 2 },
-    { kind: 'stat', metric: 'articles', title: 'Articles', span: 3, rows: 1.4 },
-    { kind: 'stat', metric: 'outlets', title: 'Outlets', span: 3, rows: 1.4 },
-    { kind: 'stat', metric: 'peak', title: 'Peak day', span: 3, rows: 1.4 },
-    { kind: 'stat', metric: 'tone', title: 'Tone', span: 3, rows: 1.4 },
-    { kind: 'area', metric: 'volume', title: 'Coverage over time', span: 8, rows: 3 },
-    { kind: 'donut', metric: 'angles', title: 'Story threads', span: 4, rows: 3 },
-    { kind: 'bar', metric: 'sources', title: 'Top outlets', span: 5, rows: 3 },
-    { kind: 'headlines', metric: 'headlines', title: 'Latest headlines', span: 7, rows: 3 },
+    { kind: 'kpi', metric: 'events', title: 'Eventos publicados', span: 4, rows: 1.7 },
+    { kind: 'evolution', metric: 'evolution', title: 'Evolução de art. e ev.', span: 3, rows: 1.7 },
+    { kind: 'kpi', metric: 'reach', title: 'Alcance estimado', span: 3, rows: 1.7 },
+    { kind: 'coverage', metric: 'coverage', title: 'Cobertura por fonte', span: 2, rows: 1.7, shelves: 2 },
+    { kind: 'kpi', metric: 'sources', title: 'Fontes ativas', span: 3, rows: 1.7 },
+    { kind: 'sentiment', metric: 'sentiment', title: 'Análise de sentimentos', span: 7, rows: 1.7 },
+    { kind: 'narratives', metric: 'narratives', title: 'Principais narrativas', span: 8, rows: 3.4 },
   ]
 }
 
-/** Four shelves: the story, two numbers, the shape of it, the reporting. */
-function compactRecipe(event: NewsEvent): Slot[] {
+/** Four shelves: the numbers, the split, the mood, the reporting. */
+function compactRecipe(): Slot[] {
   return [
-    { kind: 'header', metric: 'summary', title: event.title, span: 12, rows: 2.4 },
-    { kind: 'stat', metric: 'articles', title: 'Articles', span: 6, rows: 1.4 },
-    { kind: 'stat', metric: 'outlets', title: 'Outlets', span: 6, rows: 1.4 },
-    { kind: 'area', metric: 'volume', title: 'Coverage over time', span: 12, rows: 3 },
-    { kind: 'headlines', metric: 'headlines', title: 'Latest headlines', span: 12, rows: 2.4 },
+    { kind: 'kpi', metric: 'events', title: 'Eventos publicados', span: 12, rows: 1.6 },
+    { kind: 'kpi', metric: 'reach', title: 'Alcance estimado', span: 6, rows: 1.6 },
+    { kind: 'kpi', metric: 'sources', title: 'Fontes ativas', span: 6, rows: 1.6 },
+    { kind: 'sentiment', metric: 'sentiment', title: 'Análise de sentimentos', span: 12, rows: 1.8 },
+    { kind: 'narratives', metric: 'narratives', title: 'Principais narrativas', span: 12, rows: 2.6 },
   ]
 }
 
 export function buildDashboard(event: NewsEvent, frame: Bounds): VizItem[] {
-  return layout(recipe(event, frame), frame).map(({ x, y, w, h, kind, title, metric }) =>
+  return layout(recipe(frame), frame).map(({ x, y, w, h, kind, title, metric }) =>
     createVizItem({ kind, title, metric, eventId: event.id }, { x, y, w, h }),
   )
 }

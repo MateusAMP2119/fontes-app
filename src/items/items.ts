@@ -34,18 +34,16 @@ export type InkItem = BaseItem & {
   strokeWidth: number
 }
 
-export type VizKind = 'header' | 'stat' | 'line' | 'area' | 'bar' | 'donut' | 'headlines'
+export type VizKind = 'kpi' | 'sentiment' | 'evolution' | 'coverage' | 'narratives'
 
 export type VizMetric =
-  | 'summary'
-  | 'articles'
-  | 'outlets'
-  | 'peak'
-  | 'tone'
-  | 'volume'
-  | 'angles'
+  | 'events'
+  | 'reach'
   | 'sources'
-  | 'headlines'
+  | 'sentiment'
+  | 'evolution'
+  | 'coverage'
+  | 'narratives'
 
 /**
  * A dashboard widget. Holds no data of its own — `eventId` and `metric`
