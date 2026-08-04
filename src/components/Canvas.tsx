@@ -21,6 +21,7 @@ type CanvasProps = {
   onToggleSelect: (id: string) => void
   onSelectMany: (ids: string[]) => void
   onDragBy: (anchorId: string, dx: number, dy: number) => void
+  onDragEnd: (anchorId: string) => void
   onEdit: (id: string | null) => void
   onItemChange: (item: Item) => void
   onStroke: (points: Point[]) => void
@@ -45,6 +46,7 @@ export function Canvas({
   onToggleSelect,
   onSelectMany,
   onDragBy,
+  onDragEnd,
   onEdit,
   onItemChange,
   onStroke,
@@ -185,6 +187,7 @@ export function Canvas({
             onSelectOnly={onSelectOnly}
             onToggleSelect={onToggleSelect}
             onDragBy={onDragBy}
+            onDragEnd={onDragEnd}
             onEdit={onEdit}
             onChange={onItemChange}
           />

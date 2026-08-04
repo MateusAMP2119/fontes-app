@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import type { Point } from './camera/camera'
+import { clamp, type Point } from './camera/camera'
 import { createInkItem, createItem, type InsertableType, type Item } from './items/items'
 import {
   createBoard,
@@ -21,6 +21,11 @@ import { buildDashboard } from './news/dashboard'
 import type { NewsEvent } from './news/events'
 import { measureFrame } from './news/frame'
 import './App.css'
+
+/** Matches the minor grid tile painted on .app. */
+const GRID_SNAP = 24
+/** Breathing room between a settled card and the frame edge. */
+const FRAME_PAD = 8
 
 /** A dashboard mid-flight: computed up front, committed when the ghost lands. */
 type Build = { event: NewsEvent; from: GhostRect; items: Item[] }
@@ -130,6 +135,35 @@ export default function App() {
         return prev.map((it) =>
           group.includes(it.id) ? { ...it, x: it.x + dx, y: it.y + dy } : it,
         )
+      })
+    },
+    [selectedIds, setItems],
+  )
+
+  /**
+   * On drop, snap the dragged items to the background grid and keep them
+   * inside the PC frame. The grid is painted on .app from the window origin,
+   * while items are positioned against .board-content — the rect offset
+   * converts between the two so snapped edges land on painted lines.
+   */
+  const settleItems = useCallback(
+    (anchorId: string) => {
+      const frame = measureFrame(frameRef.current, contentRef.current)
+      const origin = contentRef.current?.getBoundingClientRect()
+      const offX = origin?.left ?? 0
+      const offY = origin?.top ?? 0
+      const snap = (v: number, off: number) =>
+        Math.round((v + off) / GRID_SNAP) * GRID_SNAP - off
+      setItems((prev) => {
+        const group = selectedIds.includes(anchorId) ? selectedIds : [anchorId]
+        return prev.map((it) => {
+          if (!group.includes(it.id)) return it
+          const maxX = Math.max(frame.x + frame.w - FRAME_PAD - it.w, frame.x + FRAME_PAD)
+          const maxY = Math.max(frame.y + frame.h - FRAME_PAD - it.h, frame.y + FRAME_PAD)
+          const x = clamp(snap(it.x, offX), frame.x + FRAME_PAD, maxX)
+          const y = clamp(snap(it.y, offY), frame.y + FRAME_PAD, maxY)
+          return x === it.x && y === it.y ? it : { ...it, x, y }
+        })
       })
     },
     [selectedIds, setItems],
@@ -285,6 +319,7 @@ export default function App() {
               onToggleSelect={toggleSelect}
               onSelectMany={setSelectedIds}
               onDragBy={dragItemsBy}
+              onDragEnd={settleItems}
               onEdit={setEditingId}
               onItemChange={updateItem}
               onStroke={commitStroke}

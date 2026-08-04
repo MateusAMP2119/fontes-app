@@ -16,6 +16,7 @@ type ItemViewProps = {
   onSelectOnly: (id: string) => void
   onToggleSelect: (id: string) => void
   onDragBy: (anchorId: string, dx: number, dy: number) => void
+  onDragEnd: (anchorId: string) => void
   onEdit: (id: string | null) => void
   onChange: (item: Item) => void
 }
@@ -35,6 +36,7 @@ export function ItemView({
   onSelectOnly,
   onToggleSelect,
   onDragBy,
+  onDragEnd,
   onEdit,
   onChange,
 }: ItemViewProps) {
@@ -86,6 +88,10 @@ export function ItemView({
     if (!drag || drag.pointerId !== e.pointerId) return
     dragRef.current = null
     setDragging(false)
+    // Dropped after a real move — let the board snap it into place.
+    if (drag.moved) {
+      onDragEnd(item.id)
+    }
     // Plain click on an already-selected item collapses the group to it.
     if (!drag.moved && !e.shiftKey && selected) {
       onSelectOnly(item.id)
