@@ -85,7 +85,7 @@ function isWorkspace(value: unknown): value is Workspace {
 
 const KNOWN_TYPES = new Set<string>(['text', 'sticky', 'note', 'table', 'viz', 'ink'])
 
-const KNOWN_VIZ_KINDS = new Set<string>(['kpi', 'sentiment', 'evolution', 'coverage', 'narratives'])
+const KNOWN_VIZ_KINDS = new Set<string>(['kpi', 'sentiment', 'evolution', 'coverage', 'entities', 'narratives'])
 
 /** Pre-redesign viz kinds (and stat metrics) mapped onto the new widget set. */
 const VIZ_MIGRATIONS: Record<string, { kind: string; metric: string } | null> = {

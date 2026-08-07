@@ -41,7 +41,7 @@ export type InkItem = BaseItem & {
   strokeWidth: number
 }
 
-export type VizKind = 'kpi' | 'sentiment' | 'evolution' | 'coverage' | 'narratives'
+export type VizKind = 'kpi' | 'sentiment' | 'evolution' | 'coverage' | 'entities' | 'narratives'
 
 export type VizMetric =
   | 'events'
@@ -50,6 +50,7 @@ export type VizMetric =
   | 'sentiment'
   | 'evolution'
   | 'coverage'
+  | 'entities'
   | 'narratives'
 
 /**

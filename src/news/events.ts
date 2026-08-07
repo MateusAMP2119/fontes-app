@@ -56,6 +56,8 @@ export type NewsEvent = {
   headlines: Headline[]
   /** Sub-threads of the story. Drives the donut. */
   angles: string[]
+  /** Actors in the story, most central first. Drives the entities widget. */
+  entities: string[]
   /** Extra search tokens beyond title and summary. */
   keywords: string[]
 }
@@ -93,6 +95,7 @@ export const NEWS_EVENTS: NewsEvent[] = [
       { title: 'Inquiry chair names three engineering firms in opening statement', source: 'Civic Review', date: '2026-06-24' },
     ],
     angles: ['Rescue operation', 'Inspection records', 'Transport funding', 'Legal liability'],
+    entities: ['Transport Ministry', 'Harbour Authority', 'Inquiry Panel', 'Roads Agency', 'Rescue Services', 'Engineering Firms'],
     keywords: ['bridge', 'infrastructure', 'collapse', 'inquiry', 'estuary'],
   },
   {
@@ -116,6 +119,7 @@ export const NEWS_EVENTS: NewsEvent[] = [
       { title: 'Three rival bidders walked away over the debt covenant, sources say', source: 'Signal & Trade', date: '2026-05-21' },
     ],
     angles: ['Antitrust review', 'Fab investment', 'Shareholder response', 'Supply chain'],
+    entities: ['Atlas Silicon', 'Verano Foundry', 'European Commission', 'Dresden Fab', 'Rival Bidders', 'Shareholders'],
     keywords: ['chips', 'semiconductor', 'merger', 'antitrust', 'foundry'],
   },
   {
@@ -138,6 +142,7 @@ export const NEWS_EVENTS: NewsEvent[] = [
       { title: 'Four settlements face relocation studies within the decade', source: 'Meridian Post', date: '2026-07-22' },
     ],
     angles: ['Survey methodology', 'Infrastructure risk', 'Relocation planning'],
+    entities: ['Survey Consortium', 'Pipeline Operators', 'Northern Settlements', 'Infrastructure Agency', 'Climate Institute'],
     keywords: ['permafrost', 'thaw', 'climate', 'arctic', 'survey'],
   },
   {
@@ -161,6 +166,7 @@ export const NEWS_EVENTS: NewsEvent[] = [
       { title: 'Regulators ask for six more months of follow-up data', source: 'Meridian Post', date: '2026-07-11' },
     ],
     angles: ['Trial results', 'Manufacturing', 'Regulatory path', 'Funding'],
+    entities: ['Harrow Consortium', 'Trial Sites', 'Health Regulators', 'Manufacturing Partner', 'Funding Bodies'],
     keywords: ['malaria', 'vaccine', 'trial', 'health', 'efficacy'],
   },
   {
@@ -184,6 +190,7 @@ export const NEWS_EVENTS: NewsEvent[] = [
       { title: 'Repair window slips to September, operators concede', source: 'The Ledger', date: '2026-07-31' },
     ],
     angles: ['Repair effort', 'Capacity impact', 'Investigation', 'Redundancy plans'],
+    entities: ['Cable Operators', 'Survey Crews', 'Transit Carriers', 'Investigation Team', 'Coastal States'],
     keywords: ['cable', 'subsea', 'baltic', 'outage', 'infrastructure'],
   },
   {
@@ -207,6 +214,7 @@ export const NEWS_EVENTS: NewsEvent[] = [
       { title: 'Regulator publishes the first conformity template', source: 'The Ledger', date: '2026-07-18' },
     ],
     angles: ['Compliance cost', 'Registry rules', 'Industry response', 'Enforcement'],
+    entities: ['Meridian Regulator', 'Model Providers', 'Smaller Labs', 'Compliance Auditors', 'Industry Groups'],
     keywords: ['ai', 'regulation', 'compliance', 'policy', 'models'],
   },
   {
@@ -229,6 +237,7 @@ export const NEWS_EVENTS: NewsEvent[] = [
       { title: 'Video review rules go back to committee in September', source: 'The Ledger', date: '2026-08-03' },
     ],
     angles: ['Match report', 'Video review', 'Referee reaction'],
+    entities: ['Ardsley FC', 'Referees Body', 'Review Panel', 'League Committee', 'Supporters Groups'],
     keywords: ['football', 'cup', 'penalty', 'var', 'final'],
   },
   {
@@ -251,6 +260,7 @@ export const NEWS_EVENTS: NewsEvent[] = [
       { title: 'Valuation formula draws the first legal challenge', source: 'Northwire', date: '2026-07-02' },
     ],
     angles: ['Buyout terms', 'Legal challenges', 'Local response', 'Funding'],
+    entities: ['State Legislature', 'Shoreline Homeowners', 'Valuation Board', 'County Authorities', 'Legal Challengers'],
     keywords: ['coastal', 'retreat', 'flooding', 'buyout', 'sea level'],
   },
   {
@@ -274,6 +284,7 @@ export const NEWS_EVENTS: NewsEvent[] = [
       { title: 'Shares close down 9% as the recall estimate doubles', source: 'The Ledger', date: '2026-07-17' },
     ],
     angles: ['Recall logistics', 'Supplier audit', 'Market reaction', 'Regulatory action'],
+    entities: ['Lumen', 'Cell Supplier', 'Safety Regulator', 'Retail Partners', 'Shareholders'],
     keywords: ['recall', 'battery', 'safety', 'manufacturing', 'defect'],
   },
   {
@@ -296,6 +307,7 @@ export const NEWS_EVENTS: NewsEvent[] = [
       { title: 'Debris-removal contract brought forward by eighteen months', source: 'Northwire', date: '2026-06-08' },
     ],
     angles: ['Fragment tracking', 'Collision avoidance', 'Removal contracts'],
+    entities: ['Tracking Networks', 'Satellite Operators', 'Launch Provider', 'Removal Contractor', 'Space Agency'],
     keywords: ['orbit', 'debris', 'satellite', 'space', 'collision'],
   },
   {
@@ -319,6 +331,7 @@ export const NEWS_EVENTS: NewsEvent[] = [
       { title: 'Emergency transfer agreed with the northern basin', source: 'Continental Health', date: '2026-07-04' },
     ],
     angles: ['Water allocation', 'Agriculture', 'Municipal supply', 'Transfer deals'],
+    entities: ['Basin Authority', 'Rice Growers', 'Municipal Utilities', 'Northern Basin', 'Water Ministry'],
     keywords: ['drought', 'water', 'reservoir', 'agriculture', 'basin'],
   },
   {
@@ -342,6 +355,7 @@ export const NEWS_EVENTS: NewsEvent[] = [
       { title: 'Recount narrows the margin to 388 with a third counted', source: 'The Ledger', date: '2026-07-30' },
     ],
     angles: ['Recount process', 'Legal filings', 'Campaign response', 'Certification'],
+    entities: ['Electoral Commission', 'Campaign Teams', 'Precinct Officials', 'Observers', 'Provincial Court'],
     keywords: ['election', 'recount', 'vote', 'margin', 'precinct'],
   },
   {
@@ -364,6 +378,7 @@ export const NEWS_EVENTS: NewsEvent[] = [
       { title: 'Mediator appointed after the second round collapses', source: 'Civic Review', date: '2026-07-18' },
     ],
     angles: ['Rostering dispute', 'Freight impact', 'Mediation', 'Passenger fallout'],
+    entities: ['Drivers Union', 'Harbourline', 'Freight Shippers', 'Appointed Mediator', 'Port Authorities'],
     keywords: ['strike', 'rail', 'freight', 'union', 'rostering'],
   },
   {
@@ -386,6 +401,7 @@ export const NEWS_EVENTS: NewsEvent[] = [
       { title: 'First disbursements tied to satellite-verified canopy cover', source: 'The Ledger', date: '2026-05-29' },
     ],
     angles: ['Fund structure', 'Verification', 'Local partners'],
+    entities: ['Verdant Fund', 'Basin Partners', 'Satellite Verifiers', 'Institutional Investors', 'Local NGOs'],
     keywords: ['forest', 'restoration', 'fund', 'carbon', 'investment'],
   },
   {
@@ -409,6 +425,7 @@ export const NEWS_EVENTS: NewsEvent[] = [
       { title: 'Two regulators open parallel investigations', source: 'The Ledger', date: '2026-07-08' },
     ],
     angles: ['Intrusion timeline', 'Notification', 'Regulatory action', 'Class actions'],
+    entities: ['Northgate', 'Affected Employers', 'Data Regulators', 'Security Researchers', 'Class Counsel'],
     keywords: ['breach', 'security', 'payroll', 'data', 'intrusion'],
   },
   {
@@ -431,6 +448,7 @@ export const NEWS_EVENTS: NewsEvent[] = [
       { title: 'Range operators warn scheduling is now the binding constraint', source: 'Northwire', date: '2026-06-16' },
     ],
     angles: ['Cadence records', 'Reuse economics', 'Range capacity'],
+    entities: ['Solaris', 'Range Operators', 'Payload Customers', 'Booster Fleet Team', 'Aviation Authority'],
     keywords: ['launch', 'rocket', 'reuse', 'orbital', 'cadence'],
   },
   {
@@ -453,6 +471,7 @@ export const NEWS_EVENTS: NewsEvent[] = [
       { title: 'Three other institutions open talks within a fortnight', source: 'The Ledger', date: '2026-06-12' },
     ],
     angles: ['Restitution terms', 'Provenance research', 'Sector response'],
+    entities: ['Lantern Museum', 'Origin Communities', 'Provenance Researchers', 'Culture Ministry', 'Peer Institutions'],
     keywords: ['museum', 'restitution', 'heritage', 'collection', 'provenance'],
   },
   {
@@ -476,6 +495,7 @@ export const NEWS_EVENTS: NewsEvent[] = [
       { title: 'Ruling cited in two pending cases within days', source: 'Bench Report', date: '2026-08-02' },
     ],
     angles: ['Separation order', 'Appeal path', 'Seller impact', 'Precedent'],
+    entities: ['Archer', 'District Court', 'Marketplace Sellers', 'Logistics Arm', 'Appeals Panel'],
     keywords: ['antitrust', 'ruling', 'marketplace', 'separation', 'court'],
   },
   {
@@ -498,6 +518,7 @@ export const NEWS_EVENTS: NewsEvent[] = [
       { title: 'Community consultation record challenged in court', source: 'Continental Health', date: '2026-06-30' },
     ],
     angles: ['Concession terms', 'Smelter build', 'Community consultation'],
+    entities: ['Copperline', 'Host Government', 'Local Communities', 'Smelter Contractor', 'Regional Court'],
     keywords: ['mining', 'copper', 'concession', 'smelter', 'royalties'],
   },
   {
@@ -521,6 +542,7 @@ export const NEWS_EVENTS: NewsEvent[] = [
       { title: 'Regulator orders an independent review of the restoration plan', source: 'Civic Review', date: '2026-07-14' },
     ],
     angles: ['Fault sequence', 'Heat demand', 'Restoration', 'Regulatory review'],
+    entities: ['Grid Operator', 'Energy Regulator', 'Substation Crews', 'Municipal Governments', 'Independent Reviewers'],
     keywords: ['grid', 'outage', 'power', 'blackout', 'heatwave'],
   },
   {
@@ -543,6 +565,7 @@ export const NEWS_EVENTS: NewsEvent[] = [
       { title: 'Benthic impact framework due before the next assembly', source: 'Meridian Post', date: '2026-05-20' },
     ],
     angles: ['Moratorium terms', 'Contractor response', 'Impact framework'],
+    entities: ['Member States', 'Mining Contractors', 'Marine Scientists', 'Assembly Secretariat', 'Environmental Groups'],
     keywords: ['seabed', 'mining', 'moratorium', 'ocean', 'benthic'],
   },
   {
@@ -565,6 +588,7 @@ export const NEWS_EVENTS: NewsEvent[] = [
       { title: 'Two clubs signal they will contest the amortisation treatment', source: 'The Ledger', date: '2026-07-23' },
     ],
     angles: ['Transfer terms', 'Spending rules', 'Club reaction'],
+    entities: ['Novara', 'Selling Club', 'League Regulator', 'Player Representatives', 'Rival Clubs'],
     keywords: ['transfer', 'football', 'record', 'spending', 'club'],
   },
   {
@@ -588,6 +612,7 @@ export const NEWS_EVENTS: NewsEvent[] = [
       { title: 'Residual formula rewritten for streaming-first releases', source: 'The Ledger', date: '2026-06-24' },
     ],
     angles: ['Deal terms', 'Synthetic likeness', 'Production restart', 'Residuals'],
+    entities: ['Performers Union', 'Crescent Studios', 'Streaming Platforms', 'Negotiating Panel', 'Production Crews'],
     keywords: ['strike', 'studio', 'film', 'likeness', 'residuals'],
   },
   {
@@ -610,6 +635,7 @@ export const NEWS_EVENTS: NewsEvent[] = [
       { title: 'Biosecurity researchers ask for a staged-release norm', source: 'Signal & Trade', date: '2026-07-30' },
     ],
     angles: ['Model release', 'Reproduction', 'Biosecurity debate'],
+    entities: ['Helix', 'Reproducing Labs', 'Biosecurity Researchers', 'Open-Source Community', 'Funding Bodies'],
     keywords: ['protein', 'model', 'open weights', 'biology', 'structure'],
   },
 ]
