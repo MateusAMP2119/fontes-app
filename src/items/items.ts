@@ -22,6 +22,13 @@ export type BaseItem = {
   h: number
 }
 
+/**
+ * Cell position and span on the dashboard's 12-column grid. Lives here
+ * rather than in news/grid.ts because VizItem carries one and the grid
+ * module already depends on this file for Bounds.
+ */
+export type GridPos = { col: number; row: number; colSpan: number; rowSpan: number }
+
 export type TextItem = BaseItem & { type: 'text'; text: string }
 export type StickyItem = BaseItem & { type: 'sticky'; text: string; color: string }
 export type NoteItem = BaseItem & { type: 'note'; text: string }
@@ -56,6 +63,12 @@ export type VizItem = BaseItem & {
   title: string
   eventId: string
   metric: VizMetric
+  /**
+   * Authoritative position on the dashboard grid; x/y/w/h are derived from
+   * it against the measured frame. Optional because boards saved before the
+   * grid existed adopt one lazily, once a frame can be measured.
+   */
+  grid?: GridPos
 }
 
 export type Item = TextItem | StickyItem | NoteItem | TableItem | VizItem | InkItem
@@ -147,8 +160,8 @@ export type VizSpec = {
 }
 
 /** Widgets are placed from a grid, so they take a box rather than a center. */
-export function createVizItem(spec: VizSpec, at: Bounds): VizItem {
-  return { id: nextItemId(), type: 'viz', ...at, ...spec }
+export function createVizItem(spec: VizSpec, at: Bounds, grid?: GridPos): VizItem {
+  return { id: nextItemId(), type: 'viz', ...at, ...spec, grid }
 }
 
 export function moveItem<T extends Item>(item: T, dx: number, dy: number): T {

@@ -15,18 +15,41 @@ type ItemViewProps = {
   interactive: boolean
   onSelectOnly: (id: string) => void
   onToggleSelect: (id: string) => void
-  onDragBy: (anchorId: string, dx: number, dy: number) => void
+  onDragTo: (anchorId: string, x: number, y: number) => void
   onDragEnd: (anchorId: string) => void
+  onResizeTo: (id: string, w: number, h: number) => void
+  onResizeEnd: (id: string) => void
   onEdit: (id: string | null) => void
   onChange: (item: Item) => void
 }
 
+/**
+ * Drags report absolute positions (origin + total pointer travel) rather
+ * than deltas: the board needs to know where the card *would* be even while
+ * the grid engine is snapping it elsewhere, and deltas cannot be un-snapped.
+ */
 type DragState = {
   pointerId: number
-  lastX: number
-  lastY: number
+  startX: number
+  startY: number
+  originX: number
+  originY: number
   moved: boolean
 }
+
+type ResizeAxis = 'e' | 's' | 'se'
+
+type ResizeState = {
+  pointerId: number
+  startX: number
+  startY: number
+  originW: number
+  originH: number
+  axis: ResizeAxis
+}
+
+/** Below this a widget is unreadable; the grid clamps to spans anyway. */
+const MIN_RESIZE = 48
 
 export function ItemView({
   item,
@@ -35,14 +58,18 @@ export function ItemView({
   interactive,
   onSelectOnly,
   onToggleSelect,
-  onDragBy,
+  onDragTo,
   onDragEnd,
+  onResizeTo,
+  onResizeEnd,
   onEdit,
   onChange,
 }: ItemViewProps) {
   const dragRef = useRef<DragState | null>(null)
+  const resizeRef = useRef<ResizeState | null>(null)
   const textRef = useRef<HTMLTextAreaElement>(null)
   const [dragging, setDragging] = useState(false)
+  const [resizing, setResizing] = useState(false)
 
   useEffect(() => {
     if (editing) textRef.current?.focus()
@@ -60,8 +87,10 @@ export function ItemView({
     }
     dragRef.current = {
       pointerId: e.pointerId,
-      lastX: e.clientX,
-      lastY: e.clientY,
+      startX: e.clientX,
+      startY: e.clientY,
+      originX: item.x,
+      originY: item.y,
       moved: false,
     }
     e.currentTarget.setPointerCapture(e.pointerId)
@@ -70,17 +99,15 @@ export function ItemView({
   const onPointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
     const drag = dragRef.current
     if (!drag || drag.pointerId !== e.pointerId) return
-    const dx = e.clientX - drag.lastX
-    const dy = e.clientY - drag.lastY
+    const dx = e.clientX - drag.startX
+    const dy = e.clientY - drag.startY
     if (!drag.moved && Math.hypot(dx, dy) < 2) {
       return
     }
     if (!drag.moved) setDragging(true)
     drag.moved = true
-    drag.lastX = e.clientX
-    drag.lastY = e.clientY
     // Moves the whole selection when this item is part of it.
-    onDragBy(item.id, dx, dy)
+    onDragTo(item.id, drag.originX + dx, drag.originY + dy)
   }
 
   const endDrag = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -101,6 +128,42 @@ export function ItemView({
     }
   }
 
+  const startResize = (e: ReactPointerEvent<HTMLDivElement>, axis: ResizeAxis) => {
+    if (!interactive || e.button !== 0) return
+    e.stopPropagation()
+    resizeRef.current = {
+      pointerId: e.pointerId,
+      startX: e.clientX,
+      startY: e.clientY,
+      originW: item.w,
+      originH: item.h,
+      axis,
+    }
+    setResizing(true)
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+
+  const moveResize = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const rs = resizeRef.current
+    if (!rs || rs.pointerId !== e.pointerId) return
+    e.stopPropagation()
+    const dw = rs.axis === 's' ? 0 : e.clientX - rs.startX
+    const dh = rs.axis === 'e' ? 0 : e.clientY - rs.startY
+    onResizeTo(item.id, Math.max(MIN_RESIZE, rs.originW + dw), Math.max(MIN_RESIZE, rs.originH + dh))
+  }
+
+  const endResize = (e: ReactPointerEvent<HTMLDivElement>) => {
+    const rs = resizeRef.current
+    if (!rs || rs.pointerId !== e.pointerId) return
+    e.stopPropagation()
+    resizeRef.current = null
+    setResizing(false)
+    onResizeEnd(item.id)
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    }
+  }
+
   const style: CSSProperties = {
     left: item.x,
     top: item.y,
@@ -116,10 +179,14 @@ export function ItemView({
     selected ? 'is-selected' : '',
     editing ? 'is-editing' : '',
     dragging ? 'is-dragging' : '',
+    resizing ? 'is-resizing' : '',
     interactive ? 'is-interactive' : '',
   ]
     .filter(Boolean)
     .join(' ')
+
+  // Only dashboard widgets live on the grid, so only they resize.
+  const showHandles = item.type === 'viz' && selected && interactive && !dragging
 
   return (
     <div
@@ -139,6 +206,18 @@ export function ItemView({
       }}
     >
       {renderBody(item, editing, textRef, onChange, onEdit)}
+      {showHandles &&
+        (['e', 's', 'se'] as const).map((axis) => (
+          <div
+            key={axis}
+            className={`item-handle is-${axis}`}
+            data-testid={`resize-${axis}`}
+            onPointerDown={(e) => startResize(e, axis)}
+            onPointerMove={moveResize}
+            onPointerUp={endResize}
+            onPointerCancel={endResize}
+          />
+        ))}
     </div>
   )
 }

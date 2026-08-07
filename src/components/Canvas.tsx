@@ -7,7 +7,7 @@ import {
   type RefObject,
 } from 'react'
 import type { Point } from '../camera/camera'
-import { inkPath, type Item } from '../items/items'
+import { inkPath, type Bounds, type Item } from '../items/items'
 import { ItemView } from './ItemView'
 import type { Tool } from './BottomBar'
 
@@ -20,11 +20,15 @@ type CanvasProps = {
   onSelectOnly: (id: string) => void
   onToggleSelect: (id: string) => void
   onSelectMany: (ids: string[]) => void
-  onDragBy: (anchorId: string, dx: number, dy: number) => void
+  onDragTo: (anchorId: string, x: number, y: number) => void
   onDragEnd: (anchorId: string) => void
+  onResizeTo: (id: string, w: number, h: number) => void
+  onResizeEnd: (id: string) => void
   onEdit: (id: string | null) => void
   onItemChange: (item: Item) => void
   onStroke: (points: Point[]) => void
+  /** Snapped landing cell for the widget being dragged/resized. */
+  gridGhost?: Bounds | null
   /** App measures the PC frame through this when building a dashboard. */
   frameRef?: RefObject<HTMLDivElement | null>
   /** Lets App park focus on the board after the composer unmounts. */
@@ -45,11 +49,14 @@ export function Canvas({
   onSelectOnly,
   onToggleSelect,
   onSelectMany,
-  onDragBy,
+  onDragTo,
   onDragEnd,
+  onResizeTo,
+  onResizeEnd,
   onEdit,
   onItemChange,
   onStroke,
+  gridGhost,
   frameRef,
   viewportRef: externalViewportRef,
   frameContent,
@@ -177,6 +184,19 @@ export function Canvas({
       </div>
 
       <div className="stage-world" data-testid="canvas-world">
+        {gridGhost && (
+          <div
+            className="grid-placeholder"
+            data-testid="grid-placeholder"
+            aria-hidden="true"
+            style={{
+              left: gridGhost.x,
+              top: gridGhost.y,
+              width: gridGhost.w,
+              height: gridGhost.h,
+            }}
+          />
+        )}
         {items.map((item) => (
           <ItemView
             key={item.id}
@@ -186,8 +206,10 @@ export function Canvas({
             interactive={tool === 'select'}
             onSelectOnly={onSelectOnly}
             onToggleSelect={onToggleSelect}
-            onDragBy={onDragBy}
+            onDragTo={onDragTo}
             onDragEnd={onDragEnd}
+            onResizeTo={onResizeTo}
+            onResizeEnd={onResizeEnd}
             onEdit={onEdit}
             onChange={onItemChange}
           />

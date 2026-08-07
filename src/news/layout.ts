@@ -1,13 +1,13 @@
 /**
- * Shelf-packs a dashboard recipe into the PC frame.
+ * Shelf-packs a dashboard recipe onto the 12-column grid.
  *
- * Runs once, at pick time. The output is ordinary freeform items, so there is
- * deliberately no re-layout on resize — it would clobber the user's drags, and
- * the app has no undo.
+ * Runs once, at pick time. The output is grid coordinates — geometry
+ * (cells → pixels, row-height solve) lives in grid.ts, and after placement
+ * the cards belong to the interactive grid engine there.
  */
 
-import { clamp } from '../camera/camera'
-import type { Bounds, VizKind, VizMetric } from '../items/items'
+import type { GridPos, VizKind, VizMetric } from '../items/items'
+import { GRID } from './grid'
 
 export type Slot = {
   kind: VizKind
@@ -15,7 +15,7 @@ export type Slot = {
   title: string
   /** Columns out of 12. */
   span: number
-  /** Row units tall — sets the shelf height. */
+  /** Whole grid rows tall — sets the shelf height. */
   rows: number
   /**
    * Spans this shelf and the next: the slot's columns are reserved in the
@@ -24,27 +24,8 @@ export type Slot = {
   shelves?: 2
 }
 
-const GRID = {
-  pad: 22,
-  gutter: 14,
-  wideCols: 12,
-  narrowCols: 6,
-  /** Inner width below this collapses to 6 columns. */
-  wideAt: 760,
-  minRowH: 48,
-  maxRowH: 112,
-} as const
-
-export function layout(slots: Slot[], frame: Bounds): (Slot & Bounds)[] {
-  const { pad, gutter } = GRID
-  const innerX = frame.x + pad
-  const innerY = frame.y + pad
-  const innerW = Math.max(frame.w - pad * 2, 260)
-  const innerH = Math.max(frame.h - pad * 2, 260)
-
-  const wide = innerW >= GRID.wideAt
-  const cols = wide ? GRID.wideCols : GRID.narrowCols
-  const colW = (innerW - gutter * (cols - 1)) / cols
+export function layout(slots: Slot[]): (Slot & GridPos)[] {
+  const cols = GRID.cols
 
   // 1 — fill a row of columns, wrap when the next slot will not fit. A slot
   // marked `shelves: 2` reserves its column range in the following shelf.
@@ -62,7 +43,7 @@ export function layout(slots: Slot[], frame: Bounds): (Slot & Bounds)[] {
     return at
   }
   for (const slot of slots) {
-    const span = spanFor(slot, wide)
+    const span = Math.min(slot.span, cols)
     let at = skipReserved(col, span)
     if (at + span > cols && shelf.placed.length > 0) {
       shelves.push(shelf)
@@ -73,42 +54,30 @@ export function layout(slots: Slot[], frame: Bounds): (Slot & Bounds)[] {
     }
     shelf.placed.push({ slot, col: at })
     shelf.rows = Math.max(shelf.rows, slot.rows)
-    if (slot.shelves === 2 && wide) nextReserved.push({ from: at, to: at + span })
+    if (slot.shelves === 2) nextReserved.push({ from: at, to: at + span })
     col = at + span
   }
   if (shelf.placed.length > 0) shelves.push(shelf)
 
-  // 2 — solve one row height so the whole recipe fills the frame vertically.
-  const totalRows = shelves.reduce((n, s) => n + s.rows, 0)
-  const avail = innerH - gutter * (shelves.length - 1)
-  const rowH = clamp(avail / totalRows, GRID.minRowH, GRID.maxRowH)
-
-  // 3 — place. Everything in a shelf takes the shelf height, so bottoms
-  // align; a two-shelf slot additionally absorbs the next shelf and gutter.
-  const out: (Slot & Bounds)[] = []
-  let y = innerY
+  // 2 — place. Everything in a shelf takes the shelf height, so bottoms
+  // align; a two-shelf slot additionally absorbs the next shelf (the gutter
+  // between rows comes with the extra rows in grid space).
+  const out: (Slot & GridPos)[] = []
+  let row = 0
   for (let si = 0; si < shelves.length; si += 1) {
     const s = shelves[si]
-    const h = s.rows * rowH
     for (const { slot, col: c } of s.placed) {
-      const span = spanFor(slot, wide)
       const next = shelves[si + 1]
-      const tall = slot.shelves === 2 && wide && next
+      const tall = slot.shelves === 2 && next
       out.push({
         ...slot,
-        x: Math.round(innerX + c * (colW + gutter)),
-        y: Math.round(y),
-        w: Math.round(span * colW + (span - 1) * gutter),
-        h: Math.round(tall ? h + gutter + next.rows * rowH : h),
+        col: c,
+        row,
+        colSpan: Math.min(slot.span, cols),
+        rowSpan: tall ? s.rows + next.rows : s.rows,
       })
     }
-    y += h + gutter
+    row += s.rows
   }
   return out
-}
-
-/** At 6 columns, wide slots go full width and narrow slots pair up. */
-function spanFor(slot: Slot, wide: boolean): number {
-  if (wide) return Math.min(slot.span, GRID.wideCols)
-  return slot.span >= 7 ? GRID.narrowCols : 3
 }

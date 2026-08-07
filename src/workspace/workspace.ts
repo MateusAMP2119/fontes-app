@@ -15,6 +15,13 @@ export type Board = {
    * back as undefined, which every check treats the same as null.
    */
   topicId?: string | null
+  /**
+   * Row height of the dashboard grid, solved once when the dashboard is
+   * built and frozen so cards keep their height as the grid grows downward.
+   * Optional and additive like topicId; boards without one get a default
+   * solved from the frame when their widgets adopt grid coordinates.
+   */
+  vizRowH?: number
 }
 
 export type Workspace = {
