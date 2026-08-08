@@ -5,10 +5,27 @@ import s from './shared.module.css'
 /** Card padding; charts derive their box from item.w/h minus these. */
 export const PAD = 16
 export const LABEL_H = 26
+/** One spacing unit: card padding and the gap between layout columns. */
+export const GUTTER = PAD
 
 export function r2(n: number): number {
   return Math.round(n * 100) / 100
 }
+
+export type CardColumns = { n: 2 | 3; colW: number }
+
+/**
+ * Horizontal cards lay out on 2 or 3 equal columns. Must mirror the CSS
+ * tracks (repeat(n, 1fr), gap 16, inside padding 16); the -2 is the
+ * .item-viz border — item.w is border-box.
+ */
+export function cardColumns(item: VizItem): CardColumns {
+  const n = item.w >= 700 ? 3 : 2
+  return { n, colW: (item.w - 2 - PAD * 2 - GUTTER * (n - 1)) / n }
+}
+
+/** Card body height below the label row — the availH for textFits. */
+export const bodyH = (item: VizItem) => item.h - 2 - PAD * 2 - LABEL_H
 
 /** True when copy fits a midW×availH box without clipping (rough type metrics). */
 export function textFits(midW: number, availH: number, copy: string): boolean {
@@ -18,7 +35,7 @@ export function textFits(midW: number, availH: number, copy: string): boolean {
 
 /** Gray weekday columns, "hoje" in white; sparse labels from the end. */
 export function MiniColumns({ item, points }: { item: VizItem; points: WeekPoint[] }) {
-  const w = Math.min(Math.max(item.w * 0.42, 120), 220)
+  const w = cardColumns(item).colW
   const h = Math.max(item.h - PAD * 2 - LABEL_H - 14, 40)
   const max = Math.max(...points.map((p) => p.value))
   const gap = 6

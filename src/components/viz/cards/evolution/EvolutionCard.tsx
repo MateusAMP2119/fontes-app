@@ -7,7 +7,7 @@ import {
   metricDetail,
   weekSeries,
 } from '../../../../news/series'
-import { LABEL_H, PAD, r2, textFits } from '../../shared/charts'
+import { bodyH, cardColumns, GUTTER, LABEL_H, PAD, r2, textFits } from '../../shared/charts'
 import { Shell } from '../../shared/Shell'
 import { variantFor } from '../../shared/variant'
 import sh from '../../shared/shared.module.css'
@@ -21,22 +21,29 @@ export function EvolutionCard({ item, event }: { item: VizItem; event: NewsEvent
   const roomy = variant === 'detail'
   const stats = evolutionStats(event)
   const copy = evolutionMomentum(event)
-  const showCopy = horizontal && textFits(item.w * 0.52 - 228, item.h - 78, copy)
+  const cols = horizontal ? cardColumns(item) : undefined
+  const showCopy = cols?.n === 3 && textFits(cols.colW, bodyH(item), copy)
+  const fillChart = cols?.n === 3 && !showCopy
+  const chartWidth = cols
+    ? fillChart
+      ? cols.colW * 2 + GUTTER
+      : cols.colW
+    : item.w - 2 - PAD * 2
   return (
     <Shell
       label={variant === 'default' ? 'Evolução de art. e ev.' : 'Evolução de artigos e eventos'}
       variant={variant}
-      className={s.root}
+      columns={cols}
     >
-      <div className={roomy ? s.detailWrap : s.kpiRow}>
+      <div className={roomy ? s.detailWrap : sh.kpiRow}>
         <EvolutionColumns
           item={item}
           event={event}
-          wide={horizontal}
-          fill={horizontal && !showCopy}
+          w={chartWidth}
+          className={fillChart ? s.span2 : undefined}
           maxH={roomy ? Math.max(item.h * 0.45, 64) : undefined}
         />
-        {showCopy && <p className={s.midCopy}>{copy}</p>}
+        {showCopy && <p className={`${sh.detail} ${sh.midCopy}`}>{copy}</p>}
         {horizontal && (
           <div className={s.side}>
             <span className={s.sidePlain}>Média</span>
@@ -55,30 +62,32 @@ export function EvolutionCard({ item, event }: { item: VizItem; event: NewsEvent
 function EvolutionColumns({
   item,
   event,
-  wide,
-  fill,
+  w,
+  className,
   maxH,
 }: {
   item: VizItem
   event: NewsEvent
-  wide: boolean
-  /** No middle copy — stretch the chart up to the side stats instead of leaving a void. */
-  fill?: boolean
+  /** Column-derived width; the card owns the math so JS and CSS tracks agree. */
+  w: number
+  className?: string
   /** Detail cards cap the chart so the body copy below keeps its room. */
   maxH?: number
 }) {
   const arts = weekSeries(event)
   const evs = eventWeekSeries(event)
-  const wideW = fill ? item.w - 165 - PAD * 2 : item.w * 0.48
-  const w = Math.max(wide ? wideW : item.w - PAD * 2, 100)
+  const width = Math.max(w, 100)
   const h = Math.min(Math.max(item.h - PAD * 2 - LABEL_H - 22, 40), maxH ?? Infinity)
   const max = Math.max(...arts.map((p) => p.value))
   const evMax = Math.max(...evs.map((p) => p.value))
   const gap = 8
-  const barW = (w - gap * (arts.length - 1)) / arts.length
+  const barW = (width - gap * (arts.length - 1)) / arts.length
   return (
-    <div className={`${sh.minichart} ${s.chart}`} style={{ width: w }}>
-      <svg viewBox={`0 0 ${w} ${h}`} width={w} height={h} aria-hidden="true">
+    <div
+      className={className ? `${sh.minichart} ${s.chart} ${className}` : `${sh.minichart} ${s.chart}`}
+      style={{ width }}
+    >
+      <svg viewBox={`0 0 ${width} ${h}`} width={width} height={h} aria-hidden="true">
         {arts.map((p, i) => {
           const artH = Math.max((p.value / max) * (h - 4), 4)
           const evH = Math.max((evs[i].value / evMax) * artH * 0.42, 2)

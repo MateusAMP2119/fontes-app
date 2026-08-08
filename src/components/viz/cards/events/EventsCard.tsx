@@ -1,6 +1,7 @@
 import type { VizItem } from '../../../../items/items'
 import type { NewsEvent } from '../../../../news/events'
 import { eventsKpi } from '../../../../news/series'
+import { cardColumns } from '../../shared/charts'
 import { Delta } from '../../shared/Delta'
 import { Shell } from '../../shared/Shell'
 import { hasCopy, variantFor } from '../../shared/variant'
@@ -13,16 +14,18 @@ export function EventsCard({ item, event }: { item: VizItem; event: NewsEvent })
   const variant = variantFor(item, THRESHOLDS)
   const horizontal = variant === 'horizontal'
   const stat = eventsKpi(event)
+  const cols = horizontal ? cardColumns(item) : undefined
   return (
     <Shell
       label="Eventos publicados"
       variant={variant}
+      columns={cols}
       className={s.root}
       labelClassName={s.label}
     >
-      <div className={s.kpiRow}>
-        <div className={s.kpiMain}>
-          <span className={s.number}>
+      <div className={`${sh.kpiRow} ${s.kpiRow}`}>
+        <div className={sh.kpiMain}>
+          <span className={`${sh.number} ${s.number}`}>
             {stat.events}
             {!horizontal && <Delta value={stat.deltaEvents} />}
           </span>

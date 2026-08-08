@@ -540,6 +540,7 @@ export default function App() {
     <div
       className="app"
       data-testid="app-shell"
+      data-grid-on={overlayOn ? '' : undefined}
       // Clicks on app chrome (top bar, margins) deselect like canvas clicks.
       // Cards and the bottom bar stop propagation before this fires.
       onPointerDown={() => {

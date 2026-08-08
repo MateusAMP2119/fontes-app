@@ -1,7 +1,7 @@
 import type { VizItem } from '../../../../items/items'
 import type { NewsEvent } from '../../../../news/events'
 import { metricDetail, sentimentSeries, toneSplit } from '../../../../news/series'
-import { LABEL_H, PAD, r2, textFits } from '../../shared/charts'
+import { bodyH, cardColumns, LABEL_H, PAD, r2, textFits } from '../../shared/charts'
 import { Shell } from '../../shared/Shell'
 import { variantFor } from '../../shared/variant'
 import sh from '../../shared/shared.module.css'
@@ -9,21 +9,18 @@ import s from './SentimentCard.module.css'
 
 const THRESHOLDS = { minAspect: 1.9, minW: 380, detailMinH: 140 }
 
-const chartW = (item: VizItem) => Math.min(Math.max(item.w * 0.42, 140), 260)
-
-const copyFits = (item: VizItem, copy: string) =>
-  textFits(item.w - 280 - chartW(item) - 68, item.h - 78, copy)
-
 export function SentimentCard({ item, event }: { item: VizItem; event: NewsEvent }) {
   const variant = variantFor(item, THRESHOLDS)
   const [pos, neu, neg] = toneSplit(event)
   const copy = metricDetail(event, 'sentiment')
+  const cols = variant === 'horizontal' ? cardColumns(item) : undefined
+  const showCopy = cols?.n === 3 && textFits(cols.colW, bodyH(item), copy)
   const pct = (v: number) => `${Math.round(v * 100)}%`
   return (
-    <Shell label="Análise de sentimentos" variant={variant} className={s.root}>
-      <div className={s.kpiRow}>
-        <div className={s.kpiMain}>
-          <span className={s.number}>{pct(pos.value)} Positivo</span>
+    <Shell label="Análise de sentimentos" variant={variant} columns={cols}>
+      <div className={sh.kpiRow}>
+        <div className={sh.kpiMain}>
+          <span className={sh.number}>{pct(pos.value)} Positivo</span>
           <div className={s.toneRows}>
             <span>
               <em>{pct(neu.value)}</em> Neutro
@@ -41,9 +38,7 @@ export function SentimentCard({ item, event }: { item: VizItem; event: NewsEvent
           )}
           {variant === 'detail' && <p className={sh.detail}>{copy}</p>}
         </div>
-        {variant === 'horizontal' && copyFits(item, copy) && (
-          <p className={`${sh.detail} ${s.midCopy}`}>{copy}</p>
-        )}
+        {showCopy && <p className={`${sh.detail} ${sh.midCopy}`}>{copy}</p>}
         {variant === 'horizontal' && <SentimentColumns item={item} event={event} />}
       </div>
     </Shell>
@@ -53,7 +48,7 @@ export function SentimentCard({ item, event }: { item: VizItem; event: NewsEvent
 /** Green/gray/red stacked daily sentiment columns. */
 function SentimentColumns({ item, event }: { item: VizItem; event: NewsEvent }) {
   const days = sentimentSeries(event)
-  const w = chartW(item)
+  const w = cardColumns(item).colW
   const h = Math.max(item.h - PAD * 2 - LABEL_H - 14, 40)
   const gap = 7
   const barW = (w - gap * (days.length - 1)) / days.length
