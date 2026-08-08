@@ -111,11 +111,13 @@
   display: block;
 }
 
-/* Column guides — revealed by the bottom-bar grid toggle */
+/* Column guides — revealed by the bottom-bar grid toggle. Top padding
+   clears the label row (16px pad + 26px label) so guides only cover the
+   body the columns actually lay out. */
 .guides {
   position: absolute;
   inset: 0;
-  padding: 16px;
+  padding: 42px 16px 16px;
   display: none;
   pointer-events: none;
 }

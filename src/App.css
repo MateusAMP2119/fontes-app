@@ -334,9 +334,10 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  /* Above resting cards so the lattice reads on a packed board, below the
-     card in flight (z 2/3) and the resize handles (z 4). */
-  z-index: 1;
+  /* Below resting cards: their opaque background masks the lattice, so
+     board cells read only in empty space while each card draws its own
+     column guides. The card in flight (z 2/3) still floats above. */
+  z-index: 0;
   animation: grid-overlay-in 160ms ease-out;
 }
 
