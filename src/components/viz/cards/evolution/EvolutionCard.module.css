@@ -1,0 +1,58 @@
+.kpiRow {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 18px;
+}
+
+.chart {
+  align-self: flex-end;
+}
+
+/* Tall card — chart on top, body copy below */
+.detailWrap {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.detailWrap .chart {
+  align-self: stretch;
+}
+
+.detail {
+  margin-top: 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--ink-tertiary);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.side {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sidePlain {
+  color: var(--ink-secondary);
+}
+
+.sideStrong {
+  font-size: 16px;
+  font-weight: 620;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}

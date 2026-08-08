@@ -1,0 +1,123 @@
+/* News rows */
+.list {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  overflow: hidden;
+}
+
+.list li {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  gap: 14px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--divider);
+}
+
+.list li:last-child {
+  border-bottom: none;
+}
+
+.list img {
+  flex: none;
+  align-self: center;
+  width: 96px;
+  height: 54px;
+  object-fit: cover;
+  border-radius: 3px;
+  filter: saturate(0.55) contrast(1.05);
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+
+.tag {
+  font-size: 10.5px;
+  font-weight: 590;
+  color: var(--neg);
+}
+
+.tag::before {
+  content: '●';
+  font-size: 7px;
+  vertical-align: 2px;
+  margin-right: 5px;
+}
+
+.title {
+  font-size: 13.5px;
+  font-weight: 620;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* One summary line in rows so three always fit; card opts into two below */
+.summary {
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--ink-tertiary);
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.counts {
+  margin-top: 2px;
+  font-size: 10.5px;
+  color: var(--ink-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Single-story card variant */
+.single {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.single img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 3px;
+  filter: saturate(0.55) contrast(1.05);
+}
+
+.single .title {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.single .summary {
+  -webkit-line-clamp: 2;
+}
+
+.meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.meta .counts {
+  margin-left: auto;
+  margin-top: 0;
+}

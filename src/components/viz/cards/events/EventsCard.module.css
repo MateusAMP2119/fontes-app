@@ -1,0 +1,89 @@
+.kpiRow {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: stretch;
+  gap: 18px;
+}
+
+.kpiMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+
+.number {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  white-space: nowrap;
+  font-size: clamp(28px, 12cqw, 40px);
+  font-weight: 640;
+  letter-spacing: -0.03em;
+  line-height: 1.04;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Horizontal variant rebuilt from measured Figma ratios (card 960×308) */
+.root[data-variant='horizontal'] .label {
+  font-size: clamp(10px, 7cqh, 23px);
+}
+
+/* Everything shares one baseline at the card bottom, like the mock */
+.root[data-variant='horizontal'] .kpiRow {
+  align-items: flex-end;
+  gap: clamp(14px, 7cqw, 80px);
+}
+
+.root[data-variant='horizontal'] .number {
+  font-size: clamp(44px, 86cqh, 250px);
+  line-height: 0.85;
+  font-weight: 600;
+  letter-spacing: -0.045em;
+}
+
+/* "24h" sits to the right, baseline-aligned with the last side row */
+.aside {
+  flex: none;
+  align-self: flex-end;
+  display: flex;
+  align-items: flex-end;
+  gap: clamp(10px, 3.5cqw, 36px);
+  padding-bottom: clamp(2px, 2cqh, 8px);
+}
+
+.side {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(3px, 4cqh, 15px);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.sidePlain {
+  color: var(--ink-secondary);
+  font-size: clamp(11px, 8.4cqh, 26px);
+  margin-bottom: clamp(2px, 4cqh, 15px);
+}
+
+.sideDelta {
+  color: var(--ink-secondary);
+  font-size: clamp(14px, 14cqh, 34px);
+  font-weight: 530;
+  letter-spacing: -0.015em;
+  line-height: 1.12;
+}
+
+.tag {
+  flex: none;
+  font-size: clamp(11px, 8.4cqh, 26px);
+  line-height: 1.2;
+  color: var(--ink-tertiary);
+  font-variant-numeric: tabular-nums;
+}

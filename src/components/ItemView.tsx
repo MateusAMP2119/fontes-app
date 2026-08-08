@@ -6,7 +6,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import { inkPath, type Item, type TableItem } from '../items/items'
-import { VizBody } from './VizBody'
+import { VizBody } from './viz'
 
 type ItemViewProps = {
   item: Item

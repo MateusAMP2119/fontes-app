@@ -1,0 +1,124 @@
+/* Narrow ranked list */
+.list {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 0;
+  list-style: none;
+  overflow: hidden;
+}
+
+/* Rows stretch (capped) so a tall card fills out instead of pooling space */
+.list li {
+  flex: 1 1 auto;
+  max-height: 46px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  font-size: 12.5px;
+}
+
+.list li.isLead {
+  flex: none;
+  max-height: none;
+  align-items: baseline;
+  padding: 8px 0 12px;
+}
+
+.name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink-secondary);
+}
+
+.list li.isLead .name {
+  font-size: 23px;
+  font-weight: 630;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.count {
+  margin-left: auto;
+  flex: none;
+  color: var(--ink-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.list li.isLead .count {
+  font-size: 14px;
+  color: var(--ink);
+}
+
+/* Wide variant — a trend line per row, axis on the lead only */
+.wideList {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  overflow: hidden;
+}
+
+.wideList li {
+  flex: 1 1 auto;
+  max-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 5px 0;
+  font-size: 12.5px;
+}
+
+.wideList li.isLead {
+  padding: 6px 0 10px;
+}
+
+.head {
+  flex: 0 0 208px;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.wideList li.isLead .name {
+  font-size: 21px;
+  font-weight: 630;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.wideList li.isLead .count {
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.spark {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--ink-tertiary);
+}
+
+.wideList li.isLead .spark {
+  color: var(--ink-secondary);
+}
+
+.spark svg {
+  width: 100%;
+}
+
+.axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--ink-tertiary);
+}
