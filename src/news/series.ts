@@ -275,6 +275,17 @@ export function audienceSegment(ev: NewsEvent): string {
 
 const WEEKDAYS_PT = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
 
+/** Weekday with its "em" contraction, for prose like "o pico foi na terça". */
+const DAY_FULL: Record<string, string> = {
+  dom: 'no domingo',
+  seg: 'na segunda',
+  ter: 'na terça',
+  qua: 'na quarta',
+  qui: 'na quinta',
+  sex: 'na sexta',
+  sáb: 'no sábado',
+}
+
 export type WeekPoint = { label: string; value: number; today: boolean }
 
 /** Last seven days of volume, weekday-labelled, final bucket "hoje". */
@@ -391,9 +402,16 @@ export function metricDetail(ev: NewsEvent, metric: 'sources' | 'sentiment' | 'e
         return `Mais ${sourcesDelta(ev)} fontes entraram na cobertura nas últimas 24h. ${rows[0].label} lidera com ${share}% dos artigos publicados.`
       }
       case 'sentiment': {
-        const [pos, , neg] = toneSplit(ev)
+        const days = sentimentSeries(ev)
+        const delta = Math.round((days[days.length - 1].positive - days[0].positive) * 100)
+        const worst = days.reduce((a, b) => (b.negative > a.negative ? b : a))
         const angle = (ev.angles[0] ?? '').toLowerCase()
-        return `${Math.round(pos.value * 100)}% dos artigos dos últimos sete dias têm tom positivo; os ${Math.round(neg.value * 100)}% negativos concentram-se em ${angle}.`
+        const trend =
+          Math.abs(delta) < 2
+            ? 'O tom positivo manteve-se estável ao longo da semana'
+            : `O tom positivo ${delta > 0 ? 'ganhou' : 'perdeu'} ${Math.abs(delta)} pontos ao longo da semana`
+        const day = worst.label === 'hoje' ? 'hoje' : (DAY_FULL[worst.label] ?? worst.label)
+        return `${trend}; o pico negativo foi ${day}, com ${Math.round(worst.negative * 100)}% dos artigos, puxado por ${angle}.`
       }
       case 'evolution': {
         const s = evolutionStats(ev)

@@ -41,6 +41,35 @@
   font-variant-numeric: tabular-nums;
 }
 
+.root[data-variant='horizontal'] .kpiMain {
+  flex: 0 0 auto;
+}
+
+.midCopy {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 46ch;
+  align-self: center;
+  margin: 0 auto;
+}
+
+/* Unclamp: JS only renders this when the full text fits the middle column */
+.root[data-variant='horizontal'] .midCopy {
+  display: block;
+}
+
+.toneBar {
+  display: flex;
+  gap: 2px;
+  height: 5px;
+  margin-top: 6px;
+}
+
+.toneBar span {
+  border-radius: 2px;
+  min-width: 4px;
+}
+
 .toneRows em {
   font-style: normal;
   display: inline-block;
