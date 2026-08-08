@@ -50,7 +50,7 @@
 
 .side {
   flex: none;
-  margin-left: auto;
+  margin-left: 24px;
   display: flex;
   flex-direction: column;
   justify-content: center;
