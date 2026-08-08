@@ -69,7 +69,7 @@ function EvolutionColumns({
 }) {
   const arts = weekSeries(event)
   const evs = eventWeekSeries(event)
-  const wideW = fill ? item.w - 220 - PAD * 2 : item.w * 0.48
+  const wideW = fill ? item.w - 165 - PAD * 2 : item.w * 0.48
   const w = Math.max(wide ? wideW : item.w - PAD * 2, 100)
   const h = Math.min(Math.max(item.h - PAD * 2 - LABEL_H - 22, 40), maxH ?? Infinity)
   const max = Math.max(...arts.map((p) => p.value))
