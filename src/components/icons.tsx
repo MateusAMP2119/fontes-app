@@ -102,6 +102,19 @@ export function IconGrid({ size }: IconProps) {
   )
 }
 
+/** 3x3 dot lattice — the dashboard grid-overlay toggle. */
+export function IconGridDots({ size }: IconProps) {
+  return (
+    <Svg size={size}>
+      {[5, 12, 19].flatMap((y) =>
+        [5, 12, 19].map((x) => (
+          <circle key={`${x}-${y}`} cx={x} cy={y} r="1.4" fill="currentColor" />
+        )),
+      )}
+    </Svg>
+  )
+}
+
 export function IconFolder({ size }: IconProps) {
   return (
     <Svg size={size}>

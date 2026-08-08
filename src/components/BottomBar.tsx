@@ -1,5 +1,5 @@
 import type { InsertableType } from '../items/items'
-import { IconGrid, IconPen, IconPhone, IconSticky, IconTrash } from './icons'
+import { IconGridDots, IconPen, IconPhone, IconSticky, IconTrash } from './icons'
 
 export type Tool = 'select' | 'draw'
 
@@ -67,6 +67,17 @@ export function BottomBar({
         <div className="pill glass" aria-label="Device frames">
           <button
             type="button"
+            className={`pill-btn frame-btn${showGrid ? ' is-on' : ''}`}
+            title="Dashboard grid"
+            aria-pressed={showGrid}
+            data-testid="grid-toggle"
+            onClick={onToggleGrid}
+          >
+            <IconGridDots />
+            <span className="sr-only">Dashboard grid</span>
+          </button>
+          <button
+            type="button"
             className={`pill-btn frame-btn${showMobile ? ' is-on' : ''}`}
             title="Mobile frame"
             aria-pressed={showMobile}
@@ -75,17 +86,6 @@ export function BottomBar({
           >
             <IconPhone />
             <span className="sr-only">Mobile frame</span>
-          </button>
-          <button
-            type="button"
-            className={`pill-btn frame-btn${showGrid ? ' is-on' : ''}`}
-            title="Dashboard grid"
-            aria-pressed={showGrid}
-            data-testid="grid-toggle"
-            onClick={onToggleGrid}
-          >
-            <IconGrid />
-            <span className="sr-only">Dashboard grid</span>
           </button>
         </div>
       </div>
