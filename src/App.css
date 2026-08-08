@@ -259,7 +259,6 @@
   border-radius: 6px;
   transition:
     transform 160ms cubic-bezier(0.32, 0.72, 0.28, 1),
-    filter 160ms ease,
     left 160ms cubic-bezier(0.32, 0.72, 0.28, 1),
     top 160ms cubic-bezier(0.32, 0.72, 0.28, 1),
     width 160ms cubic-bezier(0.32, 0.72, 0.28, 1),
@@ -271,9 +270,7 @@
    grid glide to their new cells. */
 .stage-world:has(.item.is-dragging) .item.is-selected,
 .item.is-resizing {
-  transition:
-    transform 160ms cubic-bezier(0.32, 0.72, 0.28, 1),
-    filter 160ms ease;
+  transition: transform 160ms cubic-bezier(0.32, 0.72, 0.28, 1);
 }
 
 /* Selection / hover ring: overlay so it fades instead of snapping */
@@ -308,7 +305,6 @@
   z-index: 3;
   cursor: grabbing;
   transform: scale(1.015);
-  filter: drop-shadow(0 14px 22px rgba(30, 60, 110, 0.16));
 }
 
 .item.is-editing {
