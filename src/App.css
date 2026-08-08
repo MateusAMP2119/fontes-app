@@ -292,7 +292,10 @@
   border-color: rgba(62, 142, 247, 0.25);
 }
 
-.item.is-selected {
+/* No z-index bump on plain selection — lifting the card would paint its
+   resting shadow over the neighbors, which reads as a click shadow. The
+   bump only applies while a drag is live so the moving group stays on top. */
+.stage-world:has(.item.is-dragging) .item.is-selected {
   z-index: 2;
 }
 
