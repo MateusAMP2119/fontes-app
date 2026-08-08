@@ -40,10 +40,10 @@
 }
 
 .root[data-variant='horizontal'] .number {
-  font-size: clamp(44px, 86cqh, 250px);
-  line-height: 0.85;
+  font-size: clamp(40px, 58cqh, 150px);
+  line-height: 0.9;
   font-weight: 600;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.04em;
 }
 
 /* "24h" sits to the right, baseline-aligned with the last side row */
