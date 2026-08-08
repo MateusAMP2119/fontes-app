@@ -7,7 +7,7 @@
  * Math.random(), so item ids differ every run and the data would drift.
  */
 
-import type { NewsEvent, Sentiment } from './events'
+import type { EventCategory, NewsEvent, Sentiment } from './events'
 
 export type Slice = { label: string; value: number }
 export type SeriesPoint = { day: string; value: number }
@@ -332,6 +332,74 @@ export function sentimentSeries(ev: NewsEvent): SentimentDay[] {
         negative: raw[2] / sum,
       }
     })
+  })
+}
+
+/**
+ * Supporting cast per category. Padded onto an event's own actors so the tall
+ * entities card fills out the way the Figma list does.
+ */
+const SUPPORTING_ENTITIES: Record<EventCategory, string[]> = {
+  World: ['Opposition Parties', 'City Councils', 'Foreign Ministries', 'Residents Associations'],
+  Business: ['Market Analysts', 'Pension Funds', 'Trade Unions', 'Sector Regulators'],
+  Tech: ['Developer Community', 'Privacy Advocates', 'Venture Investors', 'Standards Bodies'],
+  Science: ['Peer Reviewers', 'University Labs', 'Science Journalists', 'Ethics Boards'],
+  Climate: ['Environmental Groups', 'Local Governments', 'Insurance Industry', 'Research Stations'],
+  Sport: ['National Federation', 'Broadcasters', 'Sponsors', 'Fan Associations'],
+  Culture: ['Arts Councils', 'Critics', 'Cultural Foundations', 'Festival Organisers'],
+}
+
+/** Zipf-ish actor mentions, normalized to articleCount, descending. */
+export function entityBreakdown(ev: NewsEvent): Slice[] {
+  return memo(`${ev.id}:entities`, () => {
+    const rnd = rngFor(ev.id, 'entities')
+    const cast = [
+      ...ev.entities,
+      ...SUPPORTING_ENTITIES[ev.category].filter((e) => !ev.entities.includes(e)),
+    ].slice(0, 9)
+    const weights = cast.map((_, i) => (1 / (i + 0.6)) * (0.82 + rnd() * 0.36))
+    const sum = weights.reduce((a, b) => a + b, 0)
+    return cast
+      .map((label, i) => ({ label, value: Math.round((weights[i] / sum) * ev.articleCount) }))
+      .sort((a, b) => b.value - a.value)
+  })
+}
+
+/**
+ * Per-row trend line for the wide coverage/entities cards. Seeded on the row
+ * label so every source keeps its own recognizable wiggle.
+ */
+export function breakdownSparkline(ev: NewsEvent, label: string, count = 26): number[] {
+  return memo(`${ev.id}:rowspark:${label}:${count}`, () => {
+    const rnd = rngFor(ev.id, `rowspark:${label}`)
+    let v = 0.35 + rnd() * 0.35
+    return Array.from({ length: count }, () => {
+      v = Math.min(Math.max(v + (rnd() - 0.5) * 0.34, 0.05), 1)
+      return v
+    })
+  })
+}
+
+/** One sentence of body copy for the tall "detail" card variants. */
+export function metricDetail(ev: NewsEvent, metric: 'sources' | 'sentiment' | 'evolution'): string {
+  return memo(`${ev.id}:detail:${metric}`, () => {
+    switch (metric) {
+      case 'sources': {
+        const rows = sourceBreakdown(ev)
+        const total = rows.reduce((a, r) => a + r.value, 0)
+        const share = Math.round((rows[0].value / total) * 100)
+        return `Mais ${sourcesDelta(ev)} fontes entraram na cobertura nas últimas 24h. ${rows[0].label} lidera com ${share}% dos artigos publicados.`
+      }
+      case 'sentiment': {
+        const [pos, , neg] = toneSplit(ev)
+        const angle = (ev.angles[0] ?? '').toLowerCase()
+        return `${Math.round(pos.value * 100)}% dos artigos dos últimos sete dias têm tom positivo; os ${Math.round(neg.value * 100)}% negativos concentram-se em ${angle}.`
+      }
+      case 'evolution': {
+        const s = evolutionStats(ev)
+        return `Foram publicados ${s.articles.toLocaleString()} artigos em ${s.events} eventos nos últimos sete dias, uma média de ${s.perEvent} artigos por evento.`
+      }
+    }
   })
 }
 

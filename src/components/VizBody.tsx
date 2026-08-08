@@ -14,9 +14,12 @@ import { findEvent, type EventCategory, type NewsEvent } from '../news/events'
 import { narrativeImage } from '../news/narrativeImages'
 import {
   audienceSegment,
+  breakdownSparkline,
+  entityBreakdown,
   eventsKpi,
   eventWeekSeries,
   evolutionStats,
+  metricDetail,
   narratives,
   reachKpi,
   sentimentSeries,
@@ -24,8 +27,10 @@ import {
   sourcesDelta,
   toneSplit,
   weekSeries,
+  type Slice,
   type WeekPoint,
 } from '../news/series'
+import { Sparkline } from './Sparkline'
 
 type Variant = 'default' | 'horizontal' | 'detail'
 
@@ -40,6 +45,7 @@ const LABELS: Partial<Record<VizMetric, string>> = {
   sentiment: 'Análise de sentimentos',
   evolution: 'Evolução de art. e ev.',
   coverage: 'Cobertura por fonte',
+  entities: 'Entidades e intervenientes',
   narratives: 'Principais narrativas',
 }
 
@@ -66,7 +72,9 @@ export function VizBody({ item }: { item: VizItem }) {
     case 'evolution':
       return <EvolutionBody item={item} event={event} />
     case 'coverage':
-      return <CoverageBody item={item} event={event} />
+      return <BreakdownBody item={item} event={event} rows={sourceBreakdown(event)} />
+    case 'entities':
+      return <BreakdownBody item={item} event={event} rows={entityBreakdown(event)} />
     case 'narratives':
       return <NarrativesBody item={item} event={event} />
     default:
@@ -76,7 +84,7 @@ export function VizBody({ item }: { item: VizItem }) {
 
 function shell(item: VizItem, variant: Variant, children: ReactNode, tag?: string) {
   return (
-    <div className={`viz-card viz-${item.kind} is-${variant}`}>
+    <div className={`viz-card viz-${item.kind} viz-m-${item.metric} is-${variant}`}>
       <div className="viz-label-row">
         <span className="viz-label">{LABELS[item.metric] ?? item.title}</span>
         {tag && <span className="viz-tag">{tag}</span>}
@@ -100,8 +108,10 @@ function Delta({ value, suffix }: { value: number; suffix?: string }) {
 
 function KpiBody({ item, event }: { item: VizItem; event: NewsEvent }) {
   const aspect = item.w / item.h
-  const horizontal = aspect >= 2.1 && item.w >= 360
-  const roomy = !horizontal && item.h >= 170
+  const horizontal = aspect >= 1.9 && item.w >= 260
+  const roomy = !horizontal && item.h >= 140
+  // A horizontal card with real height carries body copy too.
+  const copy = roomy || (horizontal && item.h >= 150)
 
   if (item.metric === 'events') {
     const stat = eventsKpi(event)
@@ -112,19 +122,21 @@ function KpiBody({ item, event }: { item: VizItem; event: NewsEvent }) {
         <div className="viz-kpi-main">
           <span className="viz-number">
             {stat.events}
-            <Delta value={stat.deltaEvents} />
+            {!horizontal && <Delta value={stat.deltaEvents} />}
           </span>
-          {!horizontal && roomy && <p className="viz-detail">{event.summary}</p>}
+          {!horizontal && copy && <p className="viz-detail">{event.summary}</p>}
         </div>
         {horizontal && (
-          <div className="viz-kpi-side">
-            <span className="viz-side-plain">{stat.articles24h} artigos totais</span>
-            <span className="viz-side-delta">▲ +{stat.deltaEvents} eventos</span>
-            <span className="viz-side-delta">▲ +{stat.deltaArticles} artigos</span>
+          <div className="viz-kpi-aside">
+            <div className="viz-kpi-side">
+              <span className="viz-side-plain">{stat.articles24h} artigos totais</span>
+              <span className="viz-side-delta">▲{' '}+{stat.deltaEvents} eventos</span>
+              <span className="viz-side-delta">▲{' '}+{stat.deltaArticles} artigos</span>
+            </div>
+            <span className="viz-tag">24h</span>
           </div>
         )}
       </div>,
-      horizontal ? '24h' : undefined,
     )
   }
 
@@ -140,24 +152,25 @@ function KpiBody({ item, event }: { item: VizItem; event: NewsEvent }) {
             <Delta value={stat.delta} />
           </span>
           <span className="viz-segment">{audienceSegment(event)} ⌄</span>
-          {!horizontal && roomy && <p className="viz-detail">{event.summary}</p>}
+          {copy && <p className="viz-detail">{event.summary}</p>}
         </div>
         {horizontal && <MiniColumns item={item} points={weekSeries(event)} />}
       </div>,
     )
   }
 
-  // sources — always the plain figure, per the Preview's Padrão card
+  // sources — plain figure; a tall card adds the coverage sentence (Widget 3)
   const delta = sourcesDelta(event)
   return shell(
     item,
-    horizontal ? 'horizontal' : 'default',
+    horizontal ? 'horizontal' : roomy ? 'detail' : 'default',
     <div className="viz-kpi-row">
       <div className="viz-kpi-main">
         <span className="viz-number">
           {event.sourceCount.toLocaleString()}
           <Delta value={delta} />
         </span>
+        {copy && <p className="viz-detail">{metricDetail(event, 'sources')}</p>}
       </div>
       {horizontal && <MiniColumns item={item} points={weekSeries(event)} />}
     </div>,
@@ -167,12 +180,14 @@ function KpiBody({ item, event }: { item: VizItem; event: NewsEvent }) {
 /* —— sentiment (Widget 5) —— */
 
 function SentimentBody({ item, event }: { item: VizItem; event: NewsEvent }) {
-  const horizontal = item.w / item.h >= 1.9 && item.w >= 420
+  const horizontal = item.w / item.h >= 1.9 && item.w >= 380
+  const roomy = !horizontal && item.h >= 140
+  const copy = roomy || (horizontal && item.h >= 150)
   const [pos, neu, neg] = toneSplit(event)
   const pct = (v: number) => `${Math.round(v * 100)}%`
   return shell(
     item,
-    horizontal ? 'horizontal' : 'default',
+    horizontal ? 'horizontal' : roomy ? 'detail' : 'default',
     <div className="viz-kpi-row">
       <div className="viz-kpi-main">
         <span className="viz-number viz-number-sentiment">{pct(pos.value)} Positivo</span>
@@ -184,6 +199,7 @@ function SentimentBody({ item, event }: { item: VizItem; event: NewsEvent }) {
             <em>{pct(neg.value)}</em> Negativo
           </span>
         </div>
+        {copy && <p className="viz-detail">{metricDetail(event, 'sentiment')}</p>}
       </div>
       {horizontal && <SentimentColumns item={item} event={event} />}
     </div>,
@@ -193,13 +209,19 @@ function SentimentBody({ item, event }: { item: VizItem; event: NewsEvent }) {
 /* —— evolution (Widget 6) —— */
 
 function EvolutionBody({ item, event }: { item: VizItem; event: NewsEvent }) {
-  const horizontal = item.w / item.h >= 2.2 && item.w >= 460
+  const horizontal = item.w / item.h >= 2.2 && item.w >= 340
+  const roomy = !horizontal && item.h >= 170
   const stats = evolutionStats(event)
   return shell(
     item,
-    horizontal ? 'horizontal' : 'default',
-    <div className="viz-kpi-row">
-      <EvolutionColumns item={item} event={event} wide={horizontal} />
+    horizontal ? 'horizontal' : roomy ? 'detail' : 'default',
+    <div className={roomy ? 'viz-evolution-detail' : 'viz-kpi-row'}>
+      <EvolutionColumns
+        item={item}
+        event={event}
+        wide={horizontal}
+        maxH={roomy ? Math.max(item.h * 0.45, 64) : undefined}
+      />
       {horizontal && (
         <div className="viz-kpi-side viz-evolution-side">
           <span className="viz-side-plain">Média</span>
@@ -208,25 +230,72 @@ function EvolutionBody({ item, event }: { item: VizItem; event: NewsEvent }) {
           <span className="viz-side-plain">{stats.events} eventos</span>
         </div>
       )}
+      {roomy && <p className="viz-detail">{metricDetail(event, 'evolution')}</p>}
     </div>,
   )
 }
 
-/* —— coverage (Widget 7) —— */
+/* —— coverage / entities (Widgets 7 & 9) —— */
 
 const COVERAGE_ROW_H = 30
 const COVERAGE_FIRST_H = 54
+const SPARK_ROW_H = 34
+const SPARK_FIRST_H = 60
 
-function CoverageBody({ item, event }: { item: VizItem; event: NewsEvent }) {
-  const rows = sourceBreakdown(event)
+/**
+ * Ranked breakdown card, shared by "Cobertura por fonte" and "Entidades e
+ * intervenientes". Narrow cards get the plain list; a wide card gets a trend
+ * line per row, axis labels on the lead row only.
+ */
+function BreakdownBody({ item, event, rows }: { item: VizItem; event: NewsEvent; rows: Slice[] }) {
   const total = rows.reduce((a, r) => a + r.value, 0)
   const dayTotal = eventsKpi(event).articles24h
+  const art = (v: number) => Math.max(Math.round((v / total) * dayTotal), 1)
   const innerH = item.h - PAD * 2 - LABEL_H
+  const wide = item.w / item.h >= 1.7 && item.w >= 380
+
+  if (wide) {
+    const count = Math.min(
+      rows.length,
+      Math.max(Math.floor((innerH - SPARK_FIRST_H) / SPARK_ROW_H) + 1, 2),
+    )
+    const week = weekSeries(event)
+    const axis = week.filter((_, i) => (week.length - 1 - i) % 2 === 0)
+    return shell(
+      item,
+      'horizontal',
+      <ul className="viz-breakdown">
+        {rows.slice(0, count).map((row, i) => (
+          <li key={row.label} className={i === 0 ? 'is-lead' : undefined}>
+            <div className="viz-breakdown-head">
+              <span className="viz-coverage-name">{row.label}</span>
+              <span className="viz-coverage-count">{art(row.value)} art.</span>
+            </div>
+            <div className="viz-breakdown-spark">
+              <Sparkline
+                values={breakdownSparkline(event, row.label)}
+                width={220}
+                height={i === 0 ? 30 : 20}
+                strokeWidth={1.4}
+              />
+              {i === 0 && (
+                <div className="viz-breakdown-axis">
+                  {axis.map((p) => (
+                    <span key={p.label}>{p.label}</span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>,
+    )
+  }
+
   const count = Math.min(
     rows.length,
     Math.max(Math.floor((innerH - COVERAGE_FIRST_H) / COVERAGE_ROW_H) + 1, 2),
   )
-  const art = (v: number) => Math.max(Math.round((v / total) * dayTotal), 1)
   return shell(
     item,
     'default',
@@ -339,15 +408,18 @@ function EvolutionColumns({
   item,
   event,
   wide,
+  maxH,
 }: {
   item: VizItem
   event: NewsEvent
   wide: boolean
+  /** Detail cards cap the chart so the body copy below keeps its room. */
+  maxH?: number
 }) {
   const arts = weekSeries(event)
   const evs = eventWeekSeries(event)
   const w = Math.max(wide ? item.w * 0.48 : item.w - PAD * 2, 100)
-  const h = Math.max(item.h - PAD * 2 - LABEL_H - 22, 40)
+  const h = Math.min(Math.max(item.h - PAD * 2 - LABEL_H - 22, 40), maxH ?? Infinity)
   const max = Math.max(...arts.map((p) => p.value))
   const evMax = Math.max(...evs.map((p) => p.value))
   const gap = 8

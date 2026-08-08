@@ -480,6 +480,8 @@
   border: 1px solid var(--surface-border);
   overflow: hidden;
   box-shadow: var(--surface-shadow);
+  /* Lets the headline number scale with the card (cqw/cqh units below) */
+  container-type: size;
 }
 
 .item-viz svg {
@@ -495,6 +497,7 @@
 }
 
 .viz-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -550,7 +553,8 @@
   display: flex;
   align-items: baseline;
   gap: 10px;
-  font-size: 40px;
+  white-space: nowrap;
+  font-size: clamp(28px, 12cqw, 40px);
   font-weight: 640;
   letter-spacing: -0.03em;
   line-height: 1.04;
@@ -559,7 +563,65 @@
 }
 
 .viz-card.is-horizontal .viz-number {
-  font-size: 44px;
+  font-size: clamp(28px, 10cqw, 44px);
+}
+
+/* "Eventos publicados" horizontal — Widget 1's wide variant, rebuilt from
+   measured Figma ratios (card 960×308): label 7.8%h, number cap 55%h with
+   its baseline 10%h above the bottom, side plain 8.4%h, deltas 13%h with
+   6%h row gaps, 24h 8.4%h aligned to the last row's baseline. */
+.viz-m-events.is-horizontal .viz-label {
+  font-size: clamp(10px, 7cqh, 23px);
+}
+
+/* Everything shares one baseline at the card bottom, like the mock */
+.viz-m-events.is-horizontal .viz-kpi-row {
+  align-items: flex-end;
+  gap: clamp(14px, 7cqw, 80px);
+}
+
+.viz-m-events.is-horizontal .viz-kpi-aside {
+  align-self: flex-end;
+  padding-bottom: clamp(2px, 2cqh, 8px);
+}
+
+.viz-m-events.is-horizontal .viz-number {
+  font-size: clamp(44px, 86cqh, 250px);
+  line-height: 0.85;
+  font-weight: 600;
+  letter-spacing: -0.045em;
+}
+
+/* "24h" sits to the right, baseline-aligned with the last side row */
+.viz-kpi-aside {
+  flex: none;
+  align-self: center;
+  display: flex;
+  align-items: flex-end;
+  gap: clamp(10px, 3.5cqw, 36px);
+}
+
+.viz-m-events.is-horizontal .viz-kpi-side {
+  gap: clamp(3px, 4cqh, 15px);
+}
+
+.viz-m-events.is-horizontal .viz-side-plain {
+  font-size: clamp(11px, 8.4cqh, 26px);
+  margin-bottom: clamp(2px, 4cqh, 15px);
+}
+
+.viz-m-events.is-horizontal .viz-side-delta {
+  font-size: clamp(14px, 14cqh, 34px);
+  font-weight: 530;
+  letter-spacing: -0.015em;
+  line-height: 1.12;
+  color: var(--ink-secondary);
+}
+
+.viz-m-events.is-horizontal .viz-tag {
+  margin-left: 0;
+  line-height: 1.2;
+  font-size: clamp(11px, 8.4cqh, 26px);
 }
 
 .viz-number-sentiment {
@@ -596,6 +658,12 @@
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* Horizontal cards split width with a chart or side stats — keep the copy
+   short so it never clips against the card edge */
+.viz-card.is-horizontal .viz-detail {
+  -webkit-line-clamp: 2;
 }
 
 .viz-kpi-side {
@@ -682,15 +750,22 @@
   overflow: hidden;
 }
 
+/* Rows stretch (capped) so a tall card fills out instead of pooling
+   empty space under the list */
 .viz-coverage li {
+  flex: 1 1 auto;
+  max-height: 46px;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   padding: 5px 0;
   font-size: 12.5px;
 }
 
 .viz-coverage li.is-lead {
+  flex: none;
+  max-height: none;
+  align-items: baseline;
   padding: 8px 0 12px;
 }
 
@@ -719,6 +794,94 @@
 .viz-coverage li.is-lead .viz-coverage-count {
   font-size: 14px;
   color: var(--ink);
+}
+
+/* Wide coverage/entities — a trend line per row, axis on the lead only */
+.viz-breakdown {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  overflow: hidden;
+}
+
+.viz-breakdown li {
+  flex: 1 1 auto;
+  max-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 5px 0;
+  font-size: 12.5px;
+}
+
+.viz-breakdown li.is-lead {
+  padding: 6px 0 10px;
+}
+
+.viz-breakdown-head {
+  flex: 0 0 208px;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.viz-breakdown li.is-lead .viz-coverage-name {
+  font-size: 21px;
+  font-weight: 630;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.viz-breakdown li.is-lead .viz-coverage-count {
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.viz-breakdown-spark {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--ink-tertiary);
+}
+
+.viz-breakdown li.is-lead .viz-breakdown-spark {
+  color: var(--ink-secondary);
+}
+
+.viz-breakdown-spark svg {
+  width: 100%;
+}
+
+.viz-breakdown-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--ink-tertiary);
+}
+
+/* Tall evolution card — chart on top, body copy below */
+.viz-evolution-detail {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.viz-evolution-detail .viz-minichart {
+  align-self: stretch;
+}
+
+.viz-evolution-detail .viz-detail {
+  margin-top: 0;
+  -webkit-line-clamp: 4;
 }
 
 /* Narratives — news rows / card */

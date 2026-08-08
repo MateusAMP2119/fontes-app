@@ -19,13 +19,14 @@ const COMPACT_BELOW = 560
 export function recipe(frame: Bounds): Slot[] {
   if (frame.w < COMPACT_BELOW) return compactRecipe()
   return [
-    { kind: 'kpi', metric: 'events', title: 'Eventos publicados', span: 4, rows: 2 },
-    { kind: 'evolution', metric: 'evolution', title: 'Evolução de art. e ev.', span: 3, rows: 2 },
+    { kind: 'kpi', metric: 'events', title: 'Eventos publicados', span: 3, rows: 2 },
+    { kind: 'evolution', metric: 'evolution', title: 'Evolução de art. e ev.', span: 4, rows: 2 },
     { kind: 'kpi', metric: 'reach', title: 'Alcance estimado', span: 3, rows: 2 },
     { kind: 'coverage', metric: 'coverage', title: 'Cobertura por fonte', span: 2, rows: 2, shelves: 2 },
     { kind: 'kpi', metric: 'sources', title: 'Fontes ativas', span: 3, rows: 2 },
     { kind: 'sentiment', metric: 'sentiment', title: 'Análise de sentimentos', span: 7, rows: 2 },
     { kind: 'narratives', metric: 'narratives', title: 'Principais narrativas', span: 8, rows: 4 },
+    { kind: 'entities', metric: 'entities', title: 'Entidades e intervenientes', span: 4, rows: 4 },
   ]
 }
 
