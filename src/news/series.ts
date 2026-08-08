@@ -324,6 +324,24 @@ export function evolutionStats(ev: NewsEvent): EvolutionStats {
   })
 }
 
+/** One-sentence read of the week's publishing momentum, for the evolution card. */
+export function evolutionMomentum(ev: NewsEvent): string {
+  return memo(`${ev.id}:momentum`, () => {
+    const days = weekSeries(ev)
+    const today = days[days.length - 1]
+    const peak = days.reduce((a, b) => (b.value > a.value ? b : a))
+    const avg = days.reduce((a, d) => a + d.value, 0) / days.length
+    if (peak.value === today.value) {
+      const above = Math.round((today.value / avg - 1) * 100)
+      const vsAvg = above < 5 ? 'em linha com a média diária' : `${above}% acima da média diária`
+      return `O volume atinge hoje o pico da semana, com ${today.value} artigos, ${vsAvg}.`
+    }
+    const drop = Math.round((1 - today.value / peak.value) * 100)
+    const day = DAY_FULL[peak.label] ?? peak.label
+    return `O pico da semana foi ${day}, com ${peak.value} artigos; hoje o ritmo está ${drop}% abaixo, com ${today.value}.`
+  })
+}
+
 export type SentimentDay = { label: string; positive: number; neutral: number; negative: number }
 
 /** Daily positive/neutral/negative shares, jittered around toneSplit. */

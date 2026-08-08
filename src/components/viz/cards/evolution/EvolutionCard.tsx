@@ -1,7 +1,13 @@
 import type { VizItem } from '../../../../items/items'
 import type { NewsEvent } from '../../../../news/events'
-import { eventWeekSeries, evolutionStats, metricDetail, weekSeries } from '../../../../news/series'
-import { LABEL_H, PAD, r2 } from '../../shared/charts'
+import {
+  eventWeekSeries,
+  evolutionMomentum,
+  evolutionStats,
+  metricDetail,
+  weekSeries,
+} from '../../../../news/series'
+import { LABEL_H, PAD, r2, textFits } from '../../shared/charts'
 import { Shell } from '../../shared/Shell'
 import { variantFor } from '../../shared/variant'
 import sh from '../../shared/shared.module.css'
@@ -14,15 +20,23 @@ export function EvolutionCard({ item, event }: { item: VizItem; event: NewsEvent
   const horizontal = variant === 'horizontal'
   const roomy = variant === 'detail'
   const stats = evolutionStats(event)
+  const copy = evolutionMomentum(event)
+  const showCopy = horizontal && textFits(item.w * 0.52 - 228, item.h - 78, copy)
   return (
-    <Shell label="Evolução de art. e ev." variant={variant} className={s.root}>
+    <Shell
+      label={variant === 'default' ? 'Evolução de art. e ev.' : 'Evolução de artigos e eventos'}
+      variant={variant}
+      className={s.root}
+    >
       <div className={roomy ? s.detailWrap : s.kpiRow}>
         <EvolutionColumns
           item={item}
           event={event}
           wide={horizontal}
+          fill={horizontal && !showCopy}
           maxH={roomy ? Math.max(item.h * 0.45, 64) : undefined}
         />
+        {showCopy && <p className={s.midCopy}>{copy}</p>}
         {horizontal && (
           <div className={s.side}>
             <span className={s.sidePlain}>Média</span>
@@ -42,17 +56,21 @@ function EvolutionColumns({
   item,
   event,
   wide,
+  fill,
   maxH,
 }: {
   item: VizItem
   event: NewsEvent
   wide: boolean
+  /** No middle copy — stretch the chart up to the side stats instead of leaving a void. */
+  fill?: boolean
   /** Detail cards cap the chart so the body copy below keeps its room. */
   maxH?: number
 }) {
   const arts = weekSeries(event)
   const evs = eventWeekSeries(event)
-  const w = Math.max(wide ? item.w * 0.48 : item.w - PAD * 2, 100)
+  const wideW = fill ? item.w - 220 - PAD * 2 : item.w * 0.48
+  const w = Math.max(wide ? wideW : item.w - PAD * 2, 100)
   const h = Math.min(Math.max(item.h - PAD * 2 - LABEL_H - 22, 40), maxH ?? Infinity)
   const max = Math.max(...arts.map((p) => p.value))
   const evMax = Math.max(...evs.map((p) => p.value))

@@ -1,7 +1,7 @@
 import type { VizItem } from '../../../../items/items'
 import type { NewsEvent } from '../../../../news/events'
 import { metricDetail, sentimentSeries, toneSplit } from '../../../../news/series'
-import { LABEL_H, PAD, r2 } from '../../shared/charts'
+import { LABEL_H, PAD, r2, textFits } from '../../shared/charts'
 import { Shell } from '../../shared/Shell'
 import { variantFor } from '../../shared/variant'
 import sh from '../../shared/shared.module.css'
@@ -11,13 +11,8 @@ const THRESHOLDS = { minAspect: 1.9, minW: 380, detailMinH: 140 }
 
 const chartW = (item: VizItem) => Math.min(Math.max(item.w * 0.42, 140), 260)
 
-/** True when the copy fits the middle column without clipping (rough type metrics). */
-function copyFits(item: VizItem, copy: string): boolean {
-  const midW = item.w - 280 - chartW(item) - 68
-  if (midW < 150) return false
-  const lines = Math.ceil(copy.length / (midW / 6))
-  return lines * 17 <= item.h - 78
-}
+const copyFits = (item: VizItem, copy: string) =>
+  textFits(item.w - 280 - chartW(item) - 68, item.h - 78, copy)
 
 export function SentimentCard({ item, event }: { item: VizItem; event: NewsEvent }) {
   const variant = variantFor(item, THRESHOLDS)

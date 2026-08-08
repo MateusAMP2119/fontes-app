@@ -10,6 +10,12 @@ export function r2(n: number): number {
   return Math.round(n * 100) / 100
 }
 
+/** True when copy fits a midW×availH box without clipping (rough type metrics). */
+export function textFits(midW: number, availH: number, copy: string): boolean {
+  if (midW < 150) return false
+  return Math.ceil(copy.length / (midW / 6)) * 17 <= availH
+}
+
 /** Gray weekday columns, "hoje" in white; sparse labels from the end. */
 export function MiniColumns({ item, points }: { item: VizItem; points: WeekPoint[] }) {
   const w = Math.min(Math.max(item.w * 0.42, 120), 220)

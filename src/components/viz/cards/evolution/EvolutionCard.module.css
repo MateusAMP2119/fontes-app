@@ -36,8 +36,21 @@
   overflow: hidden;
 }
 
+/* Centered in the void between chart and side stats; JS only renders it when it fits */
+.midCopy {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 42ch;
+  margin: 0 auto;
+  align-self: center;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--ink-tertiary);
+}
+
 .side {
   flex: none;
+  margin-left: auto;
   display: flex;
   flex-direction: column;
   justify-content: center;
