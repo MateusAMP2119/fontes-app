@@ -29,6 +29,8 @@ type CanvasProps = {
   onStroke: (points: Point[]) => void
   /** Snapped landing cell for the widget being dragged/resized. */
   gridGhost?: Bounds | null
+  /** Grid cells shown while a widget drag/resize is live. */
+  gridCells?: Bounds[] | null
   /** App measures the PC frame through this when building a dashboard. */
   frameRef?: RefObject<HTMLDivElement | null>
   /** Lets App park focus on the board after the composer unmounts. */
@@ -57,6 +59,7 @@ export function Canvas({
   onItemChange,
   onStroke,
   gridGhost,
+  gridCells,
   frameRef,
   viewportRef: externalViewportRef,
   frameContent,
@@ -184,6 +187,17 @@ export function Canvas({
       </div>
 
       <div className="stage-world" data-testid="canvas-world">
+        {gridCells && (
+          <div className="grid-overlay" data-testid="grid-overlay" aria-hidden="true">
+            {gridCells.map((cell, i) => (
+              <div
+                key={i}
+                className="grid-overlay-cell"
+                style={{ left: cell.x, top: cell.y, width: cell.w, height: cell.h }}
+              />
+            ))}
+          </div>
+        )}
         {gridGhost && (
           <div
             className="grid-placeholder"

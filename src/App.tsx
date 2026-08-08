@@ -37,8 +37,8 @@ import {
   gridMetrics,
   gridToPx,
   maxRows,
+  nearestPreset,
   pxToCell,
-  pxToSpans,
   solveRowH,
   type GridEntry,
   type GridMetrics,
@@ -79,6 +79,7 @@ export default function App() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [tool, setTool] = useState<Tool>('select')
   const [showMobile, setShowMobile] = useState(false)
+  const [showGrid, setShowGrid] = useState(false)
   const [pickerQuery, setPickerQuery] = useState('')
   const [build, setBuild] = useState<Build | null>(null)
   const [gridDrag, setGridDrag] = useState<GridDrag | null>(null)
@@ -305,13 +306,13 @@ export default function App() {
       const base =
         gridBaseRef.current ?? (gridBaseRef.current = vizEntries(activeBoard.items))
       const { col, row } = anchor.grid
-      const spans = pxToSpans(w, h, m)
-      const colSpan = clamp(spans.colSpan, GRID.minColSpan, Math.max(GRID.minColSpan, GRID.cols - col))
-      const rowSpan = clamp(
-        spans.rowSpan,
-        GRID.minRowSpan,
-        Math.max(GRID.minRowSpan, maxRows(frame, m) - row),
-      )
+      const maxColSpan = Math.max(GRID.minColSpan, GRID.cols - col)
+      const maxRowSpan = Math.max(GRID.minRowSpan, maxRows(frame, m) - row)
+      // Snap to the size vocabulary; clamp again for the edge-of-frame
+      // fallback where no preset fits the remaining spans.
+      const spans = nearestPreset(w, h, m, maxColSpan, maxRowSpan)
+      const colSpan = clamp(spans.colSpan, GRID.minColSpan, maxColSpan)
+      const rowSpan = clamp(spans.rowSpan, GRID.minRowSpan, maxRowSpan)
       const px = { x: anchor.x, y: anchor.y, w, h }
       setGridDrag((prev) => {
         if (
@@ -513,6 +514,28 @@ export default function App() {
     return { displayItems: items, gridGhost: target ? gridToPx(target, m) : null }
   }, [activeBoard.items, activeBoard.vizRowH, gridDrag])
 
+  /**
+   * The unit made visible: one rect per cell, while the grid toggle is on or
+   * a drag/resize is live. Skipped while the board is still unclaimed — no
+   * widgets, nothing for a lattice to measure against.
+   */
+  const overlayOn = (showGrid || gridDrag !== null) && activeBoard.items.some((it) => it.type === 'viz')
+  const gridCells = useMemo(() => {
+    // frameTick re-runs the measure after frame resizes; the refs are stable.
+    void frameTick
+    if (!overlayOn) return null
+    const frame = measureFrame(frameRef.current, contentRef.current)
+    const m = gridMetrics(frame, activeBoard.vizRowH ?? solveRowH(frame, DEFAULT_TOTAL_ROWS))
+    const rows = maxRows(frame, m)
+    const cells: Bounds[] = []
+    for (let row = 0; row < rows; row += 1) {
+      for (let col = 0; col < GRID.cols; col += 1) {
+        cells.push(gridToPx({ col, row, colSpan: 1, rowSpan: 1 }, m))
+      }
+    }
+    return cells
+  }, [overlayOn, activeBoard.vizRowH, frameTick])
+
   return (
     <div className="app" data-testid="app-shell">
       <header className="top-bar">
@@ -561,6 +584,7 @@ export default function App() {
               onItemChange={updateItem}
               onStroke={commitStroke}
               gridGhost={gridGhost}
+              gridCells={gridCells}
               frameRef={frameRef}
               viewportRef={viewportRef}
               // Undefined while the board is claimed, so the frame stays the
@@ -593,10 +617,12 @@ export default function App() {
         tool={tool}
         hasSelection={selectedIds.length > 0}
         showMobile={showMobile}
+        showGrid={showGrid}
         onToolChange={setTool}
         onInsert={insertItem}
         onDelete={deleteSelection}
         onToggleMobile={() => setShowMobile((prev) => !prev)}
+        onToggleGrid={() => setShowGrid((prev) => !prev)}
       />
 
       {/* Owned by App so it survives the composer unmounting mid-build */}

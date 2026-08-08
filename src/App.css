@@ -329,6 +329,31 @@
     height 160ms cubic-bezier(0.32, 0.72, 0.28, 1);
 }
 
+/* Dashboard grid: the cell lattice, visible only while a widget drag or
+   resize is live so the size unit stays legible. */
+.grid-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  /* Above resting cards so the lattice reads on a packed board, below the
+     card in flight (z 2/3) and the resize handles (z 4). */
+  z-index: 1;
+  animation: grid-overlay-in 160ms ease-out;
+}
+
+.grid-overlay-cell {
+  position: absolute;
+  border-radius: 4px;
+  border: 1px dashed rgba(62, 142, 247, 0.18);
+  background: rgba(62, 142, 247, 0.03);
+}
+
+@keyframes grid-overlay-in {
+  from {
+    opacity: 0;
+  }
+}
+
 /* Resize handles — widgets only, shown while selected. The edge strips are
    invisible hit areas; the corner carries the visible grip. They sit fully
    inside the card because .item-viz clips overflow. */

@@ -1,5 +1,5 @@
 import type { InsertableType } from '../items/items'
-import { IconPen, IconPhone, IconSticky, IconTrash } from './icons'
+import { IconGrid, IconPen, IconPhone, IconSticky, IconTrash } from './icons'
 
 export type Tool = 'select' | 'draw'
 
@@ -7,20 +7,24 @@ type BottomBarProps = {
   tool: Tool
   hasSelection: boolean
   showMobile: boolean
+  showGrid: boolean
   onToolChange: (tool: Tool) => void
   onInsert: (type: InsertableType) => void
   onDelete: () => void
   onToggleMobile: () => void
+  onToggleGrid: () => void
 }
 
 export function BottomBar({
   tool,
   hasSelection,
   showMobile,
+  showGrid,
   onToolChange,
   onInsert,
   onDelete,
   onToggleMobile,
+  onToggleGrid,
 }: BottomBarProps) {
   return (
     <div className="chrome chrome-bottom" data-testid="bottom-bar">
@@ -68,6 +72,17 @@ export function BottomBar({
           >
             <IconPhone />
             <span className="sr-only">Mobile frame</span>
+          </button>
+          <button
+            type="button"
+            className={`pill-btn frame-btn${showGrid ? ' is-on' : ''}`}
+            title="Dashboard grid"
+            aria-pressed={showGrid}
+            data-testid="grid-toggle"
+            onClick={onToggleGrid}
+          >
+            <IconGrid />
+            <span className="sr-only">Dashboard grid</span>
           </button>
         </div>
       </div>

@@ -37,6 +37,54 @@ export const GRID = {
   minRowSpan: 1,
 } as const
 
+/**
+ * The size vocabulary: every card resizes to one of these span pairs, so the
+ * dashboard speaks a handful of shared sizes instead of arbitrary spans.
+ */
+export const SIZE_PRESETS: readonly { colSpan: number; rowSpan: number }[] = [
+  { colSpan: 3, rowSpan: 2 }, // S — KPI
+  { colSpan: 4, rowSpan: 2 }, // M — small chart
+  { colSpan: 6, rowSpan: 2 }, // W — wide chart
+  { colSpan: 12, rowSpan: 2 }, // F — full-width strip
+  { colSpan: 4, rowSpan: 4 }, // T — tall panel
+  { colSpan: 8, rowSpan: 4 }, // L — hero
+]
+
+/** Pixel size of a span: n units plus the n-1 gutters between them. */
+const spanPx = (span: number, unit: number, gutter: number) =>
+  span * unit + (span - 1) * gutter
+
+/**
+ * The preset closest (L1 pixel distance) to a requested size, considering
+ * only presets that fit the available spans.
+ */
+export function nearestPreset(
+  w: number,
+  h: number,
+  m: GridMetrics,
+  maxColSpan: number,
+  maxRowSpan: number,
+): { colSpan: number; rowSpan: number } {
+  const fits = SIZE_PRESETS.filter(
+    (p) => p.colSpan <= maxColSpan && p.rowSpan <= maxRowSpan,
+  )
+  // ponytail: nothing fits near the frame edge — fall back to all presets
+  // and let applyResize clamp the spans.
+  const pool = fits.length > 0 ? fits : SIZE_PRESETS
+  let best = pool[0]
+  let bestDist = Infinity
+  for (const p of pool) {
+    const dist =
+      Math.abs(w - spanPx(p.colSpan, m.colW, m.gutter)) +
+      Math.abs(h - spanPx(p.rowSpan, m.rowH, m.gutter))
+    if (dist < bestDist) {
+      best = p
+      bestDist = dist
+    }
+  }
+  return best
+}
+
 const innerW = (frame: Bounds) => Math.max(frame.w - GRID.pad * 2, 260)
 const innerH = (frame: Bounds) => Math.max(frame.h - GRID.pad * 2, 260)
 
