@@ -359,8 +359,15 @@
    inside the card because .item-viz clips overflow. */
 .item-handle {
   position: absolute;
-  pointer-events: auto;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 130ms ease;
   z-index: 4;
+}
+
+.item.is-selected:not(.is-dragging) .item-handle {
+  pointer-events: auto;
+  opacity: 1;
 }
 
 .item-handle.is-e {
@@ -391,9 +398,9 @@
   content: '';
   position: absolute;
   inset: 3px;
-  border-radius: 3px;
-  background: #fff;
-  border: 1.5px solid rgba(62, 142, 247, 0.9);
+  border-right: 2px solid rgba(62, 142, 247, 0.9);
+  border-bottom: 2px solid rgba(62, 142, 247, 0.9);
+  border-bottom-right-radius: 4px;
 }
 
 .item-text-body {

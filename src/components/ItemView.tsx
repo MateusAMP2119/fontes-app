@@ -101,7 +101,9 @@ export function ItemView({
     if (!drag || drag.pointerId !== e.pointerId) return
     const dx = e.clientX - drag.startX
     const dy = e.clientY - drag.startY
-    if (!drag.moved && Math.hypot(dx, dy) < 2) {
+    // 5px dead zone so a click's micro-wiggle doesn't flash the drag
+    // lift (scale + drop-shadow) or the grid overlay.
+    if (!drag.moved && Math.hypot(dx, dy) < 5) {
       return
     }
     if (!drag.moved) setDragging(true)
@@ -185,8 +187,9 @@ export function ItemView({
     .filter(Boolean)
     .join(' ')
 
-  // Only dashboard widgets live on the grid, so only they resize.
-  const showHandles = item.type === 'viz' && selected && interactive && !dragging
+  // Only dashboard widgets live on the grid, so only they resize. Handles
+  // stay mounted so deselection can fade them out in CSS.
+  const showHandles = item.type === 'viz' && interactive
 
   return (
     <div

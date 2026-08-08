@@ -537,7 +537,15 @@ export default function App() {
   }, [overlayOn, activeBoard.vizRowH, frameTick])
 
   return (
-    <div className="app" data-testid="app-shell">
+    <div
+      className="app"
+      data-testid="app-shell"
+      // Clicks on app chrome (top bar, margins) deselect like canvas clicks.
+      // Cards and the bottom bar stop propagation before this fires.
+      onPointerDown={() => {
+        if (selectedIds.length > 0) setSelectedIds([])
+      }}
+    >
       <header className="top-bar">
         <BoardsPanel
           open={sidebarOpen}

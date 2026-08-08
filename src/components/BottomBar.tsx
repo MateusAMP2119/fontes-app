@@ -35,6 +35,9 @@ export function BottomBar({
             className="pill-btn"
             title="Delete selection"
             disabled={!hasSelection}
+            // Keep the app shell's deselect-on-pointerdown from firing here,
+            // otherwise the button disables itself before its click lands.
+            onPointerDown={(e) => e.stopPropagation()}
             onClick={onDelete}
           >
             <IconTrash />
