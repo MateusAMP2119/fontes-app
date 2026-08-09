@@ -151,13 +151,13 @@
 :global([data-grid-on]) .card[data-variant='horizontal'] .guides {
   display: grid;
   grid-template-columns: repeat(var(--card-cols, 2), 1fr);
-  gap: 16px;
+  gap: var(--layout-guide-gap);
 }
 
 .guides span {
-  border: 1px dashed rgba(62, 142, 247, 0.18);
-  border-radius: 4px;
-  background: rgba(62, 142, 247, 0.03);
+  border: 1px dashed var(--layout-guide-stroke);
+  border-radius: var(--layout-guide-radius);
+  background: var(--layout-guide-fill);
 }
 
 .minichart {

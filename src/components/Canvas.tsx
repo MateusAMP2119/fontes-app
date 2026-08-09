@@ -80,9 +80,9 @@ export function Canvas({
     const el = viewportRef.current
     if (!el) return
     const onWheel = (e: WheelEvent) => {
-      // The board itself is fixed, but the phone preview is a real vertical
-      // viewport and must keep its native wheel/trackpad scrolling.
-      if ((e.target as HTMLElement).closest('.mobile-dashboard-scroll')) return
+      // The board itself is fixed, but explicit scroll regions (phone preview
+      // and list-card bodies) keep native wheel/trackpad scrolling.
+      if ((e.target as HTMLElement).closest('.mobile-dashboard-scroll, [data-scroll-region]')) return
       e.preventDefault()
     }
     el.addEventListener('wheel', onWheel, { passive: false })

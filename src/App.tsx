@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'motion/react'
+import { AnimatePresence, LayoutGroup, motion } from 'motion/react'
 import { clamp, type Point } from './camera/camera'
 import {
   createInkItem,
@@ -556,6 +556,7 @@ export default function App() {
       className="app"
       data-testid="app-shell"
       data-grid-on={overlayOn ? '' : undefined}
+      data-movement-locked={movementLocked ? '' : undefined}
       // Clicks on app chrome (top bar, margins) deselect like canvas clicks.
       // Cards and the bottom bar stop propagation before this fires.
       onPointerDown={() => {
@@ -582,61 +583,63 @@ export default function App() {
         className={`board-content${sidebarOpen ? ' is-shelved' : ''}`}
         ref={contentRef}
       >
-        <AnimatePresence initial={false}>
-          <motion.div
-            key={activeBoard.id}
-            className="stage"
-            initial={{ opacity: 0, scale: 0.985, filter: 'blur(6px)' }}
-            animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-            exit={{ opacity: 0, scale: 1.015, filter: 'blur(6px)' }}
-            transition={{ duration: 0.32, ease: [0.32, 0.72, 0.28, 1] }}
-          >
-            <Canvas
-              items={displayItems}
-              selectedIds={selectedIds}
-              editingId={editingId}
-              tool={tool}
-              showMobile={showMobile}
-              movementLocked={movementLocked}
-              onSelectOnly={selectOnly}
-              onToggleSelect={toggleSelect}
-              onSelectMany={setSelectedIds}
-              onDragTo={dragItemTo}
-              onDragEnd={endItemDrag}
-              onResizeTo={resizeItemTo}
-              onResizeEnd={commitGridDrag}
-              onEdit={setEditingId}
-              onPreview={setPreviewId}
-              onItemChange={updateItem}
-              onStroke={commitStroke}
-              gridGhost={gridGhost}
-              gridCells={gridCells}
-              frameRef={frameRef}
-              viewportRef={viewportRef}
-              // Undefined while the board is claimed, so the frame stays the
-              // decorative, aria-hidden surface it was.
-              frameContent={
-                showPicker ? (
-                  <>
-                    <TopicComposer
-                      query={pickerQuery}
-                      onQueryChange={setPickerQuery}
-                      onPick={startBuild}
-                      leaving={build !== null}
-                    />
-                    {build && (
-                      <BuildGhost
-                        event={build.event}
-                        from={build.from}
-                        onDone={() => commitBuild(build)}
+        <LayoutGroup id="board-morph">
+          <AnimatePresence initial={false} mode="popLayout">
+            <motion.div
+              key={activeBoard.id}
+              className="stage"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.24, ease: [0.32, 0.72, 0.28, 1] }}
+            >
+              <Canvas
+                items={displayItems}
+                selectedIds={selectedIds}
+                editingId={editingId}
+                tool={tool}
+                showMobile={showMobile}
+                movementLocked={movementLocked}
+                onSelectOnly={selectOnly}
+                onToggleSelect={toggleSelect}
+                onSelectMany={setSelectedIds}
+                onDragTo={dragItemTo}
+                onDragEnd={endItemDrag}
+                onResizeTo={resizeItemTo}
+                onResizeEnd={commitGridDrag}
+                onEdit={setEditingId}
+                onPreview={setPreviewId}
+                onItemChange={updateItem}
+                onStroke={commitStroke}
+                gridGhost={gridGhost}
+                gridCells={gridCells}
+                frameRef={frameRef}
+                viewportRef={viewportRef}
+                // Undefined while the board is claimed, so the frame stays the
+                // decorative, aria-hidden surface it was.
+                frameContent={
+                  showPicker ? (
+                    <>
+                      <TopicComposer
+                        query={pickerQuery}
+                        onQueryChange={setPickerQuery}
+                        onPick={startBuild}
+                        leaving={build !== null}
                       />
-                    )}
-                  </>
-                ) : undefined
-              }
-            />
-          </motion.div>
-        </AnimatePresence>
+                      {build && (
+                        <BuildGhost
+                          event={build.event}
+                          from={build.from}
+                          onDone={() => commitBuild(build)}
+                        />
+                      )}
+                    </>
+                  ) : undefined
+                }
+              />
+            </motion.div>
+          </AnimatePresence>
+        </LayoutGroup>
       </div>
 
       <BottomBar

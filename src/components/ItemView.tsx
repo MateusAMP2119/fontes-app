@@ -5,6 +5,7 @@ import {
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
+import { motion } from 'motion/react'
 import { inkPath, type Item, type TableItem } from '../items/items'
 import { VizBody } from './viz'
 
@@ -203,9 +204,17 @@ export function ItemView({
   const showHandles = item.type === 'viz' && interactive
 
   return (
-    <div
+    <motion.div
       className={className}
       style={style}
+      layoutId={item.type === 'viz' ? `dashboard-card-${item.metric}` : undefined}
+      layout={item.type === 'viz'}
+      layoutDependency={item.id}
+      animate={{ scale: dragging ? 1.015 : 1 }}
+      transition={{
+        layout: { duration: 0.42, ease: [0.32, 0.72, 0.28, 1] },
+        scale: { duration: 0.16, ease: [0.32, 0.72, 0.28, 1] },
+      }}
       data-testid={`item-${item.type}`}
       data-item-id={item.id}
       title={previewable ? 'Double-click to open close-up' : undefined}
@@ -238,7 +247,7 @@ export function ItemView({
             onPointerCancel={endResize}
           />
         ))}
-    </div>
+    </motion.div>
   )
 }
 

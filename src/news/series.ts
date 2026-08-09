@@ -105,13 +105,30 @@ export function peakPoint(ev: NewsEvent): SeriesPoint {
   return series.reduce((best, p) => (p.value > best.value ? p : best), series[0])
 }
 
+const SUPPORTING_SOURCES = [
+  'Harbour Watch',
+  'Public Record',
+  'Civic Wire',
+  'Field Notes',
+  'Morning Index',
+  'Regional Desk',
+  'Open Signal',
+  'The Bulletin',
+  'Current Affairs',
+  'Local Dispatch',
+]
+
 /** Zipf-ish outlet distribution, normalized to articleCount, descending. */
 export function sourceBreakdown(ev: NewsEvent): Slice[] {
   return memo(`${ev.id}:sources`, () => {
     const rnd = rngFor(ev.id, 'sources')
-    const weights = ev.sources.map((_, i) => (1 / (i + 0.6)) * (0.82 + rnd() * 0.36))
+    const sources = [
+      ...ev.sources,
+      ...SUPPORTING_SOURCES.filter((source) => !ev.sources.includes(source)),
+    ].slice(0, 14)
+    const weights = sources.map((_, i) => (1 / (i + 0.6)) * (0.82 + rnd() * 0.36))
     const sum = weights.reduce((a, b) => a + b, 0)
-    return ev.sources
+    return sources
       .map((label, i) => ({ label, value: Math.round((weights[i] / sum) * ev.articleCount) }))
       .sort((a, b) => b.value - a.value)
   })
@@ -470,27 +487,103 @@ export function sentimentSeries(ev: NewsEvent): SentimentDay[] {
  * entities card fills out the way the Figma list does.
  */
 const SUPPORTING_ENTITIES: Record<EventCategory, string[]> = {
-  World: ['Opposition Parties', 'City Councils', 'Foreign Ministries', 'Residents Associations'],
-  Business: ['Market Analysts', 'Pension Funds', 'Trade Unions', 'Sector Regulators'],
-  Tech: ['Developer Community', 'Privacy Advocates', 'Venture Investors', 'Standards Bodies'],
-  Science: ['Peer Reviewers', 'University Labs', 'Science Journalists', 'Ethics Boards'],
-  Climate: ['Environmental Groups', 'Local Governments', 'Insurance Industry', 'Research Stations'],
-  Sport: ['National Federation', 'Broadcasters', 'Sponsors', 'Fan Associations'],
-  Culture: ['Arts Councils', 'Critics', 'Cultural Foundations', 'Festival Organisers'],
+  World: ['Opposition Parties', 'City Councils', 'Foreign Ministries', 'Residents Associations', 'Emergency Services', 'Regional Courts', 'Port Authorities', 'Public Auditors'],
+  Business: ['Market Analysts', 'Pension Funds', 'Trade Unions', 'Sector Regulators', 'Retail Investors', 'Competition Authorities', 'Industry Groups', 'Credit Analysts'],
+  Tech: ['Developer Community', 'Privacy Advocates', 'Venture Investors', 'Standards Bodies', 'Cloud Providers', 'Security Researchers', 'Open-source Maintainers', 'Enterprise Buyers'],
+  Science: ['Peer Reviewers', 'University Labs', 'Science Journalists', 'Ethics Boards', 'Research Funders', 'Professional Societies', 'Laboratory Staff', 'Policy Advisers'],
+  Climate: ['Environmental Groups', 'Local Governments', 'Insurance Industry', 'Research Stations', 'Energy Providers', 'Coastal Communities', 'Agricultural Groups', 'Weather Agencies'],
+  Sport: ['National Federation', 'Broadcasters', 'Sponsors', 'Fan Associations', 'Club Owners', 'Players Union', 'Venue Operators', 'Match Officials'],
+  Culture: ['Arts Councils', 'Critics', 'Cultural Foundations', 'Festival Organisers', 'Museum Directors', 'Artist Collectives', 'Publishers', 'Local Venues'],
 }
 
 /** Zipf-ish actor mentions, normalized to articleCount, descending. */
-export function entityBreakdown(ev: NewsEvent): Slice[] {
+export type EntitySlice = Slice & {
+  role: string
+  description: string
+}
+
+type EntityRule = {
+  match: RegExp
+  role: string
+  action: string
+}
+
+const ENTITY_RULES: EntityRule[] = [
+  {
+    match: /consortium/i,
+    role: 'Consórcio coordenador',
+    action: 'Coordena parceiros, recursos e decisões técnicas do projeto.',
+  },
+  {
+    match: /trial sites?|labs?|fab|crews?|stations?|precinct officials/i,
+    role: 'Operação no terreno',
+    action: 'Executa o trabalho no terreno, recolhe evidência e reporta resultados.',
+  },
+  {
+    match: /regulator|commission|authority|ministry|agency|government|secretariat/i,
+    role: 'Entidade pública',
+    action: 'Define regras, fiscaliza o processo e decide sobre autorizações públicas.',
+  },
+  {
+    match: /panel|auditor|reviewer|court|counsel|inquiry|mediator|verifier/i,
+    role: 'Supervisão independente',
+    action: 'Avalia evidência, verifica conformidade e responsabiliza os intervenientes.',
+  },
+  {
+    match: /fund|funding|investor|shareholder|bidders?/i,
+    role: 'Financiamento',
+    action: 'Disponibiliza capital e condiciona prioridades, prazos e escala da iniciativa.',
+  },
+  {
+    match: /union|groups?|community|communities|homeowners|settlements|supporters|ngos?|observers/i,
+    role: 'Representação coletiva',
+    action: 'Representa as pessoas afetadas e leva preocupações públicas para a decisão.',
+  },
+  {
+    match: /operators?|providers?|platforms?|carriers?|utilities|networks?|harbourline/i,
+    role: 'Operador do setor',
+    action: 'Opera a infraestrutura ou serviço diretamente afetado por este evento.',
+  },
+  {
+    match: /researchers?|scientists?|analysts?|institute|reviewers?/i,
+    role: 'Especialistas técnicos',
+    action: 'Produz análise especializada e interpreta os impactos técnicos do evento.',
+  },
+  {
+    match: /manufactur|supplier|contractor|foundry|studios?|firms?|partner|production/i,
+    role: 'Parceiro industrial',
+    action: 'Transforma o plano em capacidade operacional, produção e controlo de qualidade.',
+  },
+]
+
+function entityProfile(ev: NewsEvent, label: string, index: number): Omit<EntitySlice, keyof Slice> {
+  const rule = ENTITY_RULES.find(({ match }) => match.test(label)) ?? {
+    role: 'Interveniente central',
+    action: 'Participa nas decisões e na execução das medidas associadas ao evento.',
+  }
+  const focus = ev.angles[index % ev.angles.length].toLowerCase()
+  return {
+    role: rule.role,
+    description: `${rule.action} Na cobertura, surge ligada a ${focus}.`,
+  }
+}
+
+export function entityBreakdown(ev: NewsEvent): EntitySlice[] {
   return memo(`${ev.id}:entities`, () => {
     const rnd = rngFor(ev.id, 'entities')
     const cast = [
       ...ev.entities,
       ...SUPPORTING_ENTITIES[ev.category].filter((e) => !ev.entities.includes(e)),
-    ].slice(0, 9)
+    ].slice(0, 14)
     const weights = cast.map((_, i) => (1 / (i + 0.6)) * (0.82 + rnd() * 0.36))
     const sum = weights.reduce((a, b) => a + b, 0)
+    const mentionTotal = Math.round(ev.articleCount * (1.35 + rnd() * 0.8))
     return cast
-      .map((label, i) => ({ label, value: Math.round((weights[i] / sum) * ev.articleCount) }))
+      .map((label, i) => ({
+        label,
+        value: Math.max(Math.round((weights[i] / sum) * mentionTotal), 1),
+        ...entityProfile(ev, label, i),
+      }))
       .sort((a, b) => b.value - a.value)
   })
 }
@@ -542,7 +635,7 @@ export function metricDetail(ev: NewsEvent, metric: 'sources' | 'sentiment' | 'e
 
 export type Narrative = {
   title: string
-  source: string
+  sources: string[]
   summary: string
   articles: number
   fontes: number
@@ -554,15 +647,31 @@ export type Narrative = {
 export function narratives(ev: NewsEvent): Narrative[] {
   return memo(`${ev.id}:narratives`, () => {
     const rnd = rngFor(ev.id, 'narratives')
-    return ev.headlines.map((headline, i) => {
+    const rowCount = 12
+    return Array.from({ length: rowCount }, (_, i) => {
+      const headline = ev.headlines[i % ev.headlines.length]
+      const cycle = Math.floor(i / ev.headlines.length)
       const angle = ev.angles[i % ev.angles.length]
-      const source = ev.sources[Math.floor(rnd() * ev.sources.length)]
+      const sourcePool = [
+        headline.source,
+        ...ev.sources.filter((source) => source !== headline.source),
+      ]
+      const sourceCount = Math.min(2 + Math.floor(rnd() * 5), sourcePool.length)
+      const offset = Math.floor(rnd() * sourcePool.length)
+      const sources = Array.from(
+        { length: sourceCount },
+        (_, sourceIndex) => sourcePool[(sourceIndex + offset) % sourcePool.length],
+      )
+      const title =
+        cycle === 0
+          ? headline.title
+          : `${cycle === 1 ? 'Em detalhe' : 'Contexto'}: ${angle} — ${headline.title}`
       return {
-        title: headline.title,
-        source: headline.source,
-        summary: `Cobertura centrada em ${angle.toLowerCase()}, com ${source} a liderar o volume de artigos.`,
+        title,
+        sources,
+        summary: `Cobertura centrada em ${angle.toLowerCase()}, com ${sources[0]} a liderar o volume de artigos.`,
         articles: 3 + Math.floor(rnd() * 16),
-        fontes: 2 + Math.floor(rnd() * 5),
+        fontes: sources.length,
         imageIndex: Math.floor(rnd() * 4),
       }
     })

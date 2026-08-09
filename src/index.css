@@ -13,6 +13,10 @@
     0 2px 6px rgba(30, 60, 110, 0.06);
   --hover: rgba(50, 90, 160, 0.08);
   --divider: rgba(50, 90, 160, 0.16);
+  --layout-guide-stroke: rgba(62, 142, 247, 0.18);
+  --layout-guide-fill: rgba(62, 142, 247, 0.03);
+  --layout-guide-radius: 4px;
+  --layout-guide-gap: 16px;
   --chart-fg: #222b38;
   --chart-mid: #8b93a1;
   --chart-dim: #d7dce4;
