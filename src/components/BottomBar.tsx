@@ -1,5 +1,12 @@
 import type { InsertableType } from '../items/items'
-import { IconGridDots, IconLock, IconPen, IconPhone, IconSticky, IconTrash } from './icons'
+import {
+  IconGridDots,
+  IconLock,
+  IconPen,
+  IconPhone,
+  IconSticky,
+  IconTrash,
+} from './icons'
 
 export type Tool = 'select' | 'draw'
 

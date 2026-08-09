@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { AnimatePresence, LayoutGroup, motion } from 'motion/react'
 import { clamp, type Point } from './camera/camera'
 import {
@@ -23,7 +30,16 @@ import { BoardsPanel } from './components/BoardsPanel'
 import { BottomBar, type Tool } from './components/BottomBar'
 import { Canvas } from './components/Canvas'
 import { CardCloseup } from './components/CardCloseup'
-import { TopActions } from './components/TopActions'
+import { CardInsight } from './components/CardInsight'
+import {
+  DataSourceComposer,
+  type DataConnector,
+} from './components/DataSourceComposer'
+import {
+  TopActions,
+  type PageTheme,
+  type PageTimeRange,
+} from './components/TopActions'
 import { BuildGhost, type GhostRect } from './components/picker/BuildGhost'
 import { TopicComposer } from './components/picker/TopicComposer'
 import { buildDashboard, DEFAULT_TOTAL_ROWS } from './news/dashboard'
@@ -76,6 +92,12 @@ function vizEntries(items: Item[]): GridEntry[] {
 export default function App() {
   const [ws, setWs] = useState<Workspace>(loadWorkspace)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [editToolbarOpen, setEditToolbarOpen] = useState(false)
+  const [pageTheme, setPageTheme] = useState<PageTheme>('light')
+  const [pageTimeRange, setPageTimeRange] = useState<PageTimeRange>('7d')
+  const [connectedSourceIds, setConnectedSourceIds] = useState(['news-stream', 'media-metrics'])
+  const [dataSourcePickerOpen, setDataSourcePickerOpen] = useState(false)
+  const [insightOpen, setInsightOpen] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [editingId, setEditingId] = useState<string | null>(null)
   const [tool, setTool] = useState<Tool>('select')
@@ -219,6 +241,24 @@ export default function App() {
     },
     [centerPoint, setItems],
   )
+
+  const pinInsight = useCallback((text: string) => {
+    const item = createItem('note', centerPoint())
+    if (item.type !== 'note') return
+    const note = { ...item, text }
+    setItems((prev) => [...prev, note])
+    setSelectedIds([note.id])
+    setEditingId(null)
+    setInsightOpen(false)
+  }, [centerPoint, setItems])
+
+  const connectDataSource = useCallback((connector: DataConnector) => {
+    setConnectedSourceIds((current) =>
+      current.includes(connector.id) ? current : [...current, connector.id],
+    )
+    setStatus(`${connector.name} connected. Its fields are now available to this page.`)
+    setDataSourcePickerOpen(false)
+  }, [])
 
   const updateItem = useCallback(
     (next: Item) => {
@@ -550,10 +590,13 @@ export default function App() {
         (item): item is VizItem => item.id === previewId && item.type === 'viz',
       )
     : undefined
+  const selectedItem = activeBoard.items.find((item) => selectedIds.includes(item.id))
 
   return (
     <div
       className="app"
+      data-page-theme={pageTheme}
+      data-page-time-range={pageTimeRange}
       data-testid="app-shell"
       data-grid-on={overlayOn ? '' : undefined}
       data-movement-locked={movementLocked ? '' : undefined}
@@ -576,7 +619,36 @@ export default function App() {
             setWs((prev) => setBoardFolder(prev, boardId, folderId))
           }
         />
-        <TopActions />
+        <TopActions
+          editOpen={editToolbarOpen}
+          editorView={selectedIds.length === 0 ? 'page' : 'card'}
+          onEditToggle={() => {
+            const next = !editToolbarOpen
+            setEditToolbarOpen(next)
+            if (!next) {
+              setDataSourcePickerOpen(false)
+              setInsightOpen(false)
+            }
+          }}
+          onEditClose={() => {
+            setEditToolbarOpen(false)
+            setDataSourcePickerOpen(false)
+            setInsightOpen(false)
+          }}
+          sourceCount={connectedSourceIds.length}
+          sourcePickerOpen={dataSourcePickerOpen}
+          pageTheme={pageTheme}
+          pageTimeRange={pageTimeRange}
+          onOpenDataSources={() => {
+            setDataSourcePickerOpen((open) => !open)
+            setInsightOpen(false)
+          }}
+          onAnalyze={() => {
+            if (selectedItem) setInsightOpen(true)
+          }}
+          onPageThemeChange={setPageTheme}
+          onPageTimeRangeChange={setPageTimeRange}
+        />
       </header>
 
       <div
@@ -640,6 +712,13 @@ export default function App() {
             </motion.div>
           </AnimatePresence>
         </LayoutGroup>
+        {dataSourcePickerOpen && (
+          <DataSourceComposer
+            connectedIds={connectedSourceIds}
+            onConnect={connectDataSource}
+            onClose={() => setDataSourcePickerOpen(false)}
+          />
+        )}
       </div>
 
       <BottomBar
@@ -669,6 +748,14 @@ export default function App() {
           />
         )}
       </AnimatePresence>
+
+      {insightOpen && selectedItem && (
+        <CardInsight
+          item={selectedItem}
+          onClose={() => setInsightOpen(false)}
+          onPin={pinInsight}
+        />
+      )}
 
       {/* Owned by App so it survives the composer unmounting mid-build */}
       <div className="sr-only" role="status" aria-live="polite">
