@@ -13,6 +13,7 @@ type ItemViewProps = {
   selected: boolean
   editing: boolean
   interactive: boolean
+  previewable: boolean
   onSelectOnly: (id: string) => void
   onToggleSelect: (id: string) => void
   onDragTo: (anchorId: string, x: number, y: number) => void
@@ -20,6 +21,7 @@ type ItemViewProps = {
   onResizeTo: (id: string, w: number, h: number) => void
   onResizeEnd: (id: string) => void
   onEdit: (id: string | null) => void
+  onPreview: (id: string) => void
   onChange: (item: Item) => void
 }
 
@@ -56,6 +58,7 @@ export function ItemView({
   selected,
   editing,
   interactive,
+  previewable,
   onSelectOnly,
   onToggleSelect,
   onDragTo,
@@ -63,6 +66,7 @@ export function ItemView({
   onResizeTo,
   onResizeEnd,
   onEdit,
+  onPreview,
   onChange,
 }: ItemViewProps) {
   const dragRef = useRef<DragState | null>(null)
@@ -76,6 +80,12 @@ export function ItemView({
   }, [editing])
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    // Locked dashboard cards still own the pointer so a double-click does
+    // not begin a marquee on the canvas underneath them.
+    if (previewable && e.button === 0) {
+      e.stopPropagation()
+      return
+    }
     if (!interactive || editing || e.button !== 0) return
     e.stopPropagation()
     if (e.shiftKey) {
@@ -183,6 +193,7 @@ export function ItemView({
     dragging ? 'is-dragging' : '',
     resizing ? 'is-resizing' : '',
     interactive ? 'is-interactive' : '',
+    previewable ? 'is-previewable' : '',
   ]
     .filter(Boolean)
     .join(' ')
@@ -197,11 +208,17 @@ export function ItemView({
       style={style}
       data-testid={`item-${item.type}`}
       data-item-id={item.id}
+      title={previewable ? 'Double-click to open close-up' : undefined}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
       onDoubleClick={(e) => {
+        if (previewable) {
+          e.stopPropagation()
+          onPreview(item.id)
+          return
+        }
         // Ink and widgets have no text editor to enter.
         if (!interactive || item.type === 'ink' || item.type === 'viz') return
         e.stopPropagation()

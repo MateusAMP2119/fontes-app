@@ -53,6 +53,14 @@ export function IconTrash({ size }: IconProps) {
   )
 }
 
+export function IconClose({ size }: IconProps) {
+  return (
+    <Svg size={size}>
+      <path d="M6 6l12 12M18 6L6 18" {...stroke} />
+    </Svg>
+  )
+}
+
 export function IconSticky({ size }: IconProps) {
   return (
     <Svg size={size}>

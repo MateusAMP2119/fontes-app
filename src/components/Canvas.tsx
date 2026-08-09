@@ -27,6 +27,7 @@ type CanvasProps = {
   onResizeTo: (id: string, w: number, h: number) => void
   onResizeEnd: (id: string) => void
   onEdit: (id: string | null) => void
+  onPreview: (id: string) => void
   onItemChange: (item: Item) => void
   onStroke: (points: Point[]) => void
   /** Snapped landing cell for the widget being dragged/resized. */
@@ -59,6 +60,7 @@ export function Canvas({
   onResizeTo,
   onResizeEnd,
   onEdit,
+  onPreview,
   onItemChange,
   onStroke,
   gridGhost,
@@ -237,6 +239,7 @@ export function Canvas({
             interactive={
               tool === 'select' && (item.type !== 'viz' || !movementLocked)
             }
+            previewable={movementLocked && item.type === 'viz'}
             onSelectOnly={onSelectOnly}
             onToggleSelect={onToggleSelect}
             onDragTo={onDragTo}
@@ -244,6 +247,7 @@ export function Canvas({
             onResizeTo={onResizeTo}
             onResizeEnd={onResizeEnd}
             onEdit={onEdit}
+            onPreview={onPreview}
             onChange={onItemChange}
           />
         ))}
