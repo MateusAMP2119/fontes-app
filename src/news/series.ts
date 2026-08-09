@@ -233,17 +233,137 @@ export function eventsKpi(ev: NewsEvent): EventsKpi {
   })
 }
 
-export type ReachKpi = { value: string; delta: number }
+export type ReachKpi = { value: string }
 
 /** "ALCANCE ESTIMADO" — audience reach, articles × seeded multiplier. */
 export function reachKpi(ev: NewsEvent): ReachKpi {
   return memo(`${ev.id}:reach`, () => {
     const rnd = rngFor(ev.id, 'reach')
     const perArticle = 2000 + rnd() * 7000
-    const value = formatCompact(Math.round(ev.articleCount * perArticle))
-    const delta = Math.max(Math.round(ev.articleCount * (0.2 + rnd() * 0.6)), 40)
-    return { value, delta }
+    return { value: formatCompact(Math.round(ev.articleCount * perArticle)) }
   })
+}
+
+export type ReachProfilePoint = {
+  label: string
+  value: number
+}
+
+type AudienceGroup = Pick<ReachProfilePoint, 'label'>
+
+const AUDIENCE_GROUPS: Record<EventCategory, AudienceGroup[]> = {
+  World: [
+    { label: 'comunidades afetadas' },
+    { label: 'decisores públicos' },
+    { label: 'equipas de emergência' },
+  ],
+  Business: [
+    { label: 'executivos e gestores' },
+    { label: 'investidores particulares' },
+    { label: 'analistas de mercado' },
+  ],
+  Tech: [
+    { label: 'engenheiros de software' },
+    { label: 'fundadores de startups' },
+    { label: 'investigadores de tecnologia' },
+  ],
+  Science: [
+    { label: 'investigadores científicos' },
+    { label: 'professores e educadores' },
+    { label: 'profissionais de saúde' },
+  ],
+  Climate: [
+    { label: 'investigadores do clima' },
+    { label: 'ativistas ambientais' },
+    { label: 'profissionais de energia' },
+  ],
+  Sport: [
+    { label: 'adeptos e sócios' },
+    { label: 'atletas e treinadores' },
+    { label: 'jornalistas desportivos' },
+  ],
+  Culture: [
+    { label: 'artistas e criadores' },
+    { label: 'programadores culturais' },
+    { label: 'críticos e jornalistas' },
+  ],
+}
+
+/** Topic-specific clusters replace the broader category defaults when known. */
+const TOPIC_AUDIENCE_GROUPS: Record<string, AudienceGroup[]> = {
+  'kestrel-harbour-bridge': [
+    { label: 'passageiros diários' },
+    { label: 'moradores do estuário' },
+    { label: 'engenheiros civis' },
+  ],
+  'harrow-vaccine-trial': [
+    { label: 'investigadores de vacinas' },
+    { label: 'profissionais de saúde' },
+    { label: 'responsáveis de saúde pública' },
+  ],
+  'orbital-debris-event': [
+    { label: 'cientistas espaciais' },
+    { label: 'operadores de satélites' },
+    { label: 'engenheiros aeroespaciais' },
+  ],
+  'solaris-launch-cadence': [
+    { label: 'engenheiros aeroespaciais' },
+    { label: 'operadores de lançamento' },
+    { label: 'investigadores espaciais' },
+  ],
+}
+
+/** Interest index (0-100) for the audience groups most relevant to a topic. */
+export function audienceInterestProfile(ev: NewsEvent): ReachProfilePoint[] {
+  return memo(`${ev.id}:audienceInterest`, () => {
+    const rnd = rngFor(ev.id, 'audienceInterest')
+    const index = (value: number) => Math.min(Math.max(Math.round(value), 0), 100)
+    const groups = TOPIC_AUDIENCE_GROUPS[ev.id] ?? AUDIENCE_GROUPS[ev.category]
+    return groups.map((group, i) => ({
+      ...group,
+      value: index(92 - i * 7 + (rnd() - 0.5) * 6),
+    }))
+  })
+}
+
+/** Short audience read placed directly below the reach headline. */
+export function audienceInterestSummary(ev: NewsEvent, compact = false): string {
+  const [first, second, third] = [...audienceInterestProfile(ev)].sort((a, b) => b.value - a.value)
+  if (compact) {
+    const compactStory: Record<string, string> = {
+      'kestrel-harbour-bridge':
+        'Passageiros lideram pelos desvios.',
+      'harrow-vaccine-trial':
+        'Investigadores lideram pela eficácia.',
+      'orbital-debris-event':
+        'Cientistas lideram pelo risco orbital.',
+      'solaris-launch-cadence':
+        'Engenheiros lideram pelos lançamentos.',
+    }
+    return compactStory[ev.id] ?? `Interesse liderado por ${first.label}.`
+  }
+  const topicStory: Record<string, string> = {
+    'kestrel-harbour-bridge':
+      'Passageiros diários lideram o interesse pelos desvios. Moradores do estuário acompanham o impacto local; engenheiros civis, as causas do colapso.',
+    'harrow-vaccine-trial':
+      'Investigadores de vacinas concentram o maior interesse, seguidos pelos profissionais de saúde que acompanham a chegada às clínicas. Responsáveis de saúde pública avaliam a adoção.',
+    'orbital-debris-event':
+      'Cientistas espaciais lideram o interesse pelo risco de novas colisões. Operadores de satélites e engenheiros aeroespaciais acompanham as manobras de desvio e a proteção das missões.',
+    'solaris-launch-cadence':
+      'Engenheiros aeroespaciais lideram o interesse pelo novo ritmo de lançamentos. Operadores e investigadores espaciais acompanham a capacidade e a segurança das missões.',
+  }
+  if (topicStory[ev.id]) return topicStory[ev.id]
+
+  const categoryEnding: Record<EventCategory, string> = {
+    World: 'por estarem mais próximos das consequências e da resposta pública.',
+    Business: 'que acompanham o impacto nos mercados e nas organizações.',
+    Tech: 'que acompanham a adoção e os efeitos no setor.',
+    Science: 'que acompanham a evidência e as aplicações práticas.',
+    Climate: 'que trabalham diretamente na mitigação e adaptação.',
+    Sport: 'que vivem de perto a competição e as suas decisões.',
+    Culture: 'que acompanham a criação, programação e receção pública.',
+  }
+  return `${first.label[0].toUpperCase()}${first.label.slice(1)} concentram o maior interesse, seguidos por ${second.label}. ${third.label[0].toUpperCase()}${third.label.slice(1)} também acompanham o tema, ${categoryEnding[ev.category]}`
 }
 
 /** "FONTES ATIVAS" delta — new outlets picked up over the last day. */
@@ -251,25 +371,6 @@ export function sourcesDelta(ev: NewsEvent): number {
   return memo(`${ev.id}:sourcesDelta`, () => {
     const rnd = rngFor(ev.id, 'sourcesDelta')
     return Math.max(Math.round(ev.sourceCount * (0.1 + rnd() * 0.5)), 1)
-  })
-}
-
-const SEGMENTS: Record<string, string[]> = {
-  World: ['Leitores internacionais', 'Adultos 25–44', 'Grande Lisboa'],
-  Business: ['Executivos e gestão', 'Investidores particulares', 'PMEs'],
-  Tech: ['Jovens em Fintech', 'Early adopters', 'Profissionais de TI'],
-  Science: ['Comunidade académica', 'Adultos 25–44', 'Professores'],
-  Climate: ['Jovens dos 18 aos 25', 'Ativistas locais', 'Área de Lisboa'],
-  Sport: ['Adeptos 18–34', 'Público desportivo', 'Norte do país'],
-  Culture: ['Público urbano', 'Estudantes', 'Leitores de fim de semana'],
-}
-
-/** The "Jovens em Fintech" sublabel under the reach figure. */
-export function audienceSegment(ev: NewsEvent): string {
-  return memo(`${ev.id}:segment`, () => {
-    const rnd = rngFor(ev.id, 'segment')
-    const pool = SEGMENTS[ev.category] ?? SEGMENTS.World
-    return pool[Math.floor(rnd() * pool.length)]
   })
 }
 

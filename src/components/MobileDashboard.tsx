@@ -9,7 +9,7 @@ type MobileDashboardProps = {
 /** Width ÷ aspect = height. Each metric gets a readable mobile silhouette. */
 const MOBILE_ASPECT: Record<VizMetric, number> = {
   events: 1.5,
-  reach: 1.35,
+  reach: 0.62,
   sources: 1.5,
   sentiment: 1.1,
   evolution: 1.15,
