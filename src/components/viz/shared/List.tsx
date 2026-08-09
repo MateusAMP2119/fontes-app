@@ -8,6 +8,8 @@ type ListProps = {
   columns: readonly string[]
   /** Omit for the headerless list variant. */
   header?: string[]
+  /** Softens the clipped edge when more rows continue below the viewport. */
+  fade?: boolean
   className?: string
   children: ReactNode
 }
@@ -16,12 +18,13 @@ type ListProps = {
  * Shared data-list frame. Each header/data row is one inspected layout region,
  * following the same guide treatment as graph-card regions.
  */
-export function List({ label, columns, header, className, children }: ListProps) {
+export function List({ label, columns, header, fade = false, className, children }: ListProps) {
   const style = { '--list-columns': columns.join(' ') } as CSSProperties
   return (
     <div
       className={className ? `${s.list} ${className}` : s.list}
       data-list-header={header ? '' : undefined}
+      data-list-fade={fade ? '' : undefined}
       role="table"
       aria-label={label}
       style={style}

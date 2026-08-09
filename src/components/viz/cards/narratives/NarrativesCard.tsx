@@ -7,17 +7,18 @@ import { List, ListCell, ListRow } from '../../shared/List'
 import { Shell } from '../../shared/Shell'
 import s from './NarrativesCard.module.css'
 
-export function NarrativesCard({ item, event }: { item: VizItem; event: NewsEvent }) {
+export function NarrativesCard({ event }: { item: VizItem; event: NewsEvent }) {
   const rows = narratives(event)
   return (
     <Shell
       label="Principais narrativas"
-      variant={item.w / item.h >= 1.2 ? 'horizontal' : 'default'}
+      variant="default"
     >
       <List
         label="Principais narrativas"
         columns={['var(--narrative-media-column, 108px)', 'minmax(0, 1fr)']}
         className={s.list}
+        fade
       >
         {rows.map((row, i) => (
           <ListRow key={row.title} className={s.row}>
@@ -32,7 +33,7 @@ export function NarrativesCard({ item, event }: { item: VizItem; event: NewsEven
               <span className={s.eyebrow}>
                 <SourceMarks sources={row.sources} />
                 <span className={s.counts}>
-                  {row.articles} artigos · {row.fontes} fontes
+                  {row.articles} artigos, {row.fontes} fontes
                 </span>
               </span>
               <span className={s.title}>{row.title}</span>

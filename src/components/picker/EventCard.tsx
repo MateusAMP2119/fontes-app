@@ -56,7 +56,6 @@ export function EventCard({ event, size, rank, active, onPick, onHover }: EventC
           <span className="event-card-eyebrow">
             <span className="event-card-rank">{pad2(rank)}</span>
             <span>{event.region}</span>
-            <span className="event-card-dot">·</span>
             <span>{event.category}</span>
           </span>
           <span className="event-card-name">{event.title}</span>
@@ -68,9 +67,8 @@ export function EventCard({ event, size, rank, active, onPick, onHover }: EventC
             height={16}
           />
           <span className="event-card-meta">
-            {event.articleCount.toLocaleString()} articles
-            <span className="event-card-dot">·</span>
-            {event.sourceCount} outlets
+            <span>{event.articleCount.toLocaleString()} articles</span>
+            <span>{event.sourceCount} outlets</span>
           </span>
         </>
       )}

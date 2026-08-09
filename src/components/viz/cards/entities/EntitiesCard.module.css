@@ -1,149 +1,116 @@
-.ranking {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.summary {
-  min-width: 0;
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  color: var(--ink-tertiary);
-  font-size: 9.5px;
-}
-
-.summary > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.summary strong {
-  flex: none;
-  color: var(--ink);
-  font-size: 13px;
-  font-weight: 630;
-  letter-spacing: -0.015em;
-  font-variant-numeric: tabular-nums;
-}
-
-.summary em {
-  color: var(--ink-secondary);
-  font-size: 9px;
-  font-style: normal;
-  font-weight: 520;
-  letter-spacing: 0;
-}
-
-.rows {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 4px;
+.list {
+  --list-cell-pad: 8px;
+  --list-column-gap: 8px;
+  --list-row-height: 56px;
+  --entity-media-column: 52px;
+  --entity-spark-column: 76px;
+  --entity-stats-column: 78px;
 }
 
 .row {
+  max-height: none;
+}
+
+.imageCell img {
+  width: 52px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 3px;
+  filter: saturate(0.55) contrast(1.05);
+}
+
+.text {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
   gap: 2px;
 }
 
-.rowHeading {
-  min-width: 0;
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-  font-variant-numeric: tabular-nums;
-}
-
-.rowHeading strong {
-  overflow: hidden;
+.title {
   color: var(--ink);
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 620;
-  line-height: 1.2;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
-.rowHeading span {
-  flex: none;
-  color: var(--ink-secondary);
-  font-size: 9.5px;
-  white-space: nowrap;
+.sparkCell {
+  justify-content: center;
 }
 
-.entityContext {
-  overflow: hidden;
-  color: var(--ink-tertiary);
-  font-size: 9px;
-  line-height: 1.2;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.track {
+.spark {
   width: 100%;
-  height: 4px;
-  overflow: hidden;
-  border-radius: 2px;
-  background: color-mix(in srgb, var(--chart-dim) 48%, transparent);
+  height: 24px;
+  margin: 0;
+  color: var(--chart-fg);
 }
 
-.track i {
-  display: block;
-  width: var(--bar-width);
-  height: 100%;
-  border-radius: inherit;
-  background: var(--chart-fg);
+.spark svg {
+  width: 100%;
+  height: 24px;
 }
 
-.track .leaderBar {
-  background: var(--accent);
-}
-
-.others {
+.stats {
   min-width: 0;
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  padding-top: 6px;
-  border-top: 1px solid var(--divider);
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
   color: var(--ink-tertiary);
-  font-size: 9.5px;
-}
-
-.others span {
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.35;
   white-space: nowrap;
 }
 
-.others strong {
-  flex: none;
-  color: var(--ink-secondary);
-  font-size: 9.5px;
-  font-weight: 590;
-  font-variant-numeric: tabular-nums;
+.stats strong {
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 620;
 }
 
-.ranking[data-compact] {
-  gap: 5px;
+.summary {
+  color: var(--ink-tertiary);
+  font-size: 11px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
-.ranking[data-compact] .entityContext {
-  display: none;
+@container (max-width: 300px) {
+  .list {
+    --list-cell-pad: 6px;
+    --entity-media-column: 54px;
+    --list-row-height: 112px;
+  }
+
+  .imageCell img {
+    width: 42px;
+    height: 42px;
+  }
+
+  .sparkCell {
+    display: none;
+  }
+
+  .list {
+    --entity-spark-column: 0px;
+    --entity-stats-column: 70px;
+  }
+
 }
 
-.ranking[data-compact] .others {
-  padding-top: 4px;
+@container (min-width: 301px) and (max-width: 440px) {
+  .list {
+    --entity-spark-column: 0px;
+    --list-row-height: 72px;
+  }
+
+  .sparkCell {
+    display: none;
+  }
 }
