@@ -13,7 +13,6 @@ const MOBILE_ASPECT: Record<VizMetric, number> = {
   sources: 1.5,
   sentiment: 1.1,
   evolution: 1.15,
-  coverage: 0.85,
   entities: 0.85,
   narratives: 0.72,
 }

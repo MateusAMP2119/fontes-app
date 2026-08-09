@@ -6,8 +6,7 @@ These instructions apply to the entire repository. The visualization-card layout
 
 - Every visualization card rendered with the `horizontal` variant must use the shared equal-column grid.
 - A horizontal card has exactly:
-  - **2 columns** when its card width is below `700px`.
-  - **3 columns** when its card width is `700px` or greater.
+  - **2 or 3 columns** this depends on requirments.
 - Columns must be equal width.
 - Card padding is `16px`, and the gutter between columns is `16px`.
 - `cardColumns()` in `src/components/viz/shared/charts.tsx` is the single source of truth for the column count and usable column width.
@@ -53,15 +52,3 @@ The trailing visualization or statistics section must remain on the final column
 - Mobile widget height must derive from the live card content width using the metric-specific mobile aspect ratio.
 - Measure the true content width after side padding so internal typography and charts receive the same width the card visibly has.
 - Keep the gap between desktop and mobile frames equal to the outer canvas edge spacing (`14px` in the current layout).
-
-## Verification
-
-After changing visualization layout code:
-
-- Run `npm run build`.
-- Run `npm run lint` and report any remaining warnings.
-- Visually verify horizontal cards on both sides of the breakpoint: below `700px` and at or above `700px` card width.
-- Check that the 2-column and 3-column placements follow the roles above.
-- Enable the dashboard-grid overlay and confirm its guides align with the rendered sections.
-- Check for text clipping, chart overflow, and unintended empty-width hacks.
-- When mobile layout is affected, verify at narrow, default, and wide phone-frame widths.

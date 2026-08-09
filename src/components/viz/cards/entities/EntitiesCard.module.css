@@ -1,3 +1,7 @@
+.label {
+  margin-left: 8px;
+}
+
 .list {
   --list-cell-pad: 8px;
   --list-column-gap: 8px;
@@ -21,20 +25,27 @@
 
 .text {
   min-width: 0;
+  width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
+  align-items: flex-start;
   justify-content: center;
+  justify-self: stretch;
   gap: 2px;
+  text-align: left;
 }
 
 .title {
+  display: block;
+  width: 100%;
+  align-self: stretch;
   color: var(--ink);
   font-size: 13px;
   font-weight: 620;
   letter-spacing: -0.01em;
   line-height: 1.25;
   overflow-wrap: anywhere;
+  text-align: left;
   white-space: normal;
 }
 
@@ -74,16 +85,25 @@
 }
 
 .summary {
+  width: 100%;
+  align-self: stretch;
+  margin: 0;
   color: var(--ink-tertiary);
   font-size: 11px;
   line-height: 1.35;
   overflow-wrap: anywhere;
+  text-align: left;
   white-space: normal;
 }
 
 @container (max-width: 300px) {
+  .label {
+    margin-left: 6px;
+  }
+
   .list {
     --list-cell-pad: 6px;
+    --list-column-gap: 6px;
     --entity-media-column: 54px;
     --list-row-height: 112px;
   }
@@ -93,24 +113,10 @@
     height: 42px;
   }
 
-  .sparkCell {
-    display: none;
-  }
-
-  .list {
-    --entity-spark-column: 0px;
-    --entity-stats-column: 70px;
-  }
-
 }
 
 @container (min-width: 301px) and (max-width: 440px) {
   .list {
-    --entity-spark-column: 0px;
     --list-row-height: 72px;
-  }
-
-  .sparkCell {
-    display: none;
   }
 }

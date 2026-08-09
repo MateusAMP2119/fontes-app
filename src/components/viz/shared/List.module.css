@@ -55,21 +55,39 @@
   display: none;
 }
 
-.list[data-list-fade]::after {
+.list[data-fade-top]::before,
+.list[data-fade-bottom]::after {
   content: '';
   position: absolute;
   z-index: 2;
   right: 0;
-  bottom: 0;
   left: 0;
   height: 18px;
+  pointer-events: none;
+}
+
+.list[data-fade-top]::before {
+  top: 0;
+  background: linear-gradient(
+    to bottom,
+    var(--surface) 0,
+    color-mix(in srgb, var(--surface) 68%, transparent) 28%,
+    transparent 100%
+  );
+}
+
+.list[data-list-header][data-fade-top]::before {
+  top: calc(24px + var(--list-row-gap));
+}
+
+.list[data-fade-bottom]::after {
+  bottom: 0;
   background: linear-gradient(
     to bottom,
     transparent 0,
     color-mix(in srgb, var(--surface) 68%, transparent) 72%,
     var(--surface) 100%
   );
-  pointer-events: none;
 }
 
 :global([data-movement-locked]) .rows {

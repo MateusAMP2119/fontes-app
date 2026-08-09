@@ -44,10 +44,16 @@ export function EventsCard({ item, event }: { item: VizItem; event: NewsEvent })
             </div>
             <div className={s.side}>
               <span className={`${s.fitText} ${s.sideDelta}`}>
-                ▲ +{stat.deltaEvents} eventos
+                <i className={`${s.trendArrow} ${stat.deltaEvents < 0 ? s.isDown : ''}`}>
+                  {stat.deltaEvents < 0 ? '▼' : '▲'}
+                </i>{' '}
+                {trendText(stat.deltaEvents, 'eventos')}
               </span>
               <span className={`${s.fitText} ${s.sideDelta}`}>
-                ▲ +{stat.deltaArticles} artigos
+                <i className={`${s.trendArrow} ${stat.deltaArticles < 0 ? s.isDown : ''}`}>
+                  {stat.deltaArticles < 0 ? '▼' : '▲'}
+                </i>{' '}
+                {trendText(stat.deltaArticles, 'artigos')}
               </span>
             </div>
           </div>
@@ -76,4 +82,8 @@ export function EventsCard({ item, event }: { item: VizItem; event: NewsEvent })
       )}
     </Shell>
   )
+}
+
+function trendText(value: number, suffix: string): string {
+  return `${value < 0 ? `−${Math.abs(value)}` : `+${value}`} ${suffix}`
 }

@@ -1,50 +1,85 @@
-.root[data-columns='3'] .visualWide {
-  grid-column: 2 / 4;
+.metrics {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
 }
 
 .number {
   flex: none;
+  line-height: 0.94;
 }
 
-.audienceSummary {
-  color: var(--ink-tertiary);
-  font-size: 11.5px;
-  line-height: 1.38;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
+.headline {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.headlineCluster {
+  min-width: 0;
   overflow: hidden;
+  color: var(--ink-secondary);
+  font-size: 12px;
+  font-weight: 520;
+  text-overflow: ellipsis;
+}
+
+.metricMeta {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  color: var(--ink-secondary);
+  font-size: 11px;
+  font-weight: 530;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.metricMeta span {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metricMeta strong {
+  color: var(--ink);
+  font-weight: 630;
+}
+
+.root[data-variant='horizontal'] .metrics {
+  display: grid;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 3px;
+  align-self: stretch;
+  container-type: size;
+}
+
+.root[data-variant='horizontal'] .headline {
+  align-self: end;
 }
 
 .root[data-variant='horizontal'] .number {
   font-size: clamp(28px, 9cqw, 40px);
 }
 
-.root[data-variant='horizontal'] .audienceSummary {
-  font-size: 13px;
-  line-height: 1.42;
+.root[data-variant='horizontal'] .headlineCluster {
+  font-size: clamp(9px, 15cqh, 12px);
 }
 
-.root[data-variant='horizontal'] .audienceSummary:not(.expandedStory) {
-  font-size: 11.5px;
-  line-height: 1.25;
-  -webkit-line-clamp: 2;
-}
-
-.root[data-variant='horizontal'] .expandedStory {
-  -webkit-line-clamp: 4;
-}
-
-.detailWrap .audienceSummary {
-  font-size: 13px;
-  line-height: 1.42;
-  -webkit-line-clamp: 7;
-}
-
-.radar {
-  display: block;
-  align-self: center;
-  overflow: visible;
+.root[data-variant='horizontal'] .metricMeta {
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 2px;
+  align-self: stretch;
+  font-size: clamp(9px, 16cqh, 12px);
 }
 
 .detailWrap {
@@ -55,37 +90,54 @@
   gap: 8px;
 }
 
-.detailWrap > :first-child {
+.detailWrap > .metrics,
+.detailCopy {
   flex: none;
 }
 
-.radarGrid {
-  fill: none;
-  stroke: var(--chart-dim);
-  stroke-width: 0.8;
-  vector-effect: non-scaling-stroke;
+.detailCopy {
+  display: block;
+  margin: 0;
+  overflow: visible;
+  -webkit-line-clamp: unset;
 }
 
-.radarAxis {
-  stroke: var(--chart-dim);
-  stroke-width: 0.7;
-  vector-effect: non-scaling-stroke;
+.reachTrend {
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 4px;
+  align-self: center;
+  color: var(--chart-fg);
+  font-variant-numeric: tabular-nums;
 }
 
-.radarShape {
-  fill: color-mix(in srgb, var(--chart-fg) 16%, transparent);
-  stroke: var(--chart-fg);
-  stroke-width: 1.4;
-  stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
+.detailWrap .reachTrend {
+  flex: 1;
+  min-height: 72px;
 }
 
-.radarPoint {
-  fill: var(--chart-fg);
+.reachArea {
+  display: block;
 }
 
-.radarLabel {
-  fill: var(--ink-tertiary);
-  font-size: 8px;
-  font-weight: 510;
+.reachAxis {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  color: var(--ink-tertiary);
+  font-size: 9px;
+  line-height: 1;
+}
+
+.reachAxis span {
+  min-width: 0;
+  text-align: center;
+}
+
+.detailWrap .reachAxis {
+  font-size: 10px;
 }

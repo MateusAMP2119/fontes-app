@@ -92,3 +92,12 @@
   letter-spacing: -0.015em;
   line-height: 1;
 }
+
+.trendArrow {
+  color: var(--pos);
+  font-style: normal;
+}
+
+.trendArrow.isDown {
+  color: var(--neg);
+}

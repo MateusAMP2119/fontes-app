@@ -7,19 +7,30 @@ import { List, ListCell, ListRow } from '../../shared/List'
 import { Shell } from '../../shared/Shell'
 import s from './EntitiesCard.module.css'
 
-export function EntitiesCard({ event }: { item: VizItem; event: NewsEvent }) {
+export function EntitiesCard({ item, event }: { item: VizItem; event: NewsEvent }) {
   const rows = entityBreakdown(event)
-
-  return (
-    <Shell label="Entidades e intervenientes" variant="default">
-      <List
-        label="Entidades e intervenientes"
-        columns={[
+  const compact = item.w <= 300
+  const narrow = item.w <= 440
+  const columns = compact
+    ? ['var(--entity-media-column, 54px)', 'minmax(0, 1fr)']
+    : narrow
+      ? [
+          'var(--entity-media-column, 52px)',
+          'minmax(0, 1fr)',
+          'var(--entity-stats-column, 78px)',
+        ]
+      : [
           'var(--entity-media-column, 68px)',
           'minmax(0, 1fr)',
           'var(--entity-spark-column, 88px)',
           'var(--entity-stats-column, 82px)',
-        ]}
+        ]
+
+  return (
+    <Shell label="Entidades e intervenientes" variant="default" labelClassName={s.label}>
+      <List
+        label="Entidades e intervenientes"
+        columns={columns}
         className={s.list}
         fade
       >
@@ -36,24 +47,28 @@ export function EntitiesCard({ event }: { item: VizItem; event: NewsEvent }) {
               <span className={s.title}>{row.label}</span>
               <p className={s.summary}>{row.role}. {shortAction(row.description)}</p>
             </ListCell>
-            <ListCell className={s.sparkCell}>
-              <figure
-                className={s.spark}
-                aria-label={`Evolução das menções a ${row.label}`}
-              >
-                <Sparkline
-                  values={breakdownSparkline(event, row.label, 18)}
-                  width={88}
-                  height={24}
-                  strokeWidth={1.5}
-                  area
-                />
-              </figure>
-            </ListCell>
-            <ListCell className={s.stats}>
-              <strong>{formatCompact(row.articles)} artigos</strong>
-              <span>{formatCompact(row.fontes)} fontes</span>
-            </ListCell>
+            {!narrow && (
+              <ListCell className={s.sparkCell}>
+                <figure
+                  className={s.spark}
+                  aria-label={`Evolução das menções a ${row.label}`}
+                >
+                  <Sparkline
+                    values={breakdownSparkline(event, row.label, 18)}
+                    width={88}
+                    height={24}
+                    strokeWidth={1.5}
+                    area
+                  />
+                </figure>
+              </ListCell>
+            )}
+            {!compact && (
+              <ListCell className={s.stats}>
+                <strong>{formatCompact(row.articles)} artigos</strong>
+                <span>{formatCompact(row.fontes)} fontes</span>
+              </ListCell>
+            )}
           </ListRow>
         ))}
       </List>

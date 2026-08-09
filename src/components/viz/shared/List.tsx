@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import s from './List.module.css'
 
 type ListProps = {
@@ -19,12 +19,39 @@ type ListProps = {
  * following the same guide treatment as graph-card regions.
  */
 export function List({ label, columns, header, fade = false, className, children }: ListProps) {
+  const rowsRef = useRef<HTMLDivElement>(null)
+  const [fades, setFades] = useState({ top: false, bottom: false })
+  const updateFades = useCallback(() => {
+    const rows = rowsRef.current
+    if (!rows || !fade) {
+      setFades({ top: false, bottom: false })
+      return
+    }
+    const maxScroll = rows.scrollHeight - rows.clientHeight
+    const next = {
+      top: maxScroll > 1 && rows.scrollTop > 1,
+      bottom: maxScroll > 1 && rows.scrollTop < maxScroll - 1,
+    }
+    setFades((current) => current.top === next.top && current.bottom === next.bottom ? current : next)
+  }, [fade])
+
+  useEffect(() => {
+    const rows = rowsRef.current
+    if (!rows) return
+    updateFades()
+    const observer = new ResizeObserver(updateFades)
+    observer.observe(rows)
+    return () => observer.disconnect()
+  }, [children, updateFades])
+
   const style = { '--list-columns': columns.join(' ') } as CSSProperties
   return (
     <div
       className={className ? `${s.list} ${className}` : s.list}
       data-list-header={header ? '' : undefined}
       data-list-fade={fade ? '' : undefined}
+      data-fade-top={fades.top ? '' : undefined}
+      data-fade-bottom={fades.bottom ? '' : undefined}
       role="table"
       aria-label={label}
       style={style}
@@ -39,11 +66,13 @@ export function List({ label, columns, header, fade = false, className, children
         </div>
       )}
       <div
+        ref={rowsRef}
         className={s.rows}
         role="rowgroup"
         aria-label={`${label}: itens`}
         data-scroll-region=""
         tabIndex={0}
+        onScroll={updateFades}
       >
         {children}
       </div>
