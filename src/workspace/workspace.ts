@@ -85,7 +85,7 @@ function isWorkspace(value: unknown): value is Workspace {
 
 const KNOWN_TYPES = new Set<string>(['text', 'sticky', 'note', 'table', 'viz', 'ink'])
 
-const KNOWN_VIZ_KINDS = new Set<string>(['kpi', 'sentiment', 'evolution', 'coverage', 'entities', 'narratives'])
+const KNOWN_VIZ_KINDS = new Set<string>(['kpi', 'sentiment', 'evolution', 'entities', 'narratives'])
 
 /** Pre-redesign viz kinds (and stat metrics) mapped onto the new widget set. */
 const VIZ_MIGRATIONS: Record<string, { kind: string; metric: string } | null> = {
@@ -95,7 +95,7 @@ const VIZ_MIGRATIONS: Record<string, { kind: string; metric: string } | null> = 
   'stat:tone': { kind: 'sentiment', metric: 'sentiment' },
   line: { kind: 'evolution', metric: 'evolution' },
   area: { kind: 'evolution', metric: 'evolution' },
-  bar: { kind: 'coverage', metric: 'coverage' },
+  bar: null,
   donut: { kind: 'sentiment', metric: 'sentiment' },
   headlines: { kind: 'narratives', metric: 'narratives' },
   header: null, // no masthead in the new design
@@ -117,6 +117,33 @@ function migrateItem(it: Item): Item | null {
   return { ...it, kind: target.kind, metric: target.metric } as Item
 }
 
+/** Fill the two-column gap left by the removed coverage widget on saved boards. */
+function expandRemovedCoverageLayout(items: Item[]): Item[] {
+  const hasLegacyRecipe = (
+    items.some((it) =>
+      it.type === 'viz' && it.metric === 'reach' &&
+      it.grid?.col === 7 && it.grid.row === 0 && it.grid.colSpan === 3,
+    ) &&
+    items.some((it) =>
+      it.type === 'viz' && it.metric === 'sources' &&
+      it.grid?.col === 0 && it.grid.row === 2 && it.grid.colSpan === 3,
+    ) &&
+    items.some((it) =>
+      it.type === 'viz' && it.metric === 'sentiment' &&
+      it.grid?.col === 3 && it.grid.row === 2 && it.grid.colSpan === 7,
+    )
+  )
+  if (!hasLegacyRecipe) return items
+
+  return items.map((it) => {
+    if (it.type !== 'viz' || !it.grid) return it
+    if (it.metric === 'reach') return { ...it, grid: { ...it.grid, colSpan: 5 } }
+    if (it.metric === 'sources') return { ...it, grid: { ...it.grid, colSpan: 5 } }
+    if (it.metric === 'sentiment') return { ...it, grid: { ...it.grid, col: 5 } }
+    return it
+  })
+}
+
 /**
  * Drop items whose type no longer exists, and remap widgets persisted under
  * the pre-redesign kinds. isWorkspace only validates the envelope, and
@@ -129,10 +156,12 @@ function sanitize(ws: Workspace): Workspace {
     ...ws,
     boards: ws.boards.map((b) => ({
       ...b,
-      items: (b.items ?? [])
-        .filter((it) => it && KNOWN_TYPES.has(it.type))
-        .map(migrateItem)
-        .filter((it): it is Item => it !== null),
+      items: expandRemovedCoverageLayout(
+        (b.items ?? [])
+          .filter((it) => it && KNOWN_TYPES.has(it.type))
+          .map(migrateItem)
+          .filter((it): it is Item => it !== null),
+      ),
     })),
   }
 }

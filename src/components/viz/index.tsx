@@ -1,7 +1,6 @@
 import type { ComponentType } from 'react'
 import type { VizItem, VizMetric } from '../../items/items'
 import { findEvent, type NewsEvent } from '../../news/events'
-import { CoverageCard } from './cards/breakdown/BreakdownCard'
 import { EntitiesCard } from './cards/entities/EntitiesCard'
 import { EventsCard } from './cards/events/EventsCard'
 import { EvolutionCard } from './cards/evolution/EvolutionCard'
@@ -20,7 +19,6 @@ const CARDS: Record<VizMetric, ComponentType<CardProps>> = {
   sources: SourcesCard,
   sentiment: SentimentCard,
   evolution: EvolutionCard,
-  coverage: CoverageCard,
   entities: EntitiesCard,
   narratives: NarrativesCard,
 }

@@ -116,6 +116,11 @@ const SUPPORTING_SOURCES = [
   'The Bulletin',
   'Current Affairs',
   'Local Dispatch',
+  'Atlantic Journal',
+  'Cityline News',
+  'Global Tribune',
+  'Daily Chronicle',
+  'Press Union',
 ]
 
 /** Zipf-ish outlet distribution, normalized to articleCount, descending. */
@@ -125,7 +130,7 @@ export function sourceBreakdown(ev: NewsEvent): Slice[] {
     const sources = [
       ...ev.sources,
       ...SUPPORTING_SOURCES.filter((source) => !ev.sources.includes(source)),
-    ].slice(0, 14)
+    ].slice(0, 18)
     const weights = sources.map((_, i) => (1 / (i + 0.6)) * (0.82 + rnd() * 0.36))
     const sum = weights.reduce((a, b) => a + b, 0)
     return sources
@@ -245,28 +250,44 @@ export function eventsKpi(ev: NewsEvent): EventsKpi {
     const deltaEvents = Math.max(Math.round(events * (0.2 + rnd() * 0.5)), 1)
     const series = volumeSeries(ev)
     const articles24h = series[series.length - 1].value
-    const deltaArticles = Math.max(Math.round(articles24h * (0.25 + rnd() * 0.4)), 1)
+    const deltaArticles = -Math.max(Math.round(articles24h * (0.25 + rnd() * 0.4)), 1)
     return { events, deltaEvents, articles24h, deltaArticles }
   })
 }
 
-export type ReachKpi = { value: string }
+export type ReachKpi = {
+  total: number
+  delta24h: number
+  activityLift: number
+}
 
 /** "ALCANCE ESTIMADO" — audience reach, articles × seeded multiplier. */
 export function reachKpi(ev: NewsEvent): ReachKpi {
   return memo(`${ev.id}:reach`, () => {
     const rnd = rngFor(ev.id, 'reach')
     const perArticle = 2000 + rnd() * 7000
-    return { value: formatCompact(Math.round(ev.articleCount * perArticle)) }
+    const latestArticles = volumeSeries(ev).at(-1)?.value ?? 1
+    return {
+      total: Math.round(ev.articleCount * perArticle),
+      delta24h: Math.max(Math.round(latestArticles * perArticle * (0.22 + rnd() * 0.26)), 1),
+      activityLift: 8 + Math.floor(rnd() * 23),
+    }
   })
 }
 
-export type ReachProfilePoint = {
+export type AudienceCluster = {
   label: string
   value: number
 }
 
-type AudienceGroup = Pick<ReachProfilePoint, 'label'>
+export type AudienceClusterDay = {
+  label: string
+  today: boolean
+  total: number
+  clusters: AudienceCluster[]
+}
+
+type AudienceGroup = Pick<AudienceCluster, 'label'>
 
 const AUDIENCE_GROUPS: Record<EventCategory, AudienceGroup[]> = {
   World: [
@@ -330,32 +351,72 @@ const TOPIC_AUDIENCE_GROUPS: Record<string, AudienceGroup[]> = {
   ],
 }
 
-/** Interest index (0-100) for the audience groups most relevant to a topic. */
-export function audienceInterestProfile(ev: NewsEvent): ReachProfilePoint[] {
-  return memo(`${ev.id}:audienceInterest`, () => {
-    const rnd = rngFor(ev.id, 'audienceInterest')
-    const index = (value: number) => Math.min(Math.max(Math.round(value), 0), 100)
+/** Relative affinity across three audience clusters, normalized to 100%. */
+export function audienceClusterProfile(ev: NewsEvent): AudienceCluster[] {
+  return memo(`${ev.id}:audienceClusters`, () => {
+    const rnd = rngFor(ev.id, 'audienceClusters')
     const groups = TOPIC_AUDIENCE_GROUPS[ev.id] ?? AUDIENCE_GROUPS[ev.category]
-    return groups.map((group, i) => ({
-      ...group,
-      value: index(92 - i * 7 + (rnd() - 0.5) * 6),
-    }))
+    const raw = [0.5, 0.3, 0.2].map((weight) => weight * (0.85 + rnd() * 0.3))
+    const total = raw.reduce((sum, value) => sum + value, 0)
+    const first = Math.round((raw[0] / total) * 100)
+    const second = Math.round((raw[1] / total) * 100)
+    const shares = [first, second, 100 - first - second]
+    return groups.map((group, i) => ({ ...group, value: shares[i] }))
   })
+}
+
+/** Seven-day reach profile: daily volume split across the audience clusters. */
+export function audienceClusterWeek(ev: NewsEvent): AudienceClusterDay[] {
+  return memo(`${ev.id}:audienceClusterWeek`, () => {
+    const rnd = rngFor(ev.id, 'audienceClusterWeek')
+    const base = audienceClusterProfile(ev)
+    return weekSeries(ev).map((day) => {
+      const raw = base.map((cluster) => Math.max(cluster.value * (0.88 + rnd() * 0.24), 4))
+      const sum = raw.reduce((total, value) => total + value, 0)
+      const first = Math.round((raw[0] / sum) * 100)
+      const second = Math.round((raw[1] / sum) * 100)
+      const shares = [first, second, 100 - first - second]
+      return {
+        label: day.label,
+        today: day.today,
+        total: day.value,
+        clusters: base.map((cluster, i) => ({ label: cluster.label, value: shares[i] })),
+      }
+    })
+  })
+}
+
+/** Where the leading audience cluster is most concentrated. */
+export function audienceFocusSummary(ev: NewsEvent): string {
+  const focusByTopic: Record<string, string> = {
+    'kestrel-harbour-bridge': 'corredores pendulares e comunidades do estuário',
+    'harrow-vaccine-trial': 'universidades e centros clínicos',
+    'orbital-debris-event': 'laboratórios espaciais e operadores de satélites',
+    'solaris-launch-cadence': 'polos aeroespaciais e centros de lançamento',
+  }
+  if (focusByTopic[ev.id]) return focusByTopic[ev.id]
+
+  const focusByCategory: Record<EventCategory, string> = {
+    World: 'comunidades locais e centros de decisão pública',
+    Business: 'centros financeiros e equipas de liderança',
+    Tech: 'polos tecnológicos e comunidades de produto',
+    Science: 'universidades e centros de investigação',
+    Climate: 'universidades e organizações ambientais',
+    Sport: 'clubes, academias e comunidades de adeptos',
+    Culture: 'centros culturais e comunidades criativas',
+  }
+  return focusByCategory[ev.category]
 }
 
 /** Short audience read placed directly below the reach headline. */
 export function audienceInterestSummary(ev: NewsEvent, compact = false): string {
-  const [first, second, third] = [...audienceInterestProfile(ev)].sort((a, b) => b.value - a.value)
+  const [first, second, third] = [...audienceClusterProfile(ev)].sort((a, b) => b.value - a.value)
   if (compact) {
     const compactStory: Record<string, string> = {
-      'kestrel-harbour-bridge':
-        'Passageiros lideram pelos desvios.',
-      'harrow-vaccine-trial':
-        'Investigadores lideram pela eficácia.',
-      'orbital-debris-event':
-        'Cientistas lideram pelo risco orbital.',
-      'solaris-launch-cadence':
-        'Engenheiros lideram pelos lançamentos.',
+      'kestrel-harbour-bridge': 'Passageiros lideram pelos desvios.',
+      'harrow-vaccine-trial': 'Investigadores lideram pela eficácia.',
+      'orbital-debris-event': 'Cientistas lideram pelo risco orbital.',
+      'solaris-launch-cadence': 'Engenheiros lideram pelos lançamentos.',
     }
     return compactStory[ev.id] ?? `Interesse liderado por ${first.label}.`
   }
@@ -610,17 +671,14 @@ export function entityBreakdown(ev: NewsEvent): EntitySlice[] {
   })
 }
 
-/**
- * Per-row trend line for the wide coverage/entities cards. Seeded on the row
- * label so every source keeps its own recognizable wiggle.
- */
+/** Per-entity trend line used by the compact list rows introduced on main. */
 export function breakdownSparkline(ev: NewsEvent, label: string, count = 26): number[] {
   return memo(`${ev.id}:rowspark:${label}:${count}`, () => {
     const rnd = rngFor(ev.id, `rowspark:${label}`)
-    let v = 0.35 + rnd() * 0.35
+    let value = 0.35 + rnd() * 0.35
     return Array.from({ length: count }, () => {
-      v = Math.min(Math.max(v + (rnd() - 0.5) * 0.34, 0.05), 1)
-      return v
+      value = Math.min(Math.max(value + (rnd() - 0.5) * 0.34, 0.05), 1)
+      return value
     })
   })
 }

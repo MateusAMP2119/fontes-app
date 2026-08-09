@@ -35,6 +35,15 @@
 }
 
 .delta.isDown {
+  color: var(--ink);
+}
+
+.deltaArrow {
+  color: var(--pos);
+  font-style: normal;
+}
+
+.delta.isDown .deltaArrow {
   color: var(--neg);
 }
 
