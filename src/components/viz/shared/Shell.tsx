@@ -19,6 +19,7 @@ export function Shell({ label, variant, columns, className, labelClassName, chil
     <div
       className={className ? `${s.card} ${className}` : s.card}
       data-variant={variant}
+      data-columns={columns?.n}
       style={columns && ({ '--card-cols': columns.n } as CSSProperties)}
     >
       <div className={s.labelRow}>
