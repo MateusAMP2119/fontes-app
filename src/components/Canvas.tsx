@@ -9,6 +9,7 @@ import {
 import type { Point } from '../camera/camera'
 import { inkPath, type Bounds, type Item } from '../items/items'
 import { ItemView } from './ItemView'
+import { MobileDashboard } from './MobileDashboard'
 import type { Tool } from './BottomBar'
 
 type CanvasProps = {
@@ -74,7 +75,12 @@ export function Canvas({
   useEffect(() => {
     const el = viewportRef.current
     if (!el) return
-    const onWheel = (e: WheelEvent) => e.preventDefault()
+    const onWheel = (e: WheelEvent) => {
+      // The board itself is fixed, but the phone preview is a real vertical
+      // viewport and must keep its native wheel/trackpad scrolling.
+      if ((e.target as HTMLElement).closest('.mobile-dashboard-scroll')) return
+      e.preventDefault()
+    }
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => el.removeEventListener('wheel', onWheel)
   }, [])
@@ -86,6 +92,9 @@ export function Canvas({
 
   const onPointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return
+    // Mobile preview gestures belong to its scroll container, not to the
+    // board's marquee/drawing surface underneath it.
+    if ((e.target as HTMLElement).closest('.mobile-dashboard')) return
 
     if (tool === 'draw') {
       const point = localPoint(e)
@@ -183,7 +192,13 @@ export function Canvas({
         >
           {frameContent}
         </div>
-        <div className="frame-mobile" data-testid="frame-mobile" aria-hidden="true" />
+        <div
+          className="frame-mobile"
+          data-testid="frame-mobile"
+          aria-label="Mobile dashboard preview"
+        >
+          {showMobile && <MobileDashboard items={items} />}
+        </div>
       </div>
 
       <div className="stage-world" data-testid="canvas-world">
