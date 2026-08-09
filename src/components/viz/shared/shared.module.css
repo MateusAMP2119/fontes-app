@@ -76,6 +76,32 @@
   grid-column: -2;
 }
 
+/* Semantic horizontal-card columns. Two-column cards keep metrics + visual;
+   three-column cards insert a readable summary between them. */
+.metricColumn,
+.summaryColumn,
+.visualColumn {
+  min-width: 0;
+  min-height: 0;
+}
+
+.metricColumn {
+  grid-column: 1;
+  align-self: stretch;
+}
+
+.summaryColumn {
+  grid-column: 2;
+  align-self: center;
+  margin: 0;
+}
+
+.visualColumn {
+  grid-column: -2;
+  align-self: end;
+  justify-self: end;
+}
+
 .kpiMain {
   min-width: 0;
   display: flex;
@@ -152,6 +178,92 @@
   flex: none;
   overflow: hidden;
   white-space: nowrap;
+}
+
+.timeline {
+  color: var(--chart-fg);
+}
+
+.timelineAxis {
+  display: grid;
+}
+
+.timelineAxis span {
+  width: auto;
+  text-align: center;
+}
+
+.timelineAxis span:first-child {
+  text-align: left;
+}
+
+.timelineAxis span:last-child {
+  text-align: right;
+}
+
+.comparisonTimeline {
+  gap: 4px;
+}
+
+.comparisonLegend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 12px;
+  color: var(--ink-secondary);
+  font-size: 9px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.comparisonLegend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.comparisonLegend i {
+  width: 11px;
+  height: 0;
+  border-top: 1.75px solid;
+}
+
+.comparisonLegend .eventKey {
+  border-top-color: var(--accent);
+  border-top-style: dashed;
+}
+
+.comparisonLegend .articleKey {
+  border-top-color: var(--chart-fg);
+}
+
+.comparisonLegend .intervalLabel {
+  margin-left: auto;
+  color: var(--ink-tertiary);
+}
+
+.comparisonBase {
+  stroke: var(--chart-dim);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.comparisonLine {
+  fill: none;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.articleLine {
+  stroke: var(--chart-fg);
+}
+
+.eventLine {
+  stroke: var(--accent);
+  stroke-dasharray: 4 3;
 }
 
 .missing {
