@@ -25,8 +25,8 @@ export function recipe(frame: Bounds): Slot[] {
     { kind: 'coverage', metric: 'coverage', title: 'Cobertura por fonte', span: 2, rows: 2, shelves: 2 },
     { kind: 'kpi', metric: 'sources', title: 'Fontes ativas', span: 3, rows: 2 },
     { kind: 'sentiment', metric: 'sentiment', title: 'Análise de sentimentos', span: 7, rows: 2 },
-    { kind: 'narratives', metric: 'narratives', title: 'Principais narrativas', span: 8, rows: 4 },
-    { kind: 'entities', metric: 'entities', title: 'Entidades e intervenientes', span: 4, rows: 4 },
+    { kind: 'narratives', metric: 'narratives', title: 'Principais narrativas', span: 6, rows: 4 },
+    { kind: 'entities', metric: 'entities', title: 'Entidades e intervenientes', span: 6, rows: 4 },
   ]
 }
 

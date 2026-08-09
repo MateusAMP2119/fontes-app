@@ -10,7 +10,7 @@ const FRAME_INSET = { top: 2, right: 14, bottom: 6, left: 15 } as const
  * are positioned against.
  *
  * Uses offsetLeft/offsetWidth rather than getBoundingClientRect: .frame-pc
- * lives inside the board cross-fade motion.div, which animates `scale`.
+ * lives inside the board transition layer, whose cards use layout projection.
  * Client rects are post-transform while item coordinates are pre-transform,
  * and subtracting the viewport rect does not cancel it — the delta is itself
  * scaled about the stage center. Offset boxes are layout-space, so they stay

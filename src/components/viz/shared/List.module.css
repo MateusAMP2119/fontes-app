@@ -1,0 +1,93 @@
+.list {
+  --list-cell-pad: 8px;
+  --list-column-gap: var(--layout-guide-gap);
+  --list-row-gap: var(--layout-guide-gap);
+
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--list-row-gap);
+  overflow: hidden;
+}
+
+.headerRow,
+.row {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--list-columns);
+  column-gap: var(--list-column-gap);
+  align-items: center;
+  padding-inline: var(--list-cell-pad);
+}
+
+.headerRow {
+  flex: none;
+  min-height: 24px;
+  color: var(--ink-tertiary);
+  font-size: 9.5px;
+  font-weight: 590;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.rows {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--list-row-gap);
+  overflow-x: hidden;
+  overflow-y: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  touch-action: none;
+}
+
+.row {
+  flex: 0 0 var(--list-row-height, 42px);
+  min-height: 0;
+}
+
+.rows::-webkit-scrollbar {
+  display: none;
+}
+
+:global([data-movement-locked]) .rows {
+  overflow-y: auto;
+  touch-action: pan-y;
+}
+
+.rows:focus-visible {
+  outline: 1px solid rgba(62, 142, 247, 0.32);
+  outline-offset: 2px;
+}
+
+.headerCell,
+.cell {
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+/* Lists inspect on their structural axis: every header/data row is one
+   full-width region, using the exact graph-card guide treatment. */
+.headerRow::after,
+.row::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  display: none;
+  border: 1px dashed var(--layout-guide-stroke);
+  border-radius: var(--layout-guide-radius);
+  background: var(--layout-guide-fill);
+  pointer-events: none;
+}
+
+:global([data-grid-on]) .headerRow::after,
+:global([data-grid-on]) .row::after {
+  display: block;
+}

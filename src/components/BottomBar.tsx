@@ -1,5 +1,5 @@
 import type { InsertableType } from '../items/items'
-import { IconGridDots, IconPen, IconPhone, IconSticky, IconTrash } from './icons'
+import { IconGridDots, IconLock, IconPen, IconPhone, IconSticky, IconTrash } from './icons'
 
 export type Tool = 'select' | 'draw'
 
@@ -8,11 +8,13 @@ type BottomBarProps = {
   hasSelection: boolean
   showMobile: boolean
   showGrid: boolean
+  movementLocked: boolean
   onToolChange: (tool: Tool) => void
   onInsert: (type: InsertableType) => void
   onDelete: () => void
   onToggleMobile: () => void
   onToggleGrid: () => void
+  onToggleMovementLock: () => void
 }
 
 export function BottomBar({
@@ -20,11 +22,13 @@ export function BottomBar({
   hasSelection,
   showMobile,
   showGrid,
+  movementLocked,
   onToolChange,
   onInsert,
   onDelete,
   onToggleMobile,
   onToggleGrid,
+  onToggleMovementLock,
 }: BottomBarProps) {
   return (
     <div className="chrome chrome-bottom" data-testid="bottom-bar">
@@ -64,7 +68,7 @@ export function BottomBar({
           </button>
         </div>
 
-        <div className="pill glass" aria-label="Device frames">
+        <div className="pill glass" aria-label="Dashboard controls">
           <button
             type="button"
             className={`pill-btn frame-btn${showGrid ? ' is-on' : ''}`}
@@ -75,6 +79,17 @@ export function BottomBar({
           >
             <IconGridDots />
             <span className="sr-only">Dashboard grid</span>
+          </button>
+          <button
+            type="button"
+            className={`pill-btn frame-btn${movementLocked ? ' is-on' : ''}`}
+            title={movementLocked ? 'Unlock dashboard movement' : 'Lock dashboard movement'}
+            aria-label={movementLocked ? 'Unlock dashboard movement' : 'Lock dashboard movement'}
+            aria-pressed={movementLocked}
+            data-testid="movement-lock-toggle"
+            onClick={onToggleMovementLock}
+          >
+            <IconLock locked={movementLocked} />
           </button>
           <button
             type="button"

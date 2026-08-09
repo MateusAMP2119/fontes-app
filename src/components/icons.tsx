@@ -115,6 +115,21 @@ export function IconGridDots({ size }: IconProps) {
   )
 }
 
+/** Layout lock — open while cards can move, closed while movement is locked. */
+export function IconLock({ size, locked }: IconProps & { locked: boolean }) {
+  return (
+    <Svg size={size}>
+      <rect x="5" y="10" width="14" height="10" rx="2" {...stroke} />
+      {locked ? (
+        <path d="M8 10V7a4 4 0 0 1 8 0v3" {...stroke} />
+      ) : (
+        <path d="M16 10V7a4 4 0 0 0-7.75-1.4" {...stroke} />
+      )}
+      <path d="M12 14v2" {...stroke} />
+    </Svg>
+  )
+}
+
 export function IconFolder({ size }: IconProps) {
   return (
     <Svg size={size}>

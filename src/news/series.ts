@@ -105,13 +105,30 @@ export function peakPoint(ev: NewsEvent): SeriesPoint {
   return series.reduce((best, p) => (p.value > best.value ? p : best), series[0])
 }
 
+const SUPPORTING_SOURCES = [
+  'Harbour Watch',
+  'Public Record',
+  'Civic Wire',
+  'Field Notes',
+  'Morning Index',
+  'Regional Desk',
+  'Open Signal',
+  'The Bulletin',
+  'Current Affairs',
+  'Local Dispatch',
+]
+
 /** Zipf-ish outlet distribution, normalized to articleCount, descending. */
 export function sourceBreakdown(ev: NewsEvent): Slice[] {
   return memo(`${ev.id}:sources`, () => {
     const rnd = rngFor(ev.id, 'sources')
-    const weights = ev.sources.map((_, i) => (1 / (i + 0.6)) * (0.82 + rnd() * 0.36))
+    const sources = [
+      ...ev.sources,
+      ...SUPPORTING_SOURCES.filter((source) => !ev.sources.includes(source)),
+    ].slice(0, 14)
+    const weights = sources.map((_, i) => (1 / (i + 0.6)) * (0.82 + rnd() * 0.36))
     const sum = weights.reduce((a, b) => a + b, 0)
-    return ev.sources
+    return sources
       .map((label, i) => ({ label, value: Math.round((weights[i] / sum) * ev.articleCount) }))
       .sort((a, b) => b.value - a.value)
   })
@@ -233,17 +250,137 @@ export function eventsKpi(ev: NewsEvent): EventsKpi {
   })
 }
 
-export type ReachKpi = { value: string; delta: number }
+export type ReachKpi = { value: string }
 
 /** "ALCANCE ESTIMADO" — audience reach, articles × seeded multiplier. */
 export function reachKpi(ev: NewsEvent): ReachKpi {
   return memo(`${ev.id}:reach`, () => {
     const rnd = rngFor(ev.id, 'reach')
     const perArticle = 2000 + rnd() * 7000
-    const value = formatCompact(Math.round(ev.articleCount * perArticle))
-    const delta = Math.max(Math.round(ev.articleCount * (0.2 + rnd() * 0.6)), 40)
-    return { value, delta }
+    return { value: formatCompact(Math.round(ev.articleCount * perArticle)) }
   })
+}
+
+export type ReachProfilePoint = {
+  label: string
+  value: number
+}
+
+type AudienceGroup = Pick<ReachProfilePoint, 'label'>
+
+const AUDIENCE_GROUPS: Record<EventCategory, AudienceGroup[]> = {
+  World: [
+    { label: 'comunidades afetadas' },
+    { label: 'decisores públicos' },
+    { label: 'equipas de emergência' },
+  ],
+  Business: [
+    { label: 'executivos e gestores' },
+    { label: 'investidores particulares' },
+    { label: 'analistas de mercado' },
+  ],
+  Tech: [
+    { label: 'engenheiros de software' },
+    { label: 'fundadores de startups' },
+    { label: 'investigadores de tecnologia' },
+  ],
+  Science: [
+    { label: 'investigadores científicos' },
+    { label: 'professores e educadores' },
+    { label: 'profissionais de saúde' },
+  ],
+  Climate: [
+    { label: 'investigadores do clima' },
+    { label: 'ativistas ambientais' },
+    { label: 'profissionais de energia' },
+  ],
+  Sport: [
+    { label: 'adeptos e sócios' },
+    { label: 'atletas e treinadores' },
+    { label: 'jornalistas desportivos' },
+  ],
+  Culture: [
+    { label: 'artistas e criadores' },
+    { label: 'programadores culturais' },
+    { label: 'críticos e jornalistas' },
+  ],
+}
+
+/** Topic-specific clusters replace the broader category defaults when known. */
+const TOPIC_AUDIENCE_GROUPS: Record<string, AudienceGroup[]> = {
+  'kestrel-harbour-bridge': [
+    { label: 'passageiros diários' },
+    { label: 'moradores do estuário' },
+    { label: 'engenheiros civis' },
+  ],
+  'harrow-vaccine-trial': [
+    { label: 'investigadores de vacinas' },
+    { label: 'profissionais de saúde' },
+    { label: 'responsáveis de saúde pública' },
+  ],
+  'orbital-debris-event': [
+    { label: 'cientistas espaciais' },
+    { label: 'operadores de satélites' },
+    { label: 'engenheiros aeroespaciais' },
+  ],
+  'solaris-launch-cadence': [
+    { label: 'engenheiros aeroespaciais' },
+    { label: 'operadores de lançamento' },
+    { label: 'investigadores espaciais' },
+  ],
+}
+
+/** Interest index (0-100) for the audience groups most relevant to a topic. */
+export function audienceInterestProfile(ev: NewsEvent): ReachProfilePoint[] {
+  return memo(`${ev.id}:audienceInterest`, () => {
+    const rnd = rngFor(ev.id, 'audienceInterest')
+    const index = (value: number) => Math.min(Math.max(Math.round(value), 0), 100)
+    const groups = TOPIC_AUDIENCE_GROUPS[ev.id] ?? AUDIENCE_GROUPS[ev.category]
+    return groups.map((group, i) => ({
+      ...group,
+      value: index(92 - i * 7 + (rnd() - 0.5) * 6),
+    }))
+  })
+}
+
+/** Short audience read placed directly below the reach headline. */
+export function audienceInterestSummary(ev: NewsEvent, compact = false): string {
+  const [first, second, third] = [...audienceInterestProfile(ev)].sort((a, b) => b.value - a.value)
+  if (compact) {
+    const compactStory: Record<string, string> = {
+      'kestrel-harbour-bridge':
+        'Passageiros lideram pelos desvios.',
+      'harrow-vaccine-trial':
+        'Investigadores lideram pela eficácia.',
+      'orbital-debris-event':
+        'Cientistas lideram pelo risco orbital.',
+      'solaris-launch-cadence':
+        'Engenheiros lideram pelos lançamentos.',
+    }
+    return compactStory[ev.id] ?? `Interesse liderado por ${first.label}.`
+  }
+  const topicStory: Record<string, string> = {
+    'kestrel-harbour-bridge':
+      'Passageiros diários lideram o interesse pelos desvios. Moradores do estuário acompanham o impacto local; engenheiros civis, as causas do colapso.',
+    'harrow-vaccine-trial':
+      'Investigadores de vacinas concentram o maior interesse, seguidos pelos profissionais de saúde que acompanham a chegada às clínicas. Responsáveis de saúde pública avaliam a adoção.',
+    'orbital-debris-event':
+      'Cientistas espaciais lideram o interesse pelo risco de novas colisões. Operadores de satélites e engenheiros aeroespaciais acompanham as manobras de desvio e a proteção das missões.',
+    'solaris-launch-cadence':
+      'Engenheiros aeroespaciais lideram o interesse pelo novo ritmo de lançamentos. Operadores e investigadores espaciais acompanham a capacidade e a segurança das missões.',
+  }
+  if (topicStory[ev.id]) return topicStory[ev.id]
+
+  const categoryEnding: Record<EventCategory, string> = {
+    World: 'por estarem mais próximos das consequências e da resposta pública.',
+    Business: 'que acompanham o impacto nos mercados e nas organizações.',
+    Tech: 'que acompanham a adoção e os efeitos no setor.',
+    Science: 'que acompanham a evidência e as aplicações práticas.',
+    Climate: 'que trabalham diretamente na mitigação e adaptação.',
+    Sport: 'que vivem de perto a competição e as suas decisões.',
+    Culture: 'que acompanham a criação, programação e receção pública.',
+  }
+  return `${first.label[0].toUpperCase()}${first.label.slice(1)} concentram o maior interesse, seguidos por ${second.label}. ${third.label[0].toUpperCase()}${third.label.slice(1)} também acompanham o tema, ${categoryEnding[ev.category]}`
 }
 
 /** "FONTES ATIVAS" delta — new outlets picked up over the last day. */
@@ -251,25 +388,6 @@ export function sourcesDelta(ev: NewsEvent): number {
   return memo(`${ev.id}:sourcesDelta`, () => {
     const rnd = rngFor(ev.id, 'sourcesDelta')
     return Math.max(Math.round(ev.sourceCount * (0.1 + rnd() * 0.5)), 1)
-  })
-}
-
-const SEGMENTS: Record<string, string[]> = {
-  World: ['Leitores internacionais', 'Adultos 25–44', 'Grande Lisboa'],
-  Business: ['Executivos e gestão', 'Investidores particulares', 'PMEs'],
-  Tech: ['Jovens em Fintech', 'Early adopters', 'Profissionais de TI'],
-  Science: ['Comunidade académica', 'Adultos 25–44', 'Professores'],
-  Climate: ['Jovens dos 18 aos 25', 'Ativistas locais', 'Área de Lisboa'],
-  Sport: ['Adeptos 18–34', 'Público desportivo', 'Norte do país'],
-  Culture: ['Público urbano', 'Estudantes', 'Leitores de fim de semana'],
-}
-
-/** The "Jovens em Fintech" sublabel under the reach figure. */
-export function audienceSegment(ev: NewsEvent): string {
-  return memo(`${ev.id}:segment`, () => {
-    const rnd = rngFor(ev.id, 'segment')
-    const pool = SEGMENTS[ev.category] ?? SEGMENTS.World
-    return pool[Math.floor(rnd() * pool.length)]
   })
 }
 
@@ -369,27 +487,103 @@ export function sentimentSeries(ev: NewsEvent): SentimentDay[] {
  * entities card fills out the way the Figma list does.
  */
 const SUPPORTING_ENTITIES: Record<EventCategory, string[]> = {
-  World: ['Opposition Parties', 'City Councils', 'Foreign Ministries', 'Residents Associations'],
-  Business: ['Market Analysts', 'Pension Funds', 'Trade Unions', 'Sector Regulators'],
-  Tech: ['Developer Community', 'Privacy Advocates', 'Venture Investors', 'Standards Bodies'],
-  Science: ['Peer Reviewers', 'University Labs', 'Science Journalists', 'Ethics Boards'],
-  Climate: ['Environmental Groups', 'Local Governments', 'Insurance Industry', 'Research Stations'],
-  Sport: ['National Federation', 'Broadcasters', 'Sponsors', 'Fan Associations'],
-  Culture: ['Arts Councils', 'Critics', 'Cultural Foundations', 'Festival Organisers'],
+  World: ['Opposition Parties', 'City Councils', 'Foreign Ministries', 'Residents Associations', 'Emergency Services', 'Regional Courts', 'Port Authorities', 'Public Auditors'],
+  Business: ['Market Analysts', 'Pension Funds', 'Trade Unions', 'Sector Regulators', 'Retail Investors', 'Competition Authorities', 'Industry Groups', 'Credit Analysts'],
+  Tech: ['Developer Community', 'Privacy Advocates', 'Venture Investors', 'Standards Bodies', 'Cloud Providers', 'Security Researchers', 'Open-source Maintainers', 'Enterprise Buyers'],
+  Science: ['Peer Reviewers', 'University Labs', 'Science Journalists', 'Ethics Boards', 'Research Funders', 'Professional Societies', 'Laboratory Staff', 'Policy Advisers'],
+  Climate: ['Environmental Groups', 'Local Governments', 'Insurance Industry', 'Research Stations', 'Energy Providers', 'Coastal Communities', 'Agricultural Groups', 'Weather Agencies'],
+  Sport: ['National Federation', 'Broadcasters', 'Sponsors', 'Fan Associations', 'Club Owners', 'Players Union', 'Venue Operators', 'Match Officials'],
+  Culture: ['Arts Councils', 'Critics', 'Cultural Foundations', 'Festival Organisers', 'Museum Directors', 'Artist Collectives', 'Publishers', 'Local Venues'],
 }
 
 /** Zipf-ish actor mentions, normalized to articleCount, descending. */
-export function entityBreakdown(ev: NewsEvent): Slice[] {
+export type EntitySlice = Slice & {
+  role: string
+  description: string
+}
+
+type EntityRule = {
+  match: RegExp
+  role: string
+  action: string
+}
+
+const ENTITY_RULES: EntityRule[] = [
+  {
+    match: /consortium/i,
+    role: 'Consórcio coordenador',
+    action: 'Coordena parceiros, recursos e decisões técnicas do projeto.',
+  },
+  {
+    match: /trial sites?|labs?|fab|crews?|stations?|precinct officials/i,
+    role: 'Operação no terreno',
+    action: 'Executa o trabalho no terreno, recolhe evidência e reporta resultados.',
+  },
+  {
+    match: /regulator|commission|authority|ministry|agency|government|secretariat/i,
+    role: 'Entidade pública',
+    action: 'Define regras, fiscaliza o processo e decide sobre autorizações públicas.',
+  },
+  {
+    match: /panel|auditor|reviewer|court|counsel|inquiry|mediator|verifier/i,
+    role: 'Supervisão independente',
+    action: 'Avalia evidência, verifica conformidade e responsabiliza os intervenientes.',
+  },
+  {
+    match: /fund|funding|investor|shareholder|bidders?/i,
+    role: 'Financiamento',
+    action: 'Disponibiliza capital e condiciona prioridades, prazos e escala da iniciativa.',
+  },
+  {
+    match: /union|groups?|community|communities|homeowners|settlements|supporters|ngos?|observers/i,
+    role: 'Representação coletiva',
+    action: 'Representa as pessoas afetadas e leva preocupações públicas para a decisão.',
+  },
+  {
+    match: /operators?|providers?|platforms?|carriers?|utilities|networks?|harbourline/i,
+    role: 'Operador do setor',
+    action: 'Opera a infraestrutura ou serviço diretamente afetado por este evento.',
+  },
+  {
+    match: /researchers?|scientists?|analysts?|institute|reviewers?/i,
+    role: 'Especialistas técnicos',
+    action: 'Produz análise especializada e interpreta os impactos técnicos do evento.',
+  },
+  {
+    match: /manufactur|supplier|contractor|foundry|studios?|firms?|partner|production/i,
+    role: 'Parceiro industrial',
+    action: 'Transforma o plano em capacidade operacional, produção e controlo de qualidade.',
+  },
+]
+
+function entityProfile(ev: NewsEvent, label: string, index: number): Omit<EntitySlice, keyof Slice> {
+  const rule = ENTITY_RULES.find(({ match }) => match.test(label)) ?? {
+    role: 'Interveniente central',
+    action: 'Participa nas decisões e na execução das medidas associadas ao evento.',
+  }
+  const focus = ev.angles[index % ev.angles.length].toLowerCase()
+  return {
+    role: rule.role,
+    description: `${rule.action} Na cobertura, surge ligada a ${focus}.`,
+  }
+}
+
+export function entityBreakdown(ev: NewsEvent): EntitySlice[] {
   return memo(`${ev.id}:entities`, () => {
     const rnd = rngFor(ev.id, 'entities')
     const cast = [
       ...ev.entities,
       ...SUPPORTING_ENTITIES[ev.category].filter((e) => !ev.entities.includes(e)),
-    ].slice(0, 9)
+    ].slice(0, 14)
     const weights = cast.map((_, i) => (1 / (i + 0.6)) * (0.82 + rnd() * 0.36))
     const sum = weights.reduce((a, b) => a + b, 0)
+    const mentionTotal = Math.round(ev.articleCount * (1.35 + rnd() * 0.8))
     return cast
-      .map((label, i) => ({ label, value: Math.round((weights[i] / sum) * ev.articleCount) }))
+      .map((label, i) => ({
+        label,
+        value: Math.max(Math.round((weights[i] / sum) * mentionTotal), 1),
+        ...entityProfile(ev, label, i),
+      }))
       .sort((a, b) => b.value - a.value)
   })
 }
@@ -441,7 +635,7 @@ export function metricDetail(ev: NewsEvent, metric: 'sources' | 'sentiment' | 'e
 
 export type Narrative = {
   title: string
-  source: string
+  sources: string[]
   summary: string
   articles: number
   fontes: number
@@ -453,15 +647,31 @@ export type Narrative = {
 export function narratives(ev: NewsEvent): Narrative[] {
   return memo(`${ev.id}:narratives`, () => {
     const rnd = rngFor(ev.id, 'narratives')
-    return ev.headlines.map((headline, i) => {
+    const rowCount = 12
+    return Array.from({ length: rowCount }, (_, i) => {
+      const headline = ev.headlines[i % ev.headlines.length]
+      const cycle = Math.floor(i / ev.headlines.length)
       const angle = ev.angles[i % ev.angles.length]
-      const source = ev.sources[Math.floor(rnd() * ev.sources.length)]
+      const sourcePool = [
+        headline.source,
+        ...ev.sources.filter((source) => source !== headline.source),
+      ]
+      const sourceCount = Math.min(2 + Math.floor(rnd() * 5), sourcePool.length)
+      const offset = Math.floor(rnd() * sourcePool.length)
+      const sources = Array.from(
+        { length: sourceCount },
+        (_, sourceIndex) => sourcePool[(sourceIndex + offset) % sourcePool.length],
+      )
+      const title =
+        cycle === 0
+          ? headline.title
+          : `${cycle === 1 ? 'Em detalhe' : 'Contexto'}: ${angle} — ${headline.title}`
       return {
-        title: headline.title,
-        source: headline.source,
-        summary: `Cobertura centrada em ${angle.toLowerCase()}, com ${source} a liderar o volume de artigos.`,
+        title,
+        sources,
+        summary: `Cobertura centrada em ${angle.toLowerCase()}, com ${sources[0]} a liderar o volume de artigos.`,
         articles: 3 + Math.floor(rnd() * 16),
-        fontes: 2 + Math.floor(rnd() * 5),
+        fontes: sources.length,
         imageIndex: Math.floor(rnd() * 4),
       }
     })

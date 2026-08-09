@@ -18,6 +18,7 @@ type CanvasProps = {
   editingId: string | null
   tool: Tool
   showMobile: boolean
+  movementLocked: boolean
   onSelectOnly: (id: string) => void
   onToggleSelect: (id: string) => void
   onSelectMany: (ids: string[]) => void
@@ -49,6 +50,7 @@ export function Canvas({
   editingId,
   tool,
   showMobile,
+  movementLocked,
   onSelectOnly,
   onToggleSelect,
   onSelectMany,
@@ -76,9 +78,9 @@ export function Canvas({
     const el = viewportRef.current
     if (!el) return
     const onWheel = (e: WheelEvent) => {
-      // The board itself is fixed, but the phone preview is a real vertical
-      // viewport and must keep its native wheel/trackpad scrolling.
-      if ((e.target as HTMLElement).closest('.mobile-dashboard-scroll')) return
+      // The board itself is fixed, but explicit scroll regions (phone preview
+      // and list-card bodies) keep native wheel/trackpad scrolling.
+      if ((e.target as HTMLElement).closest('.mobile-dashboard-scroll, [data-scroll-region]')) return
       e.preventDefault()
     }
     el.addEventListener('wheel', onWheel, { passive: false })
@@ -232,7 +234,7 @@ export function Canvas({
             item={item}
             selected={selectedIds.includes(item.id)}
             editing={item.id === editingId}
-            interactive={tool === 'select'}
+            interactive={tool === 'select' && (item.type !== 'viz' || !movementLocked)}
             onSelectOnly={onSelectOnly}
             onToggleSelect={onToggleSelect}
             onDragTo={onDragTo}

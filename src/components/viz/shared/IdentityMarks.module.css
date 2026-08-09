@@ -1,0 +1,27 @@
+.mark {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.88);
+  border-radius: 5px;
+  background: hsl(var(--identity-hue) 30% 48%);
+  color: #fff;
+  font-size: 7px;
+  font-weight: 680;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  box-shadow: 0 1px 3px rgba(30, 60, 110, 0.12);
+}
+
+.stack {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  padding-left: 1px;
+}
+
+.stack .mark + .mark {
+  margin-left: -5px;
+}
