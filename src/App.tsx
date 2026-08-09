@@ -22,6 +22,7 @@ import {
 import { BoardsPanel } from './components/BoardsPanel'
 import { BottomBar, type Tool } from './components/BottomBar'
 import { Canvas } from './components/Canvas'
+import { CardCloseup } from './components/CardCloseup'
 import { TopActions } from './components/TopActions'
 import { BuildGhost, type GhostRect } from './components/picker/BuildGhost'
 import { TopicComposer } from './components/picker/TopicComposer'
@@ -81,6 +82,7 @@ export default function App() {
   const [showMobile, setShowMobile] = useState(false)
   const [showGrid, setShowGrid] = useState(false)
   const [movementLocked, setMovementLocked] = useState(false)
+  const [previewId, setPreviewId] = useState<string | null>(null)
   const [pickerQuery, setPickerQuery] = useState('')
   const [build, setBuild] = useState<Build | null>(null)
   const [gridDrag, setGridDrag] = useState<GridDrag | null>(null)
@@ -121,6 +123,7 @@ export default function App() {
     setEditingId(null)
     setTool('select')
     setGridDrag(null)
+    setPreviewId(null)
     gridBaseRef.current = null
   }, [])
 
@@ -470,6 +473,10 @@ export default function App() {
         target.tagName === 'INPUT' ||
         target.tagName === 'TEXTAREA'
       if (e.key === 'Escape') {
+        if (previewId) {
+          setPreviewId(null)
+          return
+        }
         // The composer clears its query first, then falls through as usual.
         if (showPicker && !build && pickerQuery) {
           setPickerQuery('')
@@ -494,6 +501,7 @@ export default function App() {
     deleteSelection,
     editingId,
     pickerQuery,
+    previewId,
     selectedIds,
     showPicker,
     sidebarOpen,
@@ -536,6 +544,12 @@ export default function App() {
     }
     return cells
   }, [overlayOn, activeBoard.vizRowH, frameTick])
+
+  const previewItem = previewId
+    ? activeBoard.items.find(
+        (item): item is VizItem => item.id === previewId && item.type === 'viz',
+      )
+    : undefined
 
   return (
     <div
@@ -594,6 +608,7 @@ export default function App() {
                 onResizeTo={resizeItemTo}
                 onResizeEnd={commitGridDrag}
                 onEdit={setEditingId}
+                onPreview={setPreviewId}
                 onItemChange={updateItem}
                 onStroke={commitStroke}
                 gridGhost={gridGhost}
@@ -644,6 +659,16 @@ export default function App() {
           setEditingId(null)
         }}
       />
+
+      <AnimatePresence>
+        {previewItem && (
+          <CardCloseup
+            item={previewItem}
+            paneRef={frameRef}
+            onClose={() => setPreviewId(null)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Owned by App so it survives the composer unmounting mid-build */}
       <div className="sr-only" role="status" aria-live="polite">

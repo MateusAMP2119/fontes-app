@@ -288,6 +288,10 @@
   cursor: grab;
 }
 
+.item.is-previewable {
+  cursor: zoom-in;
+}
+
 .item.is-interactive:hover:not(.is-selected)::after {
   border-color: rgba(62, 142, 247, 0.25);
 }
@@ -517,6 +521,52 @@
 
 .item-viz svg {
   display: block;
+}
+
+/* Read-only close-up for locked dashboard cards. Covers only the PC view
+   pane (rect set inline from the frame): diagonal hatch marks the pane as
+   a selected area, with the card lifted on top. */
+.card-closeup-backdrop {
+  position: fixed;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  overflow: hidden;
+  background-color: rgba(251, 252, 254, 0.92);
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(62, 142, 247, 0.14) 0 1.5px,
+    transparent 1.5px 9px
+  );
+}
+
+.card-closeup-dialog {
+  position: relative;
+  outline: none;
+}
+
+.card-closeup-card {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  border-radius: 12px;
+  container-type: size;
+  box-shadow:
+    0 0 0 1px rgba(62, 142, 247, 0.35),
+    0 24px 64px rgba(23, 43, 77, 0.18),
+    0 4px 14px rgba(23, 43, 77, 0.1);
+}
+
+.card-closeup-content {
+  position: absolute;
+  inset: 0 auto auto 0;
+  /* Keep cqw/cqh and every responsive decision tied to the board card's
+     original dimensions. CSS zoom re-renders the fixed composition sharply
+     instead of stretching a cached transform layer. */
+  container-type: size;
+  contain: layout paint style;
+  pointer-events: none;
 }
 
 
