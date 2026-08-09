@@ -18,6 +18,7 @@ type CanvasProps = {
   editingId: string | null
   tool: Tool
   showMobile: boolean
+  movementLocked: boolean
   onSelectOnly: (id: string) => void
   onToggleSelect: (id: string) => void
   onSelectMany: (ids: string[]) => void
@@ -49,6 +50,7 @@ export function Canvas({
   editingId,
   tool,
   showMobile,
+  movementLocked,
   onSelectOnly,
   onToggleSelect,
   onSelectMany,
@@ -232,7 +234,9 @@ export function Canvas({
             item={item}
             selected={selectedIds.includes(item.id)}
             editing={item.id === editingId}
-            interactive={tool === 'select'}
+            interactive={
+              tool === 'select' && (item.type !== 'viz' || !movementLocked)
+            }
             onSelectOnly={onSelectOnly}
             onToggleSelect={onToggleSelect}
             onDragTo={onDragTo}

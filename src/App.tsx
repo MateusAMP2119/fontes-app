@@ -80,6 +80,7 @@ export default function App() {
   const [tool, setTool] = useState<Tool>('select')
   const [showMobile, setShowMobile] = useState(false)
   const [showGrid, setShowGrid] = useState(false)
+  const [movementLocked, setMovementLocked] = useState(false)
   const [pickerQuery, setPickerQuery] = useState('')
   const [build, setBuild] = useState<Build | null>(null)
   const [gridDrag, setGridDrag] = useState<GridDrag | null>(null)
@@ -582,6 +583,7 @@ export default function App() {
               editingId={editingId}
               tool={tool}
               showMobile={showMobile}
+              movementLocked={movementLocked}
               onSelectOnly={selectOnly}
               onToggleSelect={toggleSelect}
               onSelectMany={setSelectedIds}
@@ -627,11 +629,17 @@ export default function App() {
         hasSelection={selectedIds.length > 0}
         showMobile={showMobile}
         showGrid={showGrid}
+        movementLocked={movementLocked}
         onToolChange={setTool}
         onInsert={insertItem}
         onDelete={deleteSelection}
         onToggleMobile={() => setShowMobile((prev) => !prev)}
         onToggleGrid={() => setShowGrid((prev) => !prev)}
+        onToggleMovementLock={() => {
+          setMovementLocked((prev) => !prev)
+          setSelectedIds([])
+          setEditingId(null)
+        }}
       />
 
       {/* Owned by App so it survives the composer unmounting mid-build */}
