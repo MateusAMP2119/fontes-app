@@ -99,13 +99,13 @@ export function IconShare({ size }: IconProps) {
   )
 }
 
-export function IconGrid({ size }: IconProps) {
+export function IconSliders({ size }: IconProps) {
   return (
     <Svg size={size}>
-      <rect x="4" y="4" width="6" height="6" rx="1" {...stroke} />
-      <rect x="14" y="4" width="6" height="6" rx="1" {...stroke} />
-      <rect x="4" y="14" width="6" height="6" rx="1" {...stroke} />
-      <rect x="14" y="14" width="6" height="6" rx="1" {...stroke} />
+      <path d="M4 6h4M12 6h8M4 12h9M17 12h3M4 18h2M10 18h10" {...stroke} />
+      <circle cx="10" cy="6" r="2" {...stroke} />
+      <circle cx="15" cy="12" r="2" {...stroke} />
+      <circle cx="8" cy="18" r="2" {...stroke} />
     </Svg>
   )
 }
@@ -214,6 +214,35 @@ export function IconCloud({ size }: IconProps) {
         d="M7.5 18h9a4 4 0 0 0 .5-8 5.5 5.5 0 0 0-10.7 1.5A3.5 3.5 0 0 0 7.5 18z"
         {...stroke}
       />
+    </Svg>
+  )
+}
+
+export function IconDatabasePlus({ size }: IconProps) {
+  return (
+    <Svg size={size}>
+      <ellipse cx="10" cy="6" rx="6" ry="2.5" {...stroke} />
+      <path d="M4 6v5c0 1.4 2.7 2.5 6 2.5M16 6v4" {...stroke} />
+      <path d="M4 11v5c0 1.4 2.7 2.5 6 2.5h1" {...stroke} />
+      <path d="M17 13v7M13.5 16.5h7" {...stroke} />
+    </Svg>
+  )
+}
+
+export function IconClock({ size }: IconProps) {
+  return (
+    <Svg size={size}>
+      <circle cx="12" cy="12" r="8" {...stroke} />
+      <path d="M12 7v5l3.5 2" {...stroke} />
+    </Svg>
+  )
+}
+
+export function IconSparkles({ size }: IconProps) {
+  return (
+    <Svg size={size}>
+      <path d="M12 3l1.2 3.8L17 8l-3.8 1.2L12 13l-1.2-3.8L7 8l3.8-1.2L12 3z" {...stroke} />
+      <path d="M18.5 13l.7 2.3 2.3.7-2.3.7-.7 2.3-.7-2.3-2.3-.7 2.3-.7.7-2.3zM5.5 13l.6 1.9 1.9.6-1.9.6-.6 1.9-.6-1.9-1.9-.6 1.9-.6.6-1.9z" {...stroke} />
     </Svg>
   )
 }

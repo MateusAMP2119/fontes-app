@@ -1,0 +1,22 @@
+[Script Info]
+Title: Fontes editor mode demo
+ScriptType: v4.00+
+PlayResX: 1280
+PlayResY: 720
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Caption,SF Pro Display,24,&H00FFFFFF,&H00FFFFFF,&H00141C2A,&H96141C2A,-1,0,0,0,100,100,-0.4,0,3,1,0,1,42,42,38,1
+Style: Label,SF Pro Display,13,&H00FFFFFF,&H00FFFFFF,&H003563D8,&H203563D8,-1,0,0,0,100,100,1.6,0,3,0,0,7,36,36,26,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:00.00,0:00:16.25,Label,,0,0,0,,{\fad(250,300)}FONTES  ·  EDITOR MODE
+Dialogue: 0,0:00:00.00,0:00:01.80,Caption,,0,0,0,,{\fad(220,220)}Edit a live intelligence dashboard
+Dialogue: 0,0:00:01.90,0:00:03.35,Caption,,0,0,0,,{\fad(180,180)}Page-level controls expand in place
+Dialogue: 0,0:00:03.45,0:00:06.90,Caption,,0,0,0,,{\fad(180,180)}Search across data connectors
+Dialogue: 0,0:00:07.00,0:00:08.90,Caption,,0,0,0,,{\fad(180,180)}Connect a new source in one click
+Dialogue: 0,0:00:09.00,0:00:10.35,Caption,,0,0,0,,{\fad(180,180)}Select a card for contextual tools
+Dialogue: 0,0:00:10.45,0:00:13.15,Caption,,0,0,0,,{\fad(180,180)}Explain what is driving the visual
+Dialogue: 0,0:00:13.25,0:00:16.25,Caption,,0,0,0,,{\fad(180,260)}Pin the generated insight to the page

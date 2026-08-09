@@ -9,7 +9,7 @@ import { hasCopy, variantFor } from '../../shared/variant'
 import sh from '../../shared/shared.module.css'
 import s from './EventsCard.module.css'
 
-const THRESHOLDS = { minAspect: 1.9, minW: 260, detailMinH: 140 }
+const THRESHOLDS = { minAspect: 1.9, minW: 240, detailMinH: 140 }
 
 export function EventsCard({ item, event }: { item: VizItem; event: NewsEvent }) {
   const variant = variantFor(item, THRESHOLDS)
