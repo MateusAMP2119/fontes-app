@@ -57,7 +57,7 @@ function Breakdown({
                   <span className={s.nameText}>{row.label}</span>
                 </span>
                 <span className={s.meta}>
-                  {art(row.value)} artigos · {share(row.value)}% da cobertura
+                  {art(row.value)} artigos, {share(row.value)}% da cobertura
                 </span>
               </span>
             </ListCell>

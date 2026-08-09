@@ -1241,11 +1241,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.event-card-dot {
-  color: var(--ink-tertiary);
-  opacity: 0.6;
-}
-
 .event-card-name {
   font-size: 13.5px;
   font-weight: 560;

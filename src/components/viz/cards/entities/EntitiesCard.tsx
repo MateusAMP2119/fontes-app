@@ -1,71 +1,62 @@
-import type { CSSProperties } from 'react'
 import type { VizItem } from '../../../../items/items'
 import type { NewsEvent } from '../../../../news/events'
-import { entityBreakdown, formatCompact } from '../../../../news/series'
-import { bodyH, cardColumns } from '../../shared/charts'
+import { narrativeImage } from '../../../../news/narrativeImages'
+import { breakdownSparkline, entityBreakdown, formatCompact } from '../../../../news/series'
+import { Sparkline } from '../../../Sparkline'
+import { List, ListCell, ListRow } from '../../shared/List'
 import { Shell } from '../../shared/Shell'
-import { variantFor } from '../../shared/variant'
 import s from './EntitiesCard.module.css'
 
-const THRESHOLDS = { minAspect: 1.9, minW: 380, detailMinH: 140 }
-
-export function EntitiesCard({ item, event }: { item: VizItem; event: NewsEvent }) {
-  const variant = variantFor(item, THRESHOLDS)
-  const horizontal = variant === 'horizontal'
-  const columns = horizontal ? cardColumns(item) : undefined
-  const availableH = bodyH(item)
-  const compact = availableH < 115
-  const visibleCount = compact ? 2 : availableH < 170 ? 3 : 4
+export function EntitiesCard({ event }: { item: VizItem; event: NewsEvent }) {
   const rows = entityBreakdown(event)
-  const visible = rows.slice(0, visibleCount)
-  const remainder = rows.slice(visibleCount)
-  const total = rows.reduce((sum, row) => sum + row.value, 0)
-  const otherTotal = remainder.reduce((sum, row) => sum + row.value, 0)
-  const max = Math.max(...visible.map((row) => row.value), 1)
-  const share = (value: number) => Math.round((value / total) * 100)
 
   return (
-    <Shell
-      label="Entidades e intervenientes"
-      variant={variant}
-      columns={columns}
-      className={s.root}
-    >
-      <section
-        className={s.ranking}
-        data-compact={compact ? '' : undefined}
-        aria-label={`${total.toLocaleString()} menções por entidade, ordenadas da maior para a menor presença`}
+    <Shell label="Entidades e intervenientes" variant="default">
+      <List
+        label="Entidades e intervenientes"
+        columns={[
+          'var(--entity-media-column, 68px)',
+          'minmax(0, 1fr)',
+          'var(--entity-spark-column, 88px)',
+          'var(--entity-stats-column, 82px)',
+        ]}
+        className={s.list}
+        fade
       >
-        <div className={s.summary}>
-          <span>Ranking por volume de menções</span>
-          <strong>{formatCompact(total)} <em>menções</em></strong>
-        </div>
-
-        <div className={s.rows}>
-          {visible.map((row, index) => (
-            <article key={row.label} className={s.row}>
-              <div className={s.rowHeading}>
-                <strong>{row.label}</strong>
-                <span>{formatCompact(row.value)} · {share(row.value)}%</span>
-              </div>
-              <p className={s.entityContext}>{row.role} · {shortAction(row.description)}</p>
-              <div className={s.track} aria-hidden="true">
-                <i
-                  className={index === 0 ? s.leaderBar : undefined}
-                  style={{ '--bar-width': `${(row.value / max) * 100}%` } as CSSProperties}
+        {rows.map((row, index) => (
+          <ListRow key={row.label} className={s.row}>
+            <ListCell className={s.imageCell}>
+              <img
+                src={narrativeImage(event.category, row.imageIndex + index)}
+                alt=""
+                loading="lazy"
+              />
+            </ListCell>
+            <ListCell className={s.text}>
+              <span className={s.title}>{row.label}</span>
+              <p className={s.summary}>{row.role}. {shortAction(row.description)}</p>
+            </ListCell>
+            <ListCell className={s.sparkCell}>
+              <figure
+                className={s.spark}
+                aria-label={`Evolução das menções a ${row.label}`}
+              >
+                <Sparkline
+                  values={breakdownSparkline(event, row.label, 18)}
+                  width={88}
+                  height={24}
+                  strokeWidth={1.5}
+                  area
                 />
-              </div>
-            </article>
-          ))}
-        </div>
-
-        {remainder.length > 0 && (
-          <div className={s.others}>
-            <span>+{remainder.length} outras entidades</span>
-            <strong>{formatCompact(otherTotal)} · {share(otherTotal)}%</strong>
-          </div>
-        )}
-      </section>
+              </figure>
+            </ListCell>
+            <ListCell className={s.stats}>
+              <strong>{formatCompact(row.articles)} artigos</strong>
+              <span>{formatCompact(row.fontes)} fontes</span>
+            </ListCell>
+          </ListRow>
+        ))}
+      </List>
     </Shell>
   )
 }

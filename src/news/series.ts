@@ -500,6 +500,10 @@ const SUPPORTING_ENTITIES: Record<EventCategory, string[]> = {
 export type EntitySlice = Slice & {
   role: string
   description: string
+  articles: number
+  fontes: number
+  /** Index into the category's bundled photo pool. */
+  imageIndex: number
 }
 
 type EntityRule = {
@@ -556,7 +560,11 @@ const ENTITY_RULES: EntityRule[] = [
   },
 ]
 
-function entityProfile(ev: NewsEvent, label: string, index: number): Omit<EntitySlice, keyof Slice> {
+function entityProfile(
+  ev: NewsEvent,
+  label: string,
+  index: number,
+): Pick<EntitySlice, 'role' | 'description' | 'imageIndex'> {
   const rule = ENTITY_RULES.find(({ match }) => match.test(label)) ?? {
     role: 'Interveniente central',
     action: 'Participa nas decisões e na execução das medidas associadas ao evento.',
@@ -565,6 +573,7 @@ function entityProfile(ev: NewsEvent, label: string, index: number): Omit<Entity
   return {
     role: rule.role,
     description: `${rule.action} Na cobertura, surge ligada a ${focus}.`,
+    imageIndex: hashSeed(label) % 4,
   }
 }
 
@@ -578,13 +587,26 @@ export function entityBreakdown(ev: NewsEvent): EntitySlice[] {
     const weights = cast.map((_, i) => (1 / (i + 0.6)) * (0.82 + rnd() * 0.36))
     const sum = weights.reduce((a, b) => a + b, 0)
     const mentionTotal = Math.round(ev.articleCount * (1.35 + rnd() * 0.8))
+    const peakWeight = Math.max(...weights, 1)
     return cast
-      .map((label, i) => ({
-        label,
-        value: Math.max(Math.round((weights[i] / sum) * mentionTotal), 1),
-        ...entityProfile(ev, label, i),
-      }))
-      .sort((a, b) => b.value - a.value)
+      .map((label, i) => {
+        const prominence = weights[i] / peakWeight
+        const profile = entityProfile(ev, label, i)
+        return {
+          ...profile,
+          label,
+          value: Math.max(Math.round((weights[i] / sum) * mentionTotal), 1),
+          articles: Math.min(
+            ev.articleCount,
+            Math.max(Math.round(ev.articleCount * (0.06 + prominence * 0.58) * (0.86 + rnd() * 0.24)), 1),
+          ),
+          fontes: Math.min(
+            ev.sourceCount,
+            Math.max(Math.round(ev.sourceCount * (0.08 + prominence * 0.62) * (0.88 + rnd() * 0.2)), 1),
+          ),
+        }
+      })
+      .sort((a, b) => b.articles - a.articles || b.fontes - a.fontes)
   })
 }
 
