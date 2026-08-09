@@ -1,6 +1,6 @@
 import type { VizItem } from '../../../../items/items'
 import type { NewsEvent } from '../../../../news/events'
-import { narrativeImage } from '../../../../news/narrativeImages'
+import { topicImage } from '../../../../news/narrativeImages'
 import { narratives } from '../../../../news/series'
 import { SourceMarks } from '../../shared/IdentityMarks'
 import { List, ListCell, ListRow } from '../../shared/List'
@@ -24,7 +24,7 @@ export function NarrativesCard({ event }: { item: VizItem; event: NewsEvent }) {
           <ListRow key={row.title} className={s.row}>
             <ListCell className={s.imageCell}>
               <img
-                src={narrativeImage(event.category, row.imageIndex + i)}
+                src={topicImage(event, row.imageIndex + i)}
                 alt=""
                 loading="lazy"
               />

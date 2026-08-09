@@ -10,6 +10,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  CATEGORY_LABELS,
   EVENT_CATEGORIES,
   NEWS_EVENTS,
   searchEvents,
@@ -36,7 +37,7 @@ type TopicComposerProps = {
   query: string
   onQueryChange: (query: string) => void
   onPick: (event: NewsEvent, from: DOMRect) => void
-  /** A build is in flight — wipe out while the ghost grows into the frame. */
+  /** A build is in flight — clear the picker before the dashboard lands. */
   leaving: boolean
 }
 
@@ -123,7 +124,7 @@ export function TopicComposer({
             className="spawn-input"
             data-testid="composer-input"
             value={query}
-            placeholder="Follow any story…"
+            placeholder="Segue qualquer história…"
             role="combobox"
             aria-expanded={results.length > 0}
             aria-controls="spawn-results"
@@ -158,26 +159,26 @@ export function TopicComposer({
                 aria-pressed={s === scope}
                 onClick={() => chooseScope(s)}
               >
-                {s}
+                {s === 'All' ? 'Todos' : CATEGORY_LABELS[s]}
               </button>
             ))}
           </div>
 
           <div className="spawn-filters">
             <FilterSelect
-              label="Region"
+              label="Região"
               value={filters.region}
               options={REGION_OPTIONS}
               onChange={(v) => setFilter('region', v)}
             />
             <FilterSelect
-              label="Time"
+              label="Período"
               value={filters.window}
               options={TIME_OPTIONS}
               onChange={(v) => setFilter('window', v)}
             />
             <FilterSelect
-              label="Tone"
+              label="Tom"
               value={filters.tone}
               options={TONE_OPTIONS}
               onChange={(v) => setFilter('tone', v)}
@@ -192,7 +193,7 @@ export function TopicComposer({
                   inputRef.current?.focus()
                 }}
               >
-                Clear {filterCount}
+                Limpar {filterCount}
               </button>
             )}
           </div>
@@ -209,8 +210,8 @@ export function TopicComposer({
           {results.length === 0 ? (
             <div key="empty" className="spawn-swap spawn-empty">
               {searching
-                ? `No story matches “${query.trim()}”`
-                : 'No story matches these filters'}
+                ? `Nenhuma história corresponde a “${query.trim()}”`
+                : 'Nenhuma história corresponde a estes filtros'}
             </div>
           ) : searching ? (
             <div key="results" className="spawn-swap spawn-rows">
@@ -228,7 +229,7 @@ export function TopicComposer({
             </div>
           ) : (
             <div key="resting" className="spawn-swap spawn-resting">
-              <span className="spawn-suggest-head">Trending now</span>
+              <span className="spawn-suggest-head">Em destaque</span>
               <div className="spawn-chips">
                 {results.map((event, i) => (
                   <EventCard

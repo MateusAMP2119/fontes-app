@@ -6,7 +6,6 @@ import {
   audienceClusterWeek,
   audienceFocusSummary,
   audienceInterestSummary,
-  formatCompact,
   reachKpi,
   type AudienceClusterDay,
 } from '../../../../news/series'
@@ -30,14 +29,14 @@ export function ReachCard({ item, event }: { item: VizItem; event: NewsEvent }) 
   const days = audienceClusterWeek(event)
   const focusSummary = audienceFocusSummary(event)
   const leaderReach = Math.round(stat.total * (clusters[0].value / 100))
-  const totalText = formatCompact(stat.total).replace(' ', '')
+  const totalText = String(stat.total)
   const fullSummary = audienceInterestSummary(event)
   const compactSummary = audienceInterestSummary(event, true)
   const detailCopy = textFits(item.w - 2 - PAD * 2, Math.max(bodyH(item) - 140, 0), fullSummary)
     ? fullSummary
     : compactSummary
-  const coreFocusStory = `O tema mobiliza cerca de ${formatCompact(leaderReach)} pessoas entre ${clusters[0].label}.`
-  const fullFocusStory = `O tema mobiliza cerca de ${formatCompact(leaderReach)} pessoas entre ${clusters[0].label}, sobretudo em ${focusSummary}.`
+  const coreFocusStory = `O tema mobiliza cerca de ${leaderReach} pessoas entre ${clusters[0].label}.`
+  const fullFocusStory = `O tema mobiliza cerca de ${leaderReach} pessoas entre ${clusters[0].label}, sobretudo em ${focusSummary}.`
   const focusCopy = cols?.n === 3 && textFits(cols.colW, bodyH(item), fullFocusStory)
     ? fullFocusStory
     : coreFocusStory
@@ -62,7 +61,7 @@ export function ReachCard({ item, event }: { item: VizItem; event: NewsEvent }) 
       <div className={horizontal ? metricS.side : s.metricMeta}>
         <span className={horizontal ? `${metricS.fitText} ${metricS.sideDelta}` : undefined}>
           <i className={metricS.trendArrow}>▲</i>{' '}
-          +{formatCompact(stat.delta24h)} pessoas
+          +{stat.delta24h} pessoas
         </span>
         <span className={horizontal ? `${metricS.fitText} ${metricS.sideDelta}` : undefined}>
           <i className={metricS.trendArrow}>▲</i>{' '}

@@ -1,12 +1,5 @@
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
-import { AnimatePresence, LayoutGroup, motion } from 'motion/react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'motion/react'
 import { clamp, type Point } from './camera/camera'
 import {
   createInkItem,
@@ -40,7 +33,6 @@ import {
   type PageTheme,
   type PageTimeRange,
 } from './components/TopActions'
-import { BuildGhost, type GhostRect } from './components/picker/BuildGhost'
 import { TopicComposer } from './components/picker/TopicComposer'
 import { buildDashboard, DEFAULT_TOTAL_ROWS } from './news/dashboard'
 import type { NewsEvent } from './news/events'
@@ -66,9 +58,11 @@ import './App.css'
 const GRID_SNAP = 24
 /** Breathing room between a settled card and the frame edge. */
 const FRAME_PAD = 8
+/** Matches the picker's CSS exit so the dashboard lands after it clears. */
+const PICKER_EXIT_MS = 180
 
-/** A dashboard mid-flight: computed up front, committed when the ghost lands. */
-type Build = { event: NewsEvent; from: GhostRect; items: Item[]; rowH: number }
+/** A dashboard computed up front while the topic picker makes its exit. */
+type Build = { event: NewsEvent; items: Item[]; rowH: number }
 
 /** A widget drag/resize in flight: free pixels plus the previewed grid. */
 type GridDrag = {
@@ -90,6 +84,7 @@ function vizEntries(items: Item[]): GridEntry[] {
 }
 
 export default function App() {
+  const reducedMotion = useReducedMotion()
   const [ws, setWs] = useState<Workspace>(loadWorkspace)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [editToolbarOpen, setEditToolbarOpen] = useState(false)
@@ -146,6 +141,7 @@ export default function App() {
     setTool('select')
     setGridDrag(null)
     setPreviewId(null)
+    setBuild(null)
     gridBaseRef.current = null
   }, [])
 
@@ -466,22 +462,13 @@ export default function App() {
    */
   const showPicker = activeBoard.topicId == null && activeBoard.items.length === 0
 
-  /** Compute the whole dashboard now; the ghost is just the travel time. */
-  const startBuild = useCallback((event: NewsEvent, from: DOMRect) => {
-    const frame = frameRef.current
-    const frameRect = frame?.getBoundingClientRect()
-    const { items, rowH } = buildDashboard(event, measureFrame(frame, contentRef.current))
-    setBuild({
+  /** Compute the dashboard now, then let the picker clear before it lands. */
+  const startBuild = useCallback((event: NewsEvent) => {
+    const { items, rowH } = buildDashboard(
       event,
-      items,
-      rowH,
-      from: {
-        left: from.left - (frameRect?.left ?? 0),
-        top: from.top - (frameRect?.top ?? 0),
-        width: from.width,
-        height: from.height,
-      },
-    })
+      measureFrame(frameRef.current, contentRef.current),
+    )
+    setBuild({ event, items, rowH })
   }, [])
 
   const commitBuild = useCallback(
@@ -503,6 +490,16 @@ export default function App() {
     },
     [updateActiveBoard],
   )
+
+  /** Hand off only after the picker is fully gone; reduced motion skips the wait. */
+  useEffect(() => {
+    if (!build) return
+    const timer = window.setTimeout(
+      () => commitBuild(build),
+      reducedMotion ? 0 : PICKER_EXIT_MS,
+    )
+    return () => window.clearTimeout(timer)
+  }, [build, commitBuild, reducedMotion])
 
   // Keyboard: delete selection, escape closes sidebar / ends editing/selection/draw.
   useEffect(() => {
@@ -533,6 +530,10 @@ export default function App() {
         e.preventDefault()
         deleteSelection()
       }
+      if (e.key === 'n' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+        e.preventDefault()
+        newBoard()
+      }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
@@ -540,6 +541,7 @@ export default function App() {
     build,
     deleteSelection,
     editingId,
+    newBoard,
     pickerQuery,
     previewId,
     selectedIds,
@@ -698,13 +700,6 @@ export default function App() {
                         onPick={startBuild}
                         leaving={build !== null}
                       />
-                      {build && (
-                        <BuildGhost
-                          event={build.event}
-                          from={build.from}
-                          onDone={() => commitBuild(build)}
-                        />
-                      )}
                     </>
                   ) : undefined
                 }

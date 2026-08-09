@@ -1,6 +1,6 @@
 import type { VizItem } from '../../../../items/items'
 import type { NewsEvent } from '../../../../news/events'
-import { narrativeImage } from '../../../../news/narrativeImages'
+import { entityImage } from '../../../../news/narrativeImages'
 import { breakdownSparkline, entityBreakdown, formatCompact } from '../../../../news/series'
 import { Sparkline } from '../../../Sparkline'
 import { List, ListCell, ListRow } from '../../shared/List'
@@ -38,7 +38,7 @@ export function EntitiesCard({ item, event }: { item: VizItem; event: NewsEvent 
           <ListRow key={row.label} className={s.row}>
             <ListCell className={s.imageCell}>
               <img
-                src={narrativeImage(event.category, row.imageIndex + index)}
+                src={entityImage(event, row.label, row.imageIndex + index)}
                 alt=""
                 loading="lazy"
               />

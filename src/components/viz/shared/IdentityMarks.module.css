@@ -15,6 +15,14 @@
   box-shadow: 0 1px 3px rgba(30, 60, 110, 0.12);
 }
 
+.markIcon {
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  object-fit: cover;
+  background: #fff;
+}
+
 .stack {
   min-width: 0;
   display: inline-flex;

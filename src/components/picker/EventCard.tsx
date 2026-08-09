@@ -5,7 +5,7 @@
  * search result once the user types.
  */
 
-import type { NewsEvent } from '../../news/events'
+import { CATEGORY_LABELS, REGION_LABELS, type NewsEvent } from '../../news/events'
 import { sparkValues } from '../../news/series'
 import { Sparkline } from '../Sparkline'
 
@@ -39,7 +39,7 @@ export function EventCard({ event, size, rank, active, onPick, onHover }: EventC
       id={`event-opt-${event.id}`}
       role="option"
       aria-selected={active}
-      aria-label={`${event.title} — ${event.category}, ${event.articleCount.toLocaleString()} articles`}
+      aria-label={`${event.title} — ${CATEGORY_LABELS[event.category]}, ${event.articleCount.toLocaleString()} artigos`}
       tabIndex={-1}
       className={className}
       data-testid="event-card"
@@ -55,8 +55,8 @@ export function EventCard({ event, size, rank, active, onPick, onHover }: EventC
         <>
           <span className="event-card-eyebrow">
             <span className="event-card-rank">{pad2(rank)}</span>
-            <span>{event.region}</span>
-            <span>{event.category}</span>
+            <span>{REGION_LABELS[event.region]}</span>
+            <span>{CATEGORY_LABELS[event.category]}</span>
           </span>
           <span className="event-card-name">{event.title}</span>
           <span className="event-card-summary">{event.summary}</span>
@@ -67,8 +67,8 @@ export function EventCard({ event, size, rank, active, onPick, onHover }: EventC
             height={16}
           />
           <span className="event-card-meta">
-            <span>{event.articleCount.toLocaleString()} articles</span>
-            <span>{event.sourceCount} outlets</span>
+            <span>{event.articleCount.toLocaleString()} artigos</span>
+            <span>{event.sourceCount} fontes</span>
           </span>
         </>
       )}

@@ -32,30 +32,30 @@ export const NEWS_NOW: string = NEWS_EVENTS.reduce((latest, e) => {
 }, NEWS_EVENTS[0].startedAt)
 
 export const REGION_OPTIONS: { value: RegionFilter; label: string }[] = [
-  { value: 'any', label: 'Anywhere' },
+  { value: 'any', label: 'Qualquer região' },
   { value: 'Global', label: 'Global' },
-  { value: 'Europe', label: 'Europe' },
-  { value: 'Americas', label: 'Americas' },
-  { value: 'Asia', label: 'Asia' },
-  { value: 'Africa', label: 'Africa' },
-  { value: 'Middle East', label: 'Middle East' },
+  { value: 'Europe', label: 'Europa' },
+  { value: 'Americas', label: 'Américas' },
+  { value: 'Asia', label: 'Ásia' },
+  { value: 'Africa', label: 'África' },
+  { value: 'Middle East', label: 'Médio Oriente' },
 ]
 
 export const TIME_OPTIONS: { value: TimeWindow; label: string }[] = [
-  { value: 'any', label: 'Any time' },
-  { value: '7', label: 'Past week' },
-  { value: '14', label: 'Past fortnight' },
-  { value: '30', label: 'Past month' },
+  { value: 'any', label: 'Qualquer altura' },
+  { value: '7', label: 'Última semana' },
+  { value: '14', label: 'Últimas duas semanas' },
+  { value: '30', label: 'Último mês' },
 ]
 
 /** Bands over the net tone score; the dead zone keeps "neutral" meaningful. */
 const TONE_EDGE = 0.12
 
 export const TONE_OPTIONS: { value: ToneBand; label: string }[] = [
-  { value: 'any', label: 'Any tone' },
-  { value: 'positive', label: 'Positive' },
-  { value: 'neutral', label: 'Neutral' },
-  { value: 'negative', label: 'Negative' },
+  { value: 'any', label: 'Qualquer tom' },
+  { value: 'positive', label: 'Positivo' },
+  { value: 'neutral', label: 'Neutro' },
+  { value: 'negative', label: 'Negativo' },
 ]
 
 export function toneBandOf(event: NewsEvent): Exclude<ToneBand, 'any'> {

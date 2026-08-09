@@ -57,12 +57,12 @@ export function addDays(iso: string, n: number): string {
   return `${t.getUTCFullYear()}-${pad(t.getUTCMonth() + 1)}-${pad(t.getUTCDate())}`
 }
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const MONTHS = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez']
 
-/** 2026-06-13 -> "Jun 13". */
+/** 2026-06-13 -> "13 jun". */
 export function shortDate(iso: string): string {
   const [, m, d] = iso.split('-').map(Number)
-  return `${MONTHS[m - 1]} ${d}`
+  return `${d} ${MONTHS[m - 1]}`
 }
 
 /** Whole days between two ISO dates, UTC. */
@@ -106,21 +106,21 @@ export function peakPoint(ev: NewsEvent): SeriesPoint {
 }
 
 const SUPPORTING_SOURCES = [
-  'Harbour Watch',
-  'Public Record',
-  'Civic Wire',
-  'Field Notes',
-  'Morning Index',
-  'Regional Desk',
-  'Open Signal',
-  'The Bulletin',
-  'Current Affairs',
-  'Local Dispatch',
-  'Atlantic Journal',
-  'Cityline News',
-  'Global Tribune',
-  'Daily Chronicle',
-  'Press Union',
+  'Diário de Notícias',
+  'Jornal de Notícias',
+  'TSF',
+  'Rádio Renascença',
+  'SAPO 24',
+  'CNN Portugal',
+  'Euronews',
+  'El Mundo',
+  'Le Monde',
+  'The Guardian',
+  'Antena 1',
+  'Visão',
+  'Sábado',
+  'France 24',
+  'La Vanguardia',
 ]
 
 /** Zipf-ish outlet distribution, normalized to articleCount, descending. */
@@ -146,7 +146,7 @@ const TONE_BASE: Record<Sentiment, [number, number, number]> = {
   mixed: [0.36, 0.26, 0.38],
 }
 
-const TONE_LABELS = ['Positive', 'Neutral', 'Negative']
+const TONE_LABELS = ['Positivo', 'Neutro', 'Negativo']
 
 /** Positive / neutral / negative shares, jittered and renormalized to 1. */
 export function toneSplit(ev: NewsEvent): Slice[] {
@@ -265,11 +265,11 @@ export type ReachKpi = {
 export function reachKpi(ev: NewsEvent): ReachKpi {
   return memo(`${ev.id}:reach`, () => {
     const rnd = rngFor(ev.id, 'reach')
-    const perArticle = 2000 + rnd() * 7000
+    const perArticle = (2000 + rnd() * 7000) / 10_000
     const latestArticles = volumeSeries(ev).at(-1)?.value ?? 1
     return {
       total: Math.round(ev.articleCount * perArticle),
-      delta24h: Math.max(Math.round(latestArticles * perArticle * (0.22 + rnd() * 0.26)), 1),
+      delta24h: Math.max(Math.round(latestArticles * perArticle * (22 + rnd() * 26)), 1),
       activityLift: 8 + Math.floor(rnd() * 23),
     }
   })
@@ -329,25 +329,25 @@ const AUDIENCE_GROUPS: Record<EventCategory, AudienceGroup[]> = {
 
 /** Topic-specific clusters replace the broader category defaults when known. */
 const TOPIC_AUDIENCE_GROUPS: Record<string, AudienceGroup[]> = {
-  'kestrel-harbour-bridge': [
-    { label: 'passageiros diários' },
-    { label: 'moradores do estuário' },
-    { label: 'engenheiros civis' },
+  'eclipse-total-iberia': [
+    { label: 'astrónomos amadores' },
+    { label: 'famílias em viagem' },
+    { label: 'comunidade científica' },
   ],
-  'harrow-vaccine-trial': [
-    { label: 'investigadores de vacinas' },
-    { label: 'profissionais de saúde' },
-    { label: 'responsáveis de saúde pública' },
+  'ceuta-crise-migratoria': [
+    { label: 'decisores públicos' },
+    { label: 'organizações humanitárias' },
+    { label: 'comunidades migrantes' },
   ],
-  'orbital-debris-event': [
-    { label: 'cientistas espaciais' },
-    { label: 'operadores de satélites' },
-    { label: 'engenheiros aeroespaciais' },
+  'onda-calor-iberia': [
+    { label: 'populações vulneráveis' },
+    { label: 'bombeiros e proteção civil' },
+    { label: 'agricultores' },
   ],
-  'solaris-launch-cadence': [
-    { label: 'engenheiros aeroespaciais' },
-    { label: 'operadores de lançamento' },
-    { label: 'investigadores espaciais' },
+  'privatizacao-tap': [
+    { label: 'trabalhadores da TAP' },
+    { label: 'investidores' },
+    { label: 'passageiros frequentes' },
   ],
 }
 
@@ -389,10 +389,10 @@ export function audienceClusterWeek(ev: NewsEvent): AudienceClusterDay[] {
 /** Where the leading audience cluster is most concentrated. */
 export function audienceFocusSummary(ev: NewsEvent): string {
   const focusByTopic: Record<string, string> = {
-    'kestrel-harbour-bridge': 'corredores pendulares e comunidades do estuário',
-    'harrow-vaccine-trial': 'universidades e centros clínicos',
-    'orbital-debris-event': 'laboratórios espaciais e operadores de satélites',
-    'solaris-launch-cadence': 'polos aeroespaciais e centros de lançamento',
+    'eclipse-total-iberia': 'faixa de totalidade no nordeste transmontano e norte de Espanha',
+    'ceuta-crise-migratoria': 'Ceuta, Andaluzia e centros de decisão em Bruxelas',
+    'onda-calor-iberia': 'concelhos do interior e regiões em risco de incêndio',
+    'privatizacao-tap': 'hub de Lisboa e centros de decisão europeus',
   }
   if (focusByTopic[ev.id]) return focusByTopic[ev.id]
 
@@ -413,22 +413,22 @@ export function audienceInterestSummary(ev: NewsEvent, compact = false): string 
   const [first, second, third] = [...audienceClusterProfile(ev)].sort((a, b) => b.value - a.value)
   if (compact) {
     const compactStory: Record<string, string> = {
-      'kestrel-harbour-bridge': 'Passageiros lideram pelos desvios.',
-      'harrow-vaccine-trial': 'Investigadores lideram pela eficácia.',
-      'orbital-debris-event': 'Cientistas lideram pelo risco orbital.',
-      'solaris-launch-cadence': 'Engenheiros lideram pelos lançamentos.',
+      'eclipse-total-iberia': 'Astrónomos lideram pela totalidade.',
+      'ceuta-crise-migratoria': 'Decisores lideram pela resposta.',
+      'onda-calor-iberia': 'Populações lideram pelos alertas.',
+      'privatizacao-tap': 'Trabalhadores lideram pelo emprego.',
     }
     return compactStory[ev.id] ?? `Interesse liderado por ${first.label}.`
   }
   const topicStory: Record<string, string> = {
-    'kestrel-harbour-bridge':
-      'Passageiros diários lideram o interesse pelos desvios. Moradores do estuário acompanham o impacto local; engenheiros civis, as causas do colapso.',
-    'harrow-vaccine-trial':
-      'Investigadores de vacinas concentram o maior interesse, seguidos pelos profissionais de saúde que acompanham a chegada às clínicas. Responsáveis de saúde pública avaliam a adoção.',
-    'orbital-debris-event':
-      'Cientistas espaciais lideram o interesse pelo risco de novas colisões. Operadores de satélites e engenheiros aeroespaciais acompanham as manobras de desvio e a proteção das missões.',
-    'solaris-launch-cadence':
-      'Engenheiros aeroespaciais lideram o interesse pelo novo ritmo de lançamentos. Operadores e investigadores espaciais acompanham a capacidade e a segurança das missões.',
+    'eclipse-total-iberia':
+      'Astrónomos amadores lideram o interesse pela faixa de totalidade. Famílias em viagem acompanham a logística e o alojamento; a comunidade científica, as campanhas de observação.',
+    'ceuta-crise-migratoria':
+      'Decisores públicos concentram o maior interesse, seguidos pelas organizações humanitárias no terreno. Comunidades migrantes acompanham a situação na fronteira e o apoio aos menores.',
+    'onda-calor-iberia':
+      'Populações vulneráveis lideram o interesse pelos avisos de saúde. Bombeiros e proteção civil acompanham o risco de incêndio; agricultores, o impacto da seca nas culturas.',
+    'privatizacao-tap':
+      'Trabalhadores da TAP lideram o interesse pelas garantias de emprego. Investidores acompanham as propostas vinculativas; passageiros frequentes, o futuro das rotas e da marca.',
   }
   if (topicStory[ev.id]) return topicStory[ev.id]
 
@@ -548,13 +548,13 @@ export function sentimentSeries(ev: NewsEvent): SentimentDay[] {
  * entities card fills out the way the Figma list does.
  */
 const SUPPORTING_ENTITIES: Record<EventCategory, string[]> = {
-  World: ['Opposition Parties', 'City Councils', 'Foreign Ministries', 'Residents Associations', 'Emergency Services', 'Regional Courts', 'Port Authorities', 'Public Auditors'],
-  Business: ['Market Analysts', 'Pension Funds', 'Trade Unions', 'Sector Regulators', 'Retail Investors', 'Competition Authorities', 'Industry Groups', 'Credit Analysts'],
-  Tech: ['Developer Community', 'Privacy Advocates', 'Venture Investors', 'Standards Bodies', 'Cloud Providers', 'Security Researchers', 'Open-source Maintainers', 'Enterprise Buyers'],
-  Science: ['Peer Reviewers', 'University Labs', 'Science Journalists', 'Ethics Boards', 'Research Funders', 'Professional Societies', 'Laboratory Staff', 'Policy Advisers'],
-  Climate: ['Environmental Groups', 'Local Governments', 'Insurance Industry', 'Research Stations', 'Energy Providers', 'Coastal Communities', 'Agricultural Groups', 'Weather Agencies'],
-  Sport: ['National Federation', 'Broadcasters', 'Sponsors', 'Fan Associations', 'Club Owners', 'Players Union', 'Venue Operators', 'Match Officials'],
-  Culture: ['Arts Councils', 'Critics', 'Cultural Foundations', 'Festival Organisers', 'Museum Directors', 'Artist Collectives', 'Publishers', 'Local Venues'],
+  World: ['Partidos da oposição', 'Câmaras municipais', 'Ministérios dos Negócios Estrangeiros', 'Associações de moradores', 'Serviços de emergência', 'Tribunais regionais', 'Observadores internacionais', 'Auditores públicos'],
+  Business: ['Analistas de mercado', 'Fundos de pensões', 'Sindicatos', 'Reguladores setoriais', 'Pequenos investidores', 'Autoridade da Concorrência', 'Associações empresariais', 'Analistas de crédito'],
+  Tech: ['Comunidade de programadores', 'Defensores da privacidade', 'Investidores de capital de risco', 'Organismos de normalização', 'Fornecedores de cloud', 'Investigadores de segurança', 'Comunidade open-source', 'Compradores empresariais'],
+  Science: ['Revisores científicos', 'Laboratórios universitários', 'Jornalistas de ciência', 'Comissões de ética', 'Financiadores de investigação', 'Sociedades científicas', 'Equipas de laboratório', 'Conselheiros de política'],
+  Climate: ['Grupos ambientalistas', 'Governos locais', 'Setor segurador', 'Estações de investigação', 'Empresas de energia', 'Comunidades costeiras', 'Associações agrícolas', 'Agências meteorológicas'],
+  Sport: ['Federação nacional', 'Televisões', 'Patrocinadores', 'Claques e adeptos', 'Donos dos clubes', 'Sindicato de jogadores', 'Operadores dos estádios', 'Equipas de arbitragem'],
+  Culture: ['Direção-Geral das Artes', 'Críticos', 'Fundações culturais', 'Organizadores de festivais', 'Diretores de museus', 'Coletivos de artistas', 'Editoras', 'Salas locais'],
 }
 
 /** Zipf-ish actor mentions, normalized to articleCount, descending. */
@@ -575,51 +575,97 @@ type EntityRule = {
 
 const ENTITY_RULES: EntityRule[] = [
   {
-    match: /consortium/i,
-    role: 'Consórcio coordenador',
-    action: 'Coordena parceiros, recursos e decisões técnicas do projeto.',
-  },
-  {
-    match: /trial sites?|labs?|fab|crews?|stations?|precinct officials/i,
-    role: 'Operação no terreno',
-    action: 'Executa o trabalho no terreno, recolhe evidência e reporta resultados.',
-  },
-  {
-    match: /regulator|commission|authority|ministry|agency|government|secretariat/i,
-    role: 'Entidade pública',
-    action: 'Define regras, fiscaliza o processo e decide sobre autorizações públicas.',
-  },
-  {
-    match: /panel|auditor|reviewer|court|counsel|inquiry|mediator|verifier/i,
+    match: /comissão de acompanhamento|tribuna|auditor|observadores|painel|revisores|comissões de ética/i,
     role: 'Supervisão independente',
     action: 'Avalia evidência, verifica conformidade e responsabiliza os intervenientes.',
   },
   {
-    match: /fund|funding|investor|shareholder|bidders?/i,
-    role: 'Financiamento',
-    action: 'Disponibiliza capital e condiciona prioridades, prazos e escala da iniciativa.',
+    match: /proteção civil|defesa civil|guardia civil|bombeiros|equipas|serviços de emergência/i,
+    role: 'Operação no terreno',
+    action: 'Executa o trabalho no terreno, recolhe evidência e reporta resultados.',
   },
   {
-    match: /union|groups?|community|communities|homeowners|settlements|supporters|ngos?|observers/i,
-    role: 'Representação coletiva',
-    action: 'Representa as pessoas afetadas e leva preocupações públicas para a decisão.',
-  },
-  {
-    match: /operators?|providers?|platforms?|carriers?|utilities|networks?|harbourline/i,
-    role: 'Operador do setor',
-    action: 'Opera a infraestrutura ou serviço diretamente afetado por este evento.',
-  },
-  {
-    match: /researchers?|scientists?|analysts?|institute|reviewers?/i,
+    match: /investigador|cientista|analista|instituto|observatório|comunidade científica|laboratório|universidad/i,
     role: 'Especialistas técnicos',
     action: 'Produz análise especializada e interpreta os impactos técnicos do evento.',
   },
   {
-    match: /manufactur|supplier|contractor|foundry|studios?|firms?|partner|production/i,
+    match: /governo|ministério|comissão|autoridade|regulador|autarquia|município|câmara|presidência|congresso|administração|interpol|união africana|nações unidas|ocha|acnur|programa alimentar|ipma|aemet|inmet|serviço nacional|liga portugal|agências|direção-geral/i,
+    role: 'Entidade pública',
+    action: 'Define regras, fiscaliza o processo e decide sobre autorizações públicas.',
+  },
+  {
+    match: /fundo|investidor|acionista|doadore|bancos|financiador|patrocinador/i,
+    role: 'Financiamento',
+    action: 'Disponibiliza capital e condiciona prioridades, prazos e escala da iniciativa.',
+  },
+  {
+    match: /sindicato|associaç|comunidades|famílias|moradores|adeptos|claques|ong|grupos|inquilinos|cruz vermelha|organizações humanitárias|partidos|coletivos/i,
+    role: 'Representação coletiva',
+    action: 'Representa as pessoas afetadas e leva preocupações públicas para a decisão.',
+  },
+  {
+    match: /operador|concessionári|fornecedores|plataformas|telecomunicações|tap\b|air france|lufthansa|ren\b|televisões|empresas de energia/i,
+    role: 'Operador do setor',
+    action: 'Opera a infraestrutura ou serviço diretamente afetado por este evento.',
+  },
+  {
+    match: /fabricante|empreiteiro|estúdio|promotor|empresas|startups|editoras|organizadores/i,
     role: 'Parceiro industrial',
     action: 'Transforma o plano em capacidade operacional, produção e controlo de qualidade.',
   },
 ]
+
+/**
+ * Real, named cast for curated topics — used verbatim instead of the
+ * event's generic actors plus category padding.
+ */
+type CuratedEntity = { label: string; role: string; description: string }
+
+const TOPIC_ENTITIES: Record<string, CuratedEntity[]> = {
+  'oe2026-habitacao': [
+    {
+      label: 'Miguel Pinto Luz',
+      role: 'Ministro das Infraestruturas e Habitação',
+      description: 'Apresentou o pacote de habitação do OE2026 e a meta de devolver 300 mil casas devolutas ao mercado.',
+    },
+    {
+      label: 'Luís Montenegro',
+      role: 'Primeiro-Ministro',
+      description: 'Fez da habitação uma prioridade política do Orçamento e defende o alargamento do Porta 65 aos jovens.',
+    },
+    {
+      label: 'IHRU',
+      role: 'Instituto público da habitação',
+      description: 'Gere o parque habitacional do Estado e executa o Porta 65 e os apoios ao arrendamento.',
+    },
+    {
+      label: 'Assembleia da República',
+      role: 'Poder legislativo',
+      description: 'Debate e vota o OE2026, incluindo a isenção de IMT na primeira casa e a garantia pública no crédito jovem.',
+    },
+    {
+      label: 'Associação Portuguesa de Bancos',
+      role: 'Setor bancário',
+      description: 'Negoceia com o Governo a operacionalização da garantia pública no crédito à habitação para jovens.',
+    },
+    {
+      label: 'Associação Nacional de Municípios',
+      role: 'Autarquias',
+      description: 'Reivindica parcerias com o Estado para reabilitar o património público devoluto nos concelhos.',
+    },
+    {
+      label: 'Associação dos Inquilinos Lisbonenses',
+      role: 'Inquilinos',
+      description: 'Pede reforço dos apoios à renda e critica a aposta na compra em vez do arrendamento acessível.',
+    },
+    {
+      label: 'APPII',
+      role: 'Promotores imobiliários',
+      description: 'Defende licenciamentos mais rápidos e IVA reduzido na construção para aumentar a oferta.',
+    },
+  ],
+}
 
 function entityProfile(
   ev: NewsEvent,
@@ -641,10 +687,13 @@ function entityProfile(
 export function entityBreakdown(ev: NewsEvent): EntitySlice[] {
   return memo(`${ev.id}:entities`, () => {
     const rnd = rngFor(ev.id, 'entities')
-    const cast = [
-      ...ev.entities,
-      ...SUPPORTING_ENTITIES[ev.category].filter((e) => !ev.entities.includes(e)),
-    ].slice(0, 14)
+    const curated = TOPIC_ENTITIES[ev.id]
+    const cast = curated
+      ? curated.map((c) => c.label)
+      : [
+          ...ev.entities,
+          ...SUPPORTING_ENTITIES[ev.category].filter((e) => !ev.entities.includes(e)),
+        ].slice(0, 14)
     const weights = cast.map((_, i) => (1 / (i + 0.6)) * (0.82 + rnd() * 0.36))
     const sum = weights.reduce((a, b) => a + b, 0)
     const mentionTotal = Math.round(ev.articleCount * (1.35 + rnd() * 0.8))
@@ -652,7 +701,13 @@ export function entityBreakdown(ev: NewsEvent): EntitySlice[] {
     return cast
       .map((label, i) => {
         const prominence = weights[i] / peakWeight
-        const profile = entityProfile(ev, label, i)
+        const profile = curated
+          ? {
+              role: curated[i].role,
+              description: curated[i].description,
+              imageIndex: hashSeed(label) % 4,
+            }
+          : entityProfile(ev, label, i)
         return {
           ...profile,
           label,

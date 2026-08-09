@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react'
+import { outletIcon } from './outletIcons'
 import s from './IdentityMarks.module.css'
 
 const hueFor = (name: string) =>
@@ -14,6 +15,14 @@ const initialsFor = (name: string) =>
     .toUpperCase()
 
 export function IdentityMark({ name }: { name: string }) {
+  const icon = outletIcon(name)
+  if (icon) {
+    return (
+      <span className={s.mark} title={name} aria-hidden="true">
+        <img className={s.markIcon} src={icon} alt="" loading="lazy" />
+      </span>
+    )
+  }
   const style = { '--identity-hue': hueFor(name) } as CSSProperties
   return (
     <span className={s.mark} style={style} title={name} aria-hidden="true">
