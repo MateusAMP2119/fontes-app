@@ -1,5 +1,8 @@
 import { useEffect, useRef } from 'react'
+import type { Session } from '@supabase/supabase-js'
 import { mountQuery } from './query'
+import { supabase } from './supabase'
+import { navigate } from './navigate'
 import './MakeApp.css'
 
 type IconName =
@@ -43,9 +46,10 @@ const examples = [
   },
 ]
 
-export default function MakeApp() {
+export default function MakeApp({ session }: { session: Session | null }) {
   const queryRef = useRef<HTMLDivElement>(null)
   useEffect(() => (queryRef.current ? mountQuery(queryRef.current) : undefined), [])
+
 
   return (
     <main className="make-shell">
@@ -60,7 +64,22 @@ export default function MakeApp() {
               <button className="make-file-name" type="button">
                 Untitled <Icon name="chevron" size={14} />
               </button>
-              <button className="make-login" type="button">Entrar</button>
+              {session ? (
+                <button className="make-login" type="button" onClick={() => supabase.auth.signOut()}>
+                  Sair
+                </button>
+              ) : (
+                <a
+                  className="make-login"
+                  href="/login"
+                  onClick={(event) => {
+                    event.preventDefault()
+                    navigate('/login')
+                  }}
+                >
+                  Entrar
+                </a>
+              )}
             </div>
           </div>
         </header>
@@ -137,6 +156,7 @@ export default function MakeApp() {
         </div>
         </section>
       </div>
+
     </main>
   )
 }

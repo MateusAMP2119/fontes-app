@@ -80,3 +80,13 @@ button {
   white-space: nowrap;
   border: 0;
 }
+
+/* mobile Safari zooms to any focused input under 16px and a pinch is the only way back;
+   !important so component-scoped `font: inherit` cannot shrink it back */
+@media (pointer: coarse) {
+  input,
+  textarea,
+  select {
+    font-size: max(1em, 16px) !important;
+  }
+}
