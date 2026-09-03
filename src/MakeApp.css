@@ -1,33 +1,44 @@
+@font-face {
+  font-family: "InterVariable";
+  src: url("/fonts/InterVariable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ============================================================
+   Palette: fonteslabs.com's .mono landing, light only. Everything below
+   is real px on one scale; nothing is zoomed.
+   ============================================================ */
+
 :root {
-  --make-bg: #2c2c2c;
-  --make-body: #141414;
-  --make-text: #f5f5f5;
-  --make-muted: #a4a4a8;
-  --make-line: #444445;
-  --make-purple: #9d99ff;
-  --make-frame: #55585a;
-  --make-surface: #2c2c2c;
-  --make-surface-line: #414142;
-  --make-soft-line: #4a4a4b;
-  --make-icon: #e3e3e4;
-  --make-placeholder: #858589;
-  --make-secondary: #d6d6d7;
-  --make-card: #242424;
-  --make-card-line: #4b4b4b;
-  --make-help: #2c2c2d;
-  --make-hover: rgba(255, 255, 255, 0.06);
-  --make-shadow: rgba(0, 0, 0, 0.3);
-  --make-shadow-strong: rgba(0, 0, 0, 0.42);
-  --make-grid-line: rgba(107, 101, 165, 0.19);
-  --make-grid-light: rgba(86, 75, 150, 0.28);
+  --make-bg: #fff;
+  --make-text: #262626;
+  --make-muted: rgb(38 38 38 / 0.64);
+  --make-line: #e6e6e6;
+  --make-accent: #266df0;
+  --make-surface: #fff;
+  --make-surface-line: #cad0d9;
+  --make-soft-line: #e4e7ec;
+  --make-icon: #2e3238;
+  --make-placeholder: rgb(38 38 38 / 0.48);
+  --make-card: #fff;
+  --make-card-line: #e4e7ec;
+  --make-hover: rgb(38 38 38 / 0.04);
+  color-scheme: light;
+}
+
+/* the shared sheet locks the body for the dashboard canvas; this page scrolls */
+html,
+body,
+#root {
+  height: auto;
+  min-height: 100%;
 }
 
 body {
-  background: var(--make-body);
-}
-
-body[data-make-theme='light'] {
-  background: #fff;
+  overflow: auto;
+  background: var(--make-bg);
 }
 
 .make-shell {
@@ -35,334 +46,162 @@ body[data-make-theme='light'] {
   width: 100%;
   min-height: 100dvh;
   overflow-x: hidden;
-  border: 0;
-  border-radius: 0;
   background: var(--make-bg);
-  box-shadow: none;
   color: var(--make-text);
-  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "InterVariable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   user-select: none;
   -webkit-user-select: none;
-  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
 }
 
 .make-stage {
   position: relative;
   width: 100%;
-  min-height: calc(100dvh / 0.72);
-  zoom: 0.72;
+  min-height: 100dvh;
 }
 
-.make-shell[data-theme='light'] {
-  --make-bg: #fff;
-  --make-body: #fff;
-  --make-text: #242424;
-  --make-muted: #77777c;
-  --make-line: #ebebeb;
-  --make-purple: #514cff;
-  --make-frame: #c8c8c9;
-  --make-surface: #fff;
-  --make-surface-line: #d7d7d8;
-  --make-soft-line: #d1d1d3;
-  --make-icon: #4a4a4d;
-  --make-placeholder: #85858a;
-  --make-secondary: #505055;
-  --make-card: #fff;
-  --make-card-line: #d1d1d2;
-  --make-help: #fff;
-  --make-hover: rgba(0, 0, 0, 0.055);
-  --make-shadow: rgba(35, 35, 40, 0.14);
-  --make-shadow-strong: rgba(35, 35, 40, 0.11);
-  --make-grid-line: rgba(105, 95, 185, 0.13);
-  --make-grid-light: rgba(114, 99, 205, 0.18);
-  box-shadow: none;
-}
-
-.make-shell[data-theme='light'] .make-figma-button,
-.make-shell[data-theme='light'] .make-file-name {
-  color: #242424;
-}
-
-.make-shell[data-theme='light'] .make-plan {
-  background: #e3e1ff;
-  color: #5650b8;
-}
-
-.make-shell[data-theme='light'] .make-ai-button {
-  border-color: #ceced0;
-  color: #66666a;
-}
-
-.make-shell[data-theme='light'] .make-icon-button {
-  color: #4c4c50;
-}
-
-.make-shell[data-theme='light'] .make-mic {
-  background: #eeecff;
-  color: #514cff;
-}
-
-.make-shell[data-theme='light'] .make-submit {
-  background: #d9d9dc;
-  color: #fff;
-}
-
-.make-shell[data-theme='light'] .make-header {
-  border-bottom-color: #ebebeb;
-}
-
-.make-shell[data-theme='light'] .make-background {
-  background:
-    radial-gradient(ellipse 42% 72% at 69% 42%, rgba(107, 94, 255, 0.16), rgba(107, 94, 255, 0.08) 42%, transparent 72%),
-    #fff;
-}
-
-.make-shell[data-theme='light'] .make-purple-blob {
-  opacity: 0.1;
-}
-
-.make-shell[data-theme='light'] .make-composer {
-  box-shadow:
-    0 1.3889px 4.1667px rgba(0, 0, 0, 0.14),
-    inset 0 0 0.6944px rgba(0, 0, 0, 0.16),
-    0 4.1667px 11.1111px rgba(0, 0, 0, 0.1),
-    inset 0 0.6944px 0 rgba(255, 255, 255, 0.7);
-}
-
-.make-shell[data-theme='light'] .make-example-image-button {
-  border-color: #dedee0;
-}
-
-.make-shell[data-theme='light'] .make-example-image-button img {
-  transform: scale(1.006);
-}
+/* ============================================================
+   Header: fonteslabs.com's .m-header on its 1112px rail with 30px sides,
+   cut down to a 64px app bar (the site's 101px is its grid cell, not a
+   nav height). Mark + wordmark left, the file control right. Phones get
+   the site's 52px row with 24px sides and the 28px mark.
+   ============================================================ */
 
 .make-header {
   position: relative;
   z-index: 3;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  height: 68.0556px;
-  padding: 0 11.1111px;
-  border-bottom: 1.3889px solid #444;
+  height: 64px;
+  border-bottom: 1px solid var(--make-line);
   background: var(--make-bg);
 }
 
-.make-header-left,
-.make-header-right,
-.make-figma-button,
+.make-rail {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(1112px, 100%);
+  height: 100%;
+  margin-inline: auto;
+  padding: 0 30px;
+}
+
+.make-brand,
+.make-actions,
 .make-file-name {
   display: flex;
   align-items: center;
 }
 
-.make-header-left {
-  gap: 0;
+.make-actions {
+  gap: 8px;
 }
 
-.make-header-right {
-  gap: 11.1111px;
-}
-
-.make-figma-button {
-  width: 61.1111px;
-  height: 44.4444px;
-  justify-content: center;
-  gap: 6px;
-  border-radius: 6.9444px;
+.make-brand {
+  gap: 10px;
   color: var(--make-text);
-  cursor: pointer;
+  text-decoration: none;
 }
 
-.make-figma-mark {
-  position: relative;
-  display: grid;
-  grid-template: repeat(3, 8.3333px) / repeat(2, 8.3333px);
-  width: 16.6667px;
-  height: 25px;
-}
-
-.make-figma-mark i {
-  width: 8.3333px;
-  height: 8.3333px;
-  border: 2.0833px solid currentColor;
-}
-
-.make-figma-mark i:nth-child(1) {
-  border-radius: 4px 0 0 4px;
-}
-
-.make-figma-mark i:nth-child(2) {
-  border-radius: 0 4px 4px 0;
-}
-
-.make-figma-mark i:nth-child(3) {
-  grid-row: 2;
-  border-radius: 4px 0 0 4px;
-}
-
-.make-figma-mark i:nth-child(4) {
-  grid-row: 2;
-  border-radius: 50%;
-}
-
-.make-figma-mark i:nth-child(5) {
-  grid-row: 3;
-  border-radius: 4px 0 4px 4px;
-}
-
-.make-file-name {
-  margin-left: 6.9444px;
-  gap: 12px;
-  color: var(--make-text);
-  font-size: 18px;
-  font-weight: 550;
-  cursor: pointer;
-}
-
-.make-plan {
-  margin-left: 24px;
-  padding: 2.7778px 6.6944px;
+.make-mark {
+  width: 30px;
+  height: 30px;
   border-radius: 7px;
-  background: #434064;
-  color: #c2bfff;
-  font-size: 15px;
-  line-height: 16.6667px;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.12);
 }
 
-.make-ai-button {
-  display: grid;
-  width: 28.25px;
-  height: 25px;
-  place-items: center;
-  border: 1.3889px solid #444;
-  border-radius: 6.9444px;
-  color: #aaa;
-  font-size: 15.2778px;
-  cursor: pointer;
-}
-
-.make-icon-button {
-  display: grid;
-  width: 44.4444px;
-  height: 44.4444px;
-  place-items: center;
-  border-radius: 6.9444px;
-  color: var(--make-icon);
-  cursor: pointer;
-}
-
-.make-settings svg {
-  width: 33.3333px;
-  height: 33.3333px;
-}
-
-.make-settings-popover {
-  position: absolute;
-  z-index: 10;
-  top: 66px;
-  right: 13px;
-  width: 220px;
-  padding: 10px;
-  border: 1px solid var(--make-surface-line);
-  border-radius: 14px;
-  background: var(--make-surface);
-  box-shadow:
-    0 14px 32px var(--make-shadow),
-    0 2px 6px var(--make-shadow-strong);
-  color: var(--make-text);
-}
-
-.make-settings-popover > p {
-  padding: 3px 8px 8px;
-  color: var(--make-muted);
-  font-size: 12px;
+.make-brand span {
+  font-size: 17px;
   font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 
-.make-theme-options {
-  display: grid;
-  gap: 2px;
-}
-
-.make-theme-options button {
-  display: grid;
-  grid-template-columns: 22px 1fr 14px;
-  align-items: center;
-  min-height: 38px;
-  padding: 0 8px;
+/* the file control: a ghost button at the mark's height, 14/500, wash on hover */
+.make-file-name {
+  height: 30px;
+  padding: 0 10px;
+  gap: 6px;
   border-radius: 8px;
-  color: var(--make-secondary);
+  color: var(--make-icon);
   font-size: 14px;
-  text-align: left;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: -0.005em;
   cursor: pointer;
+  transition: background-color 0.15s;
 }
 
-.make-theme-options button:hover,
-.make-theme-options button.is-selected {
+.make-file-name:hover {
   background: var(--make-hover);
-  color: var(--make-text);
 }
 
-.make-theme-options button > span {
-  display: none;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--make-purple);
+/* login: shadcn primary at the mark's height */
+.make-login {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: #18181b;
+  color: #fafafa;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  transition: background-color 150ms ease, transform 150ms ease;
 }
 
-.make-theme-options button.is-selected > span {
-  display: block;
+.make-login:hover {
+  background: rgb(24 24 27 / 0.9);
 }
+
+.make-login:active {
+  transform: scale(0.97);
+}
+
+/* ============================================================
+   Background: the Make blob and grid, inked in the site's kicker pair.
+   ============================================================ */
 
 .make-background {
   position: absolute;
   z-index: 0;
-  top: 68.0556px;
-  right: 0;
-  bottom: 0;
-  left: 0;
+  inset: 0;
   overflow: hidden;
-  background: var(--make-bg);
+  background:
+    radial-gradient(ellipse 42% 72% at 69% 42%, rgb(112 159 245 / 0.14), rgb(163 236 233 / 0.07) 42%, transparent 72%),
+    var(--make-bg);
   pointer-events: none;
 }
 
 .make-purple-blob {
   position: absolute;
-  top: 66.6667px;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  opacity: 0.2;
+  inset: 48px 0 0;
+  opacity: 0.1;
   animation: make-purple-blob-motion 60s ease-in-out infinite;
 }
 
 .make-purple-blob-primary,
 .make-purple-blob-secondary {
   position: absolute;
-  filter: blur(83.3333px);
+  filter: blur(60px);
   background: radial-gradient(circle, var(--make-blob-color) 0%, transparent 100%);
 }
 
 .make-purple-blob-primary {
-  --make-blob-color: #8b7eff;
-  top: 13.8889vh;
-  left: 27.7778vw;
-  width: 69.4444vw;
-  height: 83.3333vh;
+  --make-blob-color: #709ff5;
+  top: 14vh;
+  left: 28vw;
+  width: 69vw;
+  height: 83vh;
 }
 
 .make-purple-blob-secondary {
-  --make-blob-color: #6b5eff;
-  top: 41.6667vh;
-  left: 13.8889vw;
-  width: 48.6111vw;
-  height: 62.5vh;
+  --make-blob-color: #a3ece9;
+  top: 42vh;
+  left: 14vw;
+  width: 49vw;
+  height: 62vh;
 }
 
 .make-background-grid {
@@ -370,22 +209,26 @@ body[data-make-theme='light'] {
   inset: 0;
   opacity: 0.8;
   background-image:
-    linear-gradient(to right, var(--make-bg) 0, var(--make-bg) 0.9722px, transparent 0.9722px, transparent 22.2222px),
-    linear-gradient(var(--make-bg) 0, var(--make-bg) 0.9722px, transparent 0.9722px, transparent 22.2222px);
-  background-size: 22.2222px 22.2222px;
+    linear-gradient(to right, var(--make-bg) 0, var(--make-bg) 1px, transparent 1px, transparent 16px),
+    linear-gradient(var(--make-bg) 0, var(--make-bg) 1px, transparent 1px, transparent 16px);
+  background-size: 16px 16px;
 }
 
 @keyframes make-purple-blob-motion {
   0% { transform: translate3d(0, 0, 0) scale(1) rotate(0deg); }
-  12.5% { transform: translate3d(69.4444vw, -27.7778vh, 0) scale(1.05) rotate(5deg); }
-  25% { transform: translate3d(-41.6667vw, 41.6667vh, 0) scale(0.95) rotate(20deg); }
-  37.5% { transform: translate3d(83.3333vw, 62.5vh, 0) scale(1.08) rotate(60deg); }
-  50% { transform: translate3d(-48.6111vw, -34.7222vh, 0) scale(0.92) rotate(120deg); }
-  62.5% { transform: translate3d(62.5vw, -13.8889vh, 0) scale(1.02) rotate(180deg); }
-  75% { transform: translate3d(13.8889vw, 48.6111vh, 0) scale(0.98) rotate(240deg); }
-  87.5% { transform: translate3d(83.3333vw, -13.8889vh, 0) scale(1.06) rotate(300deg); }
+  12.5% { transform: translate3d(69vw, -28vh, 0) scale(1.05) rotate(5deg); }
+  25% { transform: translate3d(-42vw, 42vh, 0) scale(0.95) rotate(20deg); }
+  37.5% { transform: translate3d(83vw, 62vh, 0) scale(1.08) rotate(60deg); }
+  50% { transform: translate3d(-49vw, -35vh, 0) scale(0.92) rotate(120deg); }
+  62.5% { transform: translate3d(62vw, -14vh, 0) scale(1.02) rotate(180deg); }
+  75% { transform: translate3d(14vw, 49vh, 0) scale(0.98) rotate(240deg); }
+  87.5% { transform: translate3d(83vw, -14vh, 0) scale(1.06) rotate(300deg); }
   100% { transform: translate3d(0, 0, 0) scale(1) rotate(360deg); }
 }
+
+/* ============================================================
+   Hero
+   ============================================================ */
 
 .make-hero,
 .make-examples {
@@ -397,83 +240,100 @@ body[data-make-theme='light'] {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: clamp(108px, 16.3vh, 170px);
+  padding: clamp(56px, 8vh, 88px) 24px 0;
 }
 
 .make-hero h1 {
-  font-size: 35.5px;
+  font-size: clamp(24px, 1.2vw + 16px, 28px);
   font-weight: 600;
-  line-height: 45px;
-  letter-spacing: -0.009em;
-  transform: translate(0.7px, 0.7px);
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+  text-align: center;
+  text-wrap: balance;
 }
 
-.make-composer {
+/* the query card from fonteslabs.com's hero, in its own measures */
+.make-query {
+  --q-soft: color-mix(in srgb, var(--make-text) 56%, transparent);
+  --q-well: color-mix(in srgb, var(--make-text) 4%, transparent);
+  --q-line: color-mix(in srgb, var(--make-text) 5%, transparent);
+  --q-ring: color-mix(in srgb, var(--make-text) 7%, transparent);
   position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  width: min(944.4444px, calc(100vw - 48px));
-  height: 138.8889px;
-  margin-top: 36px;
-  padding: 22.2222px;
-  border: 0;
-  border-radius: 38.8889px;
+  width: min(552px, 100%);
+  height: 113px;
+  margin-top: 28px;
+  border-radius: 20px;
   background: var(--make-surface);
-  box-shadow:
-    0 1.3889px 4.1667px rgba(0, 0, 0, 0.5),
-    inset 0 0 0.6944px rgba(255, 255, 255, 0.3),
-    0 4.1667px 11.1111px rgba(0, 0, 0, 0.35),
-    inset 0 0.6944px 0 rgba(255, 255, 255, 0.08);
-}
-
-.make-composer textarea {
-  width: 100%;
-  height: 42px;
-  resize: none;
-  border: 0;
-  outline: 0;
-  background: transparent;
+  box-shadow: 0 0 56px rgb(0 0 0 / 0.08), 0 0 20px rgb(0 0 0 / 0.05), 0 0 0 1px var(--q-ring);
   color: var(--make-text);
-  font: inherit;
-  font-size: 19.3px;
-  line-height: 26px;
-  letter-spacing: 0.005em;
-  user-select: text;
-  -webkit-user-select: text;
+  font-size: 15px;
+  line-height: 24px;
+  text-align: left;
 }
 
-.make-composer textarea::placeholder {
-  color: var(--make-placeholder);
-  opacity: 1;
+.m-query-line { display: flex; align-items: center; gap: 8px; height: 57px; padding: 0 16px; border-bottom: 1px solid var(--q-line); }
+.m-query-line svg { flex: 0 0 auto; width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.25; stroke-linecap: square; opacity: 0.32; }
+.m-query-line input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: inherit; font: inherit; user-select: text; -webkit-user-select: text; }
+.m-query-line input::placeholder { color: var(--make-placeholder); opacity: 1; }
+/* mobile Safari zooms to any focused input under 16px and a pinch is the only way back */
+@media (pointer: coarse) { .m-query-line input { font-size: 16px; } }
+.m-query-bar { display: flex; align-items: center; justify-content: space-between; height: 56px; padding: 0 10px; }
+.m-tabs { position: relative; display: flex; align-items: center; height: 36px; padding: 2px; border-radius: 10px; background: var(--q-well); box-shadow: inset 0 6px 12px rgb(0 0 0 / 0.02), inset 0 0.75px 0.75px rgb(0 0 0 / 0.02), inset 0 0.25px 0.25px rgb(0 0 0 / 0.04); }
+/* the indicator's width is the pre-JS guess for "Procurar"; query.ts measures it from rects */
+.m-tabs-ind { position: absolute; top: 2px; left: 2px; width: 108px; height: 32px; border-radius: 8px; background: #fff; box-shadow: 0 6px 12px -3px rgb(0 0 0 / 0.04), 0 3px 6px -1px rgb(0 0 0 / 0.04), 0 1px 2px rgb(0 0 0 / 0.04); transition: width 0.24s cubic-bezier(0.22, 1, 0.36, 1), left 0.24s cubic-bezier(0.22, 1, 0.36, 1); }
+.m-tab { position: relative; z-index: 1; display: flex; align-items: center; height: 32px; padding: 6px 4px 6px 6px; border: 0; background: none; color: var(--q-soft); font: inherit; font-size: 14px; font-weight: 450; line-height: 20px; cursor: pointer; transition: color 0.2s ease; }
+.m-tab[aria-selected="true"] { color: var(--make-text); }
+.m-tab canvas { display: block; width: 20px; height: 20px; transition: opacity 0.2s ease; }
+.m-tab:not([aria-selected="true"]) canvas { opacity: 0.6; }
+.m-tab span { padding: 0 6px; }
+/* the run button: the site's box (44px, growing to its label when dirty) in shadcn's primary colours */
+.m-run { display: flex; align-items: center; justify-content: center; width: 44px; height: 36px; padding: 0; border: 0; border-radius: 10px; overflow: hidden; color: #fafafa; background: #18181b; font: inherit; font-size: 14px; font-weight: 450; line-height: 20px; cursor: pointer; transition: width 0.25s cubic-bezier(0.22, 1, 0.36, 1), background-color 150ms ease, transform 150ms ease; }
+.m-run:hover { background: rgb(24 24 27 / 0.9); }
+.m-run:active { transform: scale(0.96); }
+.m-run span { display: none; }
+.m-run svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.make-query.is-dirty .m-run { width: 94px; }
+.make-query.is-dirty .m-run span { display: block; }
+.make-query.is-dirty .m-run svg { display: none; }
+
+/* ============================================================
+   Examples: on the header's rail, so the grid's edges are the mark's
+   and the file chip's.
+   ============================================================ */
+
+.make-examples {
+  width: min(1112px, 100%);
+  margin: 56px auto 0;
+  padding: 0 30px 80px;
 }
 
-.make-composer-row,
-.make-composer-left,
-.make-composer-right,
 .make-examples-heading-row,
 .make-example-actions {
   display: flex;
   align-items: center;
 }
 
-.make-composer-row {
-  justify-content: space-between;
+.make-examples-heading-row {
+  justify-content: flex-end;
 }
 
-.make-composer-left {
-  gap: 10px;
+.make-example-actions {
+  gap: 8px;
 }
 
-.make-composer-right {
-  gap: 10px;
+.make-see-more {
+  margin-right: 8px;
+  color: var(--make-accent);
+  font-size: 14px;
+  font-weight: 450;
+  cursor: pointer;
 }
 
 .make-round-button {
   display: grid;
-  width: 46px;
-  height: 46px;
-  flex: 0 0 46px;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
   place-items: center;
   border: 1px solid var(--make-soft-line);
   border-radius: 50%;
@@ -482,94 +342,26 @@ body[data-make-theme='light'] {
   transition: background-color 120ms ease, border-color 120ms ease;
 }
 
-.make-round-button:hover,
-.make-select-button:hover,
-.make-icon-button:hover,
-.make-ai-button:hover {
+.make-round-button:hover {
   background: var(--make-hover);
-  border-color: #626264;
+  border-color: var(--make-surface-line);
 }
 
 .make-round-button:focus-visible,
-.make-select-button:focus-visible,
 .make-file-name:focus-visible,
-.make-figma-button:focus-visible,
-.make-icon-button:focus-visible,
-.make-ai-button:focus-visible,
+.make-login:focus-visible,
+.make-brand:focus-visible,
 .make-see-more:focus-visible,
-.make-example-image-button:focus-visible,
-.make-help:focus-visible,
-.make-composer textarea:focus-visible {
-  outline: 2px solid #8c87f1;
+.make-example-image-button:focus-visible {
+  outline: 2px solid var(--make-accent);
   outline-offset: 2px;
-}
-
-.make-magic {
-  color: #88888b;
-}
-
-.make-select-button {
-  display: flex;
-  height: 44px;
-  align-items: center;
-  gap: 8px;
-  padding: 0 11px;
-  border-radius: 10px;
-  color: var(--make-secondary);
-  font-size: 15px;
-  cursor: pointer;
-}
-
-.make-mic {
-  border: 0;
-  background: #545079;
-  color: #c4c0ff;
-}
-
-.make-submit {
-  border: 0;
-  background: #7a7a7b;
-  color: #ededed;
-}
-
-.make-examples {
-  width: min(1322px, calc(100vw - 64px));
-  margin: 67.7px auto 0;
-}
-
-.make-examples-heading-row {
-  justify-content: space-between;
-}
-
-.make-examples h2 {
-  font-size: 18px;
-  font-weight: 500;
-  line-height: 24px;
-  letter-spacing: 0.021em;
-}
-
-.make-example-actions {
-  gap: 12px;
-}
-
-.make-see-more {
-  margin-right: 11px;
-  color: var(--make-purple);
-  font-size: 17px;
-  cursor: pointer;
-}
-
-.make-example-actions .make-round-button {
-  width: 44px;
-  height: 44px;
-  flex-basis: 44px;
 }
 
 .make-example-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 34px;
-  margin-top: 22px;
+  gap: 24px;
+  margin-top: 16px;
 }
 
 .make-example-image-button {
@@ -577,130 +369,103 @@ body[data-make-theme='light'] {
   width: 100%;
   overflow: hidden;
   border: 1px solid var(--make-card-line);
-  border-radius: 18px;
+  border-radius: 14px;
   background: var(--make-card);
   cursor: pointer;
 }
 
+/* the PNGs carry a baked dark edge with ~11px corners; the clip's larger
+   radius and a 1.5% overscan keep it outside the card */
 .make-example-image-button img {
   display: block;
   width: 100%;
   aspect-ratio: 604 / 341;
   object-fit: cover;
+  transform: scale(1.015);
 }
 
 .make-example h3 {
-  margin-top: 22.5px;
-  font-size: 19px;
+  margin-top: 14px;
+  font-size: 14px;
   font-weight: 500;
-  line-height: 25px;
+  line-height: 20px;
 }
 
 .make-example p {
-  margin-top: 5px;
+  margin-top: 2px;
   color: var(--make-muted);
-  font-size: 18px;
-  line-height: 25px;
-}
-
-.make-help {
-  position: absolute;
-  z-index: 4;
-  right: 14px;
-  bottom: 15px;
-  display: grid;
-  width: 44px;
-  height: 44px;
-  place-items: center;
-  border: 1px solid var(--make-soft-line);
-  border-radius: 50%;
-  background: var(--make-help);
-  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.45);
-  color: var(--make-icon);
-  font-size: 23px;
-  cursor: pointer;
+  font-size: 13px;
+  line-height: 18px;
 }
 
 @media (max-width: 1100px) {
-  .make-shell {
-    border-radius: 0;
-  }
-
-  .make-hero {
-    padding: 88px 24px 0;
-  }
-
-  .make-composer {
-    width: min(820px, calc(100vw - 48px));
-    border-radius: 28px;
-    transform: none;
-  }
-
-  .make-examples {
-    width: calc(100vw - 48px);
-    margin-top: 58px;
-    padding-bottom: 104px;
-    transform: none;
-  }
-
   .make-example-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 34px 24px;
-  }
-
-  .make-help {
-    position: fixed;
   }
 }
 
 @media (max-width: 700px) {
-  .make-settings-popover {
-    right: 11.1111px;
+  .make-header {
+    height: 52px;
+  }
+
+  .make-rail {
+    padding: 0 24px;
+  }
+
+  .make-brand {
+    gap: 8px;
+  }
+
+  .make-mark {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+  }
+
+  .make-brand span {
+    font-size: 16px;
+    font-weight: 500;
+  }
+
+  .make-file-name,
+  .make-login {
+    height: 28px;
   }
 
   .make-hero {
-    padding-top: clamp(108px, 16.3vh, 170px);
-    padding-right: 0;
-    padding-left: 0;
+    padding: 40px 16px 0;
   }
 
-  .make-hero h1 {
-    max-width: none;
-    white-space: nowrap;
-  }
-
-  .make-composer {
-    width: calc(100% - 44.4444px);
-    height: 138.8889px;
-    min-height: 0;
-    margin-top: 34px;
-    padding: 22.2222px;
-    border-radius: 38.8889px;
-  }
-
-  .make-composer textarea {
-    height: 55.5556px;
+  .make-query {
+    margin-top: 24px;
   }
 
   .make-examples {
-    width: min(419.4444px, calc(100% - 122.2222px));
-    margin-top: 67.7px;
-    padding-bottom: 127.7778px;
+    margin-top: 40px;
+    padding: 0 16px 56px;
+  }
+
+  /* a stacked list has no pages to flip */
+  .make-example-actions .make-round-button {
+    display: none;
+  }
+
+  .make-see-more {
+    margin-right: 0;
   }
 
   .make-example-grid {
     grid-template-columns: 1fr;
-    gap: 34px;
-  }
-
-  .make-example:nth-child(n + 2) {
-    display: none;
+    gap: 24px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .make-shell,
-  .make-round-button {
+  .make-round-button,
+  .m-tabs-ind,
+  .m-run {
     transition: none;
   }
 
