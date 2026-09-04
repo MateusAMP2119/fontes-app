@@ -16,7 +16,7 @@ type Story = {
   latest_at: string
   /** Article arrivals in 12 equal buckets from the story's origin until now. */
   popularity?: number[]
-  /** Homepage position and movement since this browser's previous observation. */
+  /** Feed position, and the move since the position before the latest third of the story's coverage (functions/api/stories.ts). */
   rank?: number
   rank_change?: number
   /** Newest preview image, when any article has one. */
@@ -35,18 +35,6 @@ const API = import.meta.env.VITE_API_URL as string
 const PAGE = 20
 const SKELETON_ROWS = 8
 const MAX_LOGOS = 8
-const RANKS_KEY = 'fontes:story-ranks'
-const previousRanks = readRanks()
-const currentRanks = { ...previousRanks }
-
-function readRanks(): Record<string, number> {
-  try {
-    return JSON.parse(localStorage.getItem(RANKS_KEY) ?? '{}') as Record<string, number>
-  } catch {
-    return {}
-  }
-}
-
 // fonteslabs.com's per-story date: "Hoje", "Ontem", then "22 ago", the year only when it is not this one
 const dayMonth = new Intl.DateTimeFormat('pt-PT', { day: 'numeric', month: 'short' })
 function shortDay(iso: string): string {
@@ -70,21 +58,6 @@ function warm(page: Story[]) {
     const picture = new Image()
     picture.decoding = 'async'
     picture.src = story.image
-  }
-}
-
-function withRankChanges(page: Story[], offset: number): Story[] {
-  try {
-    const ranked = page.map((story, index) => {
-      const rank = offset + index + 1
-      const oldRank = previousRanks[story.id]
-      currentRanks[story.id] = rank
-      return { ...story, rank, rank_change: oldRank == null ? undefined : oldRank - rank }
-    })
-    localStorage.setItem(RANKS_KEY, JSON.stringify(currentRanks))
-    return ranked
-  } catch {
-    return page.map((story, index) => ({ ...story, rank: offset + index + 1 }))
   }
 }
 
@@ -276,7 +249,6 @@ export default function Feed({ session: _session, queries = [] }: { session: Aut
           .sort((a, b) => Date.parse(b.latest_at) - Date.parse(a.latest_at))
       } else {
         page = await read(`/api/stories?limit=${PAGE}&offset=${offset}`)
-        page = withRankChanges(page, offset)
       }
       warm(page)
       return page

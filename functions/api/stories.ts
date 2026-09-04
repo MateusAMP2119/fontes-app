@@ -16,6 +16,8 @@ interface StoryRow {
   article_count: number
   source_count: number
   popularity: string
+  rank: number
+  rank_change: number
   image: string | null
   thumb: string | null
   sources: string
@@ -41,12 +43,29 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request, waitUntil
   const url = new URL(request.url)
   const limit = boundedInteger(url.searchParams.get('limit'), 20, 1, 100)
   const offset = boundedInteger(url.searchParams.get('offset'), 0, 0, 100_000)
+  // `rank_change` is the move from where the story stood before the latest
+  // third of its coverage (the last four of its twelve popularity buckets),
+  // so a story whose articles are recent climbs and a fading one drops.
   const { results } = await env.DB.prepare(
-    `SELECT id, slug, title, description, first_at, latest_at, summarized_at,
-            event_count, article_count, source_count, popularity, image, thumb, sources
-     FROM stories
-     WHERE latest_at >= strftime('%Y-%m-%dT%H:%M:%S', 'now', '-5 days')
-     ORDER BY source_count * 2 + article_count DESC, latest_at DESC, id
+    `WITH windowed AS (
+       SELECT *,
+              source_count * 2 + article_count AS score,
+              coalesce(json_extract(popularity, '$[8]'), 0) + coalesce(json_extract(popularity, '$[9]'), 0)
+                + coalesce(json_extract(popularity, '$[10]'), 0) + coalesce(json_extract(popularity, '$[11]'), 0) AS recent
+       FROM stories
+       WHERE latest_at >= strftime('%Y-%m-%dT%H:%M:%S', 'now', '-5 days')
+     ),
+     ranked AS (
+       SELECT *,
+              rank() OVER (ORDER BY score DESC, latest_at DESC, id) AS rank,
+              rank() OVER (ORDER BY score - recent DESC, id) AS previous_rank
+       FROM windowed
+     )
+     SELECT id, slug, title, description, first_at, latest_at, summarized_at,
+            event_count, article_count, source_count, popularity, image, thumb, sources,
+            rank, previous_rank - rank AS rank_change
+     FROM ranked
+     ORDER BY rank
      LIMIT ? OFFSET ?`,
   )
     .bind(limit, offset)
