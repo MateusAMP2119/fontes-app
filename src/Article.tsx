@@ -401,7 +401,8 @@ function Footer() {
   )
 }
 
-const favicon = (url: string) => `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host(url))}&sz=64`
+// our own origin (functions/api/favicon.ts): Google's service is cut off on phones behind tracker-blocking DNS
+const favicon = (url: string) => `/api/favicon?host=${encodeURIComponent(host(url))}`
 
 /** fonteslabs.com's clips strip: the pictured articles as 16:10 cards that scroll by hand; an article without a picture is not shown. */
 function Clips({ articles }: { articles: Clip[] }) {

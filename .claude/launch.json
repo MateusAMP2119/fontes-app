@@ -20,6 +20,30 @@
       ],
       "port": 4176,
       "autoPort": true
+    },
+    {
+      "name": "fontes-spa-pages",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd ../fontes-spa && npx wrangler pages dev dist --port 8788"
+      ],
+      "port": 8788,
+      "autoPort": true
+    },
+    {
+      "name": "fontes-pages",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "wrangler",
+        "pages",
+        "dev",
+        "dist",
+        "--port",
+        "8789"
+      ],
+      "port": 8789,
+      "autoPort": true
     }
   ]
 }

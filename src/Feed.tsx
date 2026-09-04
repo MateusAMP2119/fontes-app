@@ -50,7 +50,8 @@ function shortDay(iso: string): string {
   return then.getFullYear() === today.getFullYear() ? label : `${label} ${then.getFullYear()}`
 }
 
-const favicon = (host: string) => `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`
+// our own origin (functions/api/favicon.ts): Google's service is cut off on phones behind tracker-blocking DNS
+const favicon = (host: string) => `/api/favicon?host=${encodeURIComponent(host)}`
 
 /** Puts a page's full-size pictures in the browser cache before its rows exist. */
 function warm(page: Story[]) {
