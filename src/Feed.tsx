@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import './Feed.css'
 
-/** One row of GET /stories on the Fontes API (iris-core, src/openapi.yaml). */
+/** One row of GET /api/stories (functions/api/stories.ts), the engine's stories mirrored to the edge. */
 type Story = {
   id: number
   slug: string | null
@@ -14,6 +14,8 @@ type Story = {
   latest_at: string
   /** Newest preview image, when any article has one. */
   image: string | null
+  /** Small JPEG data URI of it, made by the engine; absent on search results. */
+  thumb?: string | null
   /** Publishers, most articles first. */
   sources: { name: string; host: string | null }[]
 }
@@ -39,10 +41,10 @@ function shortDay(iso: string): string {
 
 const favicon = (host: string) => `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`
 
-/** Puts a page's pictures in the browser cache before its rows exist. */
+/** Puts a page's full-size pictures in the browser cache before its rows exist. */
 function warm(page: Story[]) {
   for (const story of page) {
-    if (!story.image) continue
+    if (story.thumb || !story.image) continue
     const picture = new Image()
     picture.decoding = 'async'
     picture.src = story.image
@@ -54,10 +56,10 @@ function Row({ story, index }: { story: Story; index: number }) {
     <article className="m-story">
       <time className="m-story-date" dateTime={story.latest_at}>{shortDay(story.latest_at)}</time>
       <h3>{story.title}</h3>
-      {story.image ? (
+      {story.thumb || story.image ? (
         <img
           className="m-front-media"
-          src={story.image}
+          src={story.thumb ?? story.image ?? undefined}
           alt=""
           width={96}
           height={96}
@@ -113,11 +115,15 @@ export default function Feed({ session, query = '' }: { session: Session | null;
 
   const fetchPage = useCallback(
     async (offset: number): Promise<Story[]> => {
-      // the API matches whole words, so "vice-presidente" must go up as two
+      // Browsing reads the edge mirror (functions/api/stories.ts); a search
+      // still asks the engine, which matches whole words, so
+      // "vice-presidente" must go up as two.
       const q = query ? `&q=${encodeURIComponent(query.replace(/[^\p{L}\p{N}]+/gu, ' '))}` : ''
-      const response = await fetch(`${API}/stories?limit=${PAGE}&offset=${offset}${q}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-      })
+      const response = query
+        ? await fetch(`${API}/stories?limit=${PAGE}&offset=${offset}${q}`, {
+            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          })
+        : await fetch(`/api/stories?limit=${PAGE}&offset=${offset}`)
       if (!response.ok) throw new Error(`${response.status}`)
       const page: Story[] = await response.json()
       warm(page)

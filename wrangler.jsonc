@@ -2,5 +2,14 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "fontes",
   "pages_build_output_dir": "./dist",
-  "compatibility_date": "2026-09-04"
+  "compatibility_date": "2026-09-04",
+  // fonteslabs.com's database (fontes-spa owns its migrations); the feed
+  // reads the `stories` table the engine keeps in sync.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "fontes-articles",
+      "database_id": "424dc93c-318a-43bb-9993-0b8e0f82d799"
+    }
+  ]
 }
