@@ -5,15 +5,26 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 24px;
   min-height: 100svh;
-  padding: 24px;
-  overflow: hidden;
+  padding: max(24px, calc((100svh - 524px) / 2)) 24px 24px;
+  overflow-x: hidden;
   color: #09090b;
   font-family: "InterVariable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 14px;
   line-height: 20px;
+}
+
+/* Keep the backdrop viewport-sized while taller forms scroll over it. */
+.login-page > .make-background {
+  position: fixed;
+}
+
+@media (max-width: 640px) {
+  .login-page {
+    padding-top: 24px;
+  }
 }
 
 .login-brand,
@@ -104,7 +115,82 @@
   box-shadow: 0 0 0 3px rgb(161 161 170 / 0.5);
 }
 
+.login-password-wrap {
+  position: relative;
+}
+
+.login-password-wrap input {
+  padding-right: 42px;
+}
+
+.login-password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #71717a;
+  cursor: pointer;
+}
+
+.login-password-toggle:hover {
+  background: #f4f4f5;
+  color: #18181b;
+}
+
+.login-strength {
+  display: grid;
+  gap: 6px;
+  margin-top: -12px;
+  color: #71717a;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.login-strength-bars {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.login-strength-bars span {
+  height: 3px;
+  border-radius: 999px;
+  background: #e4e4e7;
+}
+
+.login-strength-bars .strength-1,
+.login-strength-bars .strength-2 {
+  background: #dc2626;
+}
+
+.login-strength-bars .strength-3 {
+  background: #d97706;
+}
+
+.login-strength-bars .strength-4 {
+  background: #16a34a;
+}
+
+.login-field-error {
+  margin-top: -4px;
+  color: #dc2626;
+  font-size: 12px;
+  line-height: 16px;
+}
+
 .login-buttons {
+  display: grid;
+  gap: 12px;
+}
+
+.login-oauth {
   display: grid;
   gap: 12px;
 }
@@ -138,6 +224,7 @@
 .login-divider {
   position: relative;
   text-align: center;
+  color: #71717a;
 }
 
 .login-divider::before {
@@ -151,7 +238,6 @@
   position: relative;
   padding: 0 8px;
   background: #fff;
-  color: #71717a;
 }
 
 .login-spinner {
@@ -191,6 +277,7 @@
 }
 
 .login-button:focus-visible,
+.login-password-toggle:focus-visible,
 .login-link:focus-visible {
   outline: 0;
   box-shadow: 0 0 0 3px rgb(161 161 170 / 0.5);
