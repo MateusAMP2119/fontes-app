@@ -100,7 +100,7 @@ function Skeleton() {
 }
 
 // ponytail: rows go nowhere yet; give them a story page when one exists.
-export default function Feed({ session: _session, query = '' }: { session: AuthSession | null; query?: string }) {
+export default function Feed({ session: _session, queries = [] }: { session: AuthSession | null; queries?: string[] }) {
   const [stories, setStories] = useState<Story[]>([])
   const [status, setStatus] = useState<'loading' | 'more' | 'end' | 'error'>('loading')
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -115,21 +115,33 @@ export default function Feed({ session: _session, query = '' }: { session: AuthS
 
   const fetchPage = useCallback(
     async (offset: number): Promise<Story[]> => {
-      // Browsing reads the edge mirror (functions/api/stories.ts); a search
-      // still asks the engine, which matches whole words, so
+      // Browsing reads the edge mirror (functions/api/stories.ts) page by
+      // page. Searches ask the engine once per stored term and merge the
+      // answers, newest first; the engine matches whole words, so
       // "vice-presidente" must go up as two.
-      const q = query ? `&q=${encodeURIComponent(query.replace(/[^\p{L}\p{N}]+/gu, ' '))}` : ''
-      const response = query
-        ? await fetch(`${API}/stories?limit=${PAGE}&offset=${offset}${q}`, {
-            headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-          })
-        : await fetch(`/api/stories?limit=${PAGE}&offset=${offset}`)
-      if (!response.ok) throw new Error(`${response.status}`)
-      const page: Story[] = await response.json()
+      // ponytail: one page of 100 per term, no paging; page when a term passes that.
+      const read = async (url: string): Promise<Story[]> => {
+        const response = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
+        if (!response.ok) throw new Error(`${response.status}`)
+        return response.json()
+      }
+      let page: Story[]
+      if (queries.length) {
+        const answers = await Promise.all(
+          queries.map((term) => read(`${API}/stories?limit=100&q=${encodeURIComponent(term.replace(/[^\p{L}\p{N}]+/gu, ' '))}`)),
+        )
+        const seen = new Set<number>()
+        page = answers
+          .flat()
+          .filter((story) => !seen.has(story.id) && seen.add(story.id))
+          .sort((a, b) => Date.parse(b.latest_at) - Date.parse(a.latest_at))
+      } else {
+        page = await read(`/api/stories?limit=${PAGE}&offset=${offset}`)
+      }
       warm(page)
       return page
     },
-    [token, query],
+    [token, queries],
   )
 
   const prefetch = useCallback(
@@ -152,7 +164,7 @@ export default function Feed({ session: _session, query = '' }: { session: AuthS
       const page = await pending
       if (mine !== generation.current) return
       setStories((previous) => (nextOffset.current ? [...previous, ...page] : page))
-      if (page.length < PAGE) {
+      if (page.length < PAGE || queries.length) {
         setStatus('end')
         return
       }
@@ -161,7 +173,7 @@ export default function Feed({ session: _session, query = '' }: { session: AuthS
     } catch {
       setStatus('error')
     }
-  }, [prefetch])
+  }, [prefetch, queries.length])
 
   useEffect(() => {
     generation.current += 1
@@ -191,7 +203,7 @@ export default function Feed({ session: _session, query = '' }: { session: AuthS
 
   return (
     <section className="make-feed" aria-labelledby="feed-heading">
-      <h2 id="feed-heading">{query ? `Resultados para “${query}”` : 'Histórias recentes'}</h2>
+      <h2 id="feed-heading">Histórias recentes</h2>
       <div className="feed-list">
         {stories.map((story, index) => (
           <Row story={story} index={index} key={story.id} />

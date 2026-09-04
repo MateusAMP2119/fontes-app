@@ -403,12 +403,15 @@ body {
 .m-suggest { margin: 0; padding: 0; list-style: none; }
 .m-suggest li { padding: 8px 12px; border-radius: 10px; font-size: 14px; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .m-suggest li[aria-selected="true"] { background: color-mix(in srgb, var(--make-text) 7%, transparent); }
-/* the stored search: a row at the foot of the sheet, under a rule when suggestions sit above it; its cross clears the search */
-.m-stored { display: flex; align-items: center; gap: 8px; padding: 6px 4px 6px 12px; font-size: 14px; line-height: 20px; }
-.m-suggest + .m-stored { margin-top: 6px; padding-top: 12px; border-top: 1px solid color-mix(in srgb, var(--make-text) 8%, transparent); }
-.m-stored span { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-weight: 500; }
-.m-stored button { display: flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 8px; background: none; color: inherit; opacity: 0.6; cursor: pointer; }
-.m-stored button:hover { opacity: 1; background: color-mix(in srgb, var(--make-text) 7%, transparent); }
+/* the stored searches: chips at the foot of the sheet, under a rule when suggestions sit above them; each cross removes its chip */
+.m-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 6px 2px; }
+.m-suggest + .m-chips { margin-top: 6px; padding-top: 12px; border-top: 1px solid color-mix(in srgb, var(--make-text) 8%, transparent); }
+.m-chip { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; height: 28px; padding: 0 4px 0 10px; border-radius: 999px; background: var(--make-surface); box-shadow: 0 0 0 1px var(--q-ring), 0 1px 2px rgb(0 0 0 / 0.04); font-size: 13px; line-height: 20px; }
+.m-chip > span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.m-chip button, .m-clear { display: flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%; background: color-mix(in srgb, var(--make-text) 8%, transparent); color: inherit; cursor: pointer; }
+.m-chip button:hover, .m-clear:hover { background: color-mix(in srgb, var(--make-text) 16%, transparent); }
+/* clears the typed text; sits at the end of the input line */
+.m-clear { width: 24px; height: 24px; }
 
 .make-file-name:focus-visible,
 .make-login:focus-visible,
@@ -456,9 +459,23 @@ body {
     margin-top: 24px;
   }
 
-  /* 44pt rows for thumbs */
+  /* 44pt rows and bigger crosses for thumbs */
   .m-suggest li {
     padding: 12px;
+  }
+
+  .m-chip {
+    height: 32px;
+  }
+
+  .m-chip button {
+    width: 24px;
+    height: 24px;
+  }
+
+  .m-clear {
+    width: 32px;
+    height: 32px;
   }
 
 }

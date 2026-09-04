@@ -91,7 +91,8 @@ export default function MakeApp({ session }: { session: AuthSession | null }) {
   const [hits, setHits] = useState<Hit[]>([])
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(-1)
-  const [search, setSearch] = useState('')
+  /** Stored searches; the feed shows stories matching any of them. */
+  const [chips, setChips] = useState<string[]>([])
   const token = undefined
 
   useEffect(() => {
@@ -134,18 +135,24 @@ export default function MakeApp({ session }: { session: AuthSession | null }) {
 
   const showList = open && typed.trim().length > 0 && hits.length > 0
 
-  const run = (value: string) => {
+  const clearInput = () => {
     const input = inputRef.current
-    if (input && input.value !== value) {
-      input.value = value
+    if (input && input.value) {
+      input.value = ''
       // query.ts reads dirtiness off the native event
       input.dispatchEvent(new Event('input', { bubbles: true }))
     }
-    setTyped(value)
-    setSearch(value.trim())
+    setTyped('')
+  }
+
+  /** Stores the term as a chip and empties the field for the next one. */
+  const run = (value: string) => {
+    const term = value.trim()
+    if (term && !chips.some((chip) => chip.toLowerCase() === term.toLowerCase())) setChips([...chips, term])
+    clearInput()
     setOpen(false)
     // drops the phone keyboard so the results are not under it
-    input?.blur()
+    inputRef.current?.blur()
   }
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -237,6 +244,20 @@ export default function MakeApp({ session }: { session: AuthSession | null }) {
               onFocus={() => setOpen(true)}
               onKeyDown={onKeyDown}
             />
+            {typed && (
+              <button
+                type="button"
+                className="m-clear"
+                aria-label="Limpar texto"
+                onPointerDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  clearInput()
+                  inputRef.current?.focus()
+                }}
+              >
+                <Icon name="close" size={16} />
+              </button>
+            )}
           </label>
           <div className="m-query-bar">
             <div className="m-tabs" role="tablist" aria-label="Modo">
@@ -258,8 +279,8 @@ export default function MakeApp({ session }: { session: AuthSession | null }) {
             </button>
           </div>
         </div>
-          {/* one sheet under the card: suggestions on top, the stored search under a rule */}
-          {(showList || search) && (
+          {/* one sheet under the card: suggestions on top, the stored searches as chips under a rule */}
+          {(showList || chips.length > 0) && (
             <div className="m-sheet">
               {showList && (
                 <ul className="m-suggest" id="m-suggest" role="listbox" aria-label="Sugestões">
@@ -277,12 +298,20 @@ export default function MakeApp({ session }: { session: AuthSession | null }) {
                   ))}
                 </ul>
               )}
-              {search && (
-                <div className="m-stored" role="status">
-                  <span>{search}</span>
-                  <button type="button" aria-label="Limpar pesquisa" onClick={() => run('')}>
-                    <Icon name="close" size={14} />
-                  </button>
+              {chips.length > 0 && (
+                <div className="m-chips" role="list" aria-label="Pesquisas guardadas">
+                  {chips.map((chip) => (
+                    <span className="m-chip" role="listitem" key={chip}>
+                      <span>{chip}</span>
+                      <button
+                        type="button"
+                        aria-label={`Remover ${chip}`}
+                        onClick={() => setChips(chips.filter((other) => other !== chip))}
+                      >
+                        <Icon name="close" size={12} />
+                      </button>
+                    </span>
+                  ))}
                 </div>
               )}
             </div>
@@ -290,7 +319,7 @@ export default function MakeApp({ session }: { session: AuthSession | null }) {
         </div>
         </section>
 
-        <Feed session={session} query={search} />
+        <Feed session={session} queries={chips} />
       </div>
 
     </main>
