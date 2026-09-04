@@ -1,16 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
-import { mountQuery } from './query'
-import { authClient, type AuthSession } from './auth'
+import { mountQuery, type ModeKey } from './query'
+import { authClient, AUTH_ENABLED, type AuthSession } from './auth'
 import { navigate } from './navigate'
 import Feed from './Feed'
 import './MakeApp.css'
 
 const API = import.meta.env.VITE_API_URL as string
 
-/** The bit of GET /stories a suggestion row needs. */
-type Hit = { id: number; title: string }
+/** The bit of GET /stories or GET /events a suggestion row needs. */
+type Hit = { id: number; slug: string | null; title: string }
 
-type IconName = 'chevron' | 'close' | 'log-out' | 'user'
+type IconName = 'close' | 'log-out' | 'user'
 
 function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   const common = {
@@ -23,7 +23,6 @@ function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
 
   return (
     <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24">
-      {name === 'chevron' && <path d="m8.5 10 3.5 3.5 3.5-3.5" {...common} />}
       {name === 'close' && <path d="m7 7 10 10M17 7 7 17" {...common} />}
       {name === 'user' && <><circle cx="12" cy="8" r="3.25" {...common} /><path d="M5.5 19c.7-3.1 3-4.75 6.5-4.75S17.8 15.9 18.5 19" {...common} /></>}
       {name === 'log-out' && <><path d="M10 5H6.75A1.75 1.75 0 0 0 5 6.75v10.5C5 18.22 5.78 19 6.75 19H10" {...common} /><path d="m15 8 4 4-4 4m4-4H9" {...common} /></>}
@@ -82,17 +81,19 @@ export default function MakeApp({ session }: { session: AuthSession | null }) {
   /** Card plus the suggestion sheet under it; outside-click and scroll target. */
   const searchRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
-  useEffect(() => (queryRef.current ? mountQuery(queryRef.current) : undefined), [])
+  /** The card's tab: search stores terms for the feed, build opens one event. */
+  const [mode, setMode] = useState<ModeKey>('search')
+  useEffect(() => (queryRef.current ? mountQuery(queryRef.current, setMode) : undefined), [])
 
-  // Live suggestions: story titles from the API as the user types. `typed`
+  // Live suggestions: story or event titles from the API as the user types. `typed`
   // follows every keystroke; `search` is what the feed shows, set on Enter,
   // the run button, or a pick.
   const [typed, setTyped] = useState('')
   const [hits, setHits] = useState<Hit[]>([])
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(-1)
-  /** Stored searches; the feed shows stories matching any of them. */
-  const [chips, setChips] = useState<string[]>([])
+  /** Stored searches; the feed shows stories matching any of them. fonteslabs.com's card hands its term over as `?q=`. */
+  const [chips, setChips] = useState<string[]>(() => new URLSearchParams(location.search).getAll('q').map((q) => q.trim()).filter(Boolean))
   const token = undefined
 
   useEffect(() => {
@@ -107,7 +108,7 @@ export default function MakeApp({ session }: { session: AuthSession | null }) {
       try {
         // the API matches whole words, so "vice-presidente" must go up as two
         const words = q.replace(/[^\p{L}\p{N}]+/gu, ' ')
-        const response = await fetch(`${API}/stories?q=${encodeURIComponent(words)}&limit=6`, {
+        const response = await fetch(`${API}/${mode === 'build' ? 'events' : 'stories'}?q=${encodeURIComponent(words)}&limit=6`, {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
           signal: controller.signal,
         })
@@ -120,7 +121,7 @@ export default function MakeApp({ session }: { session: AuthSession | null }) {
       window.clearTimeout(timer)
       controller.abort()
     }
-  }, [typed, token])
+  }, [typed, token, mode])
 
   // Clicks outside the card close the list; blur would fire before a tap on
   // a row lands on touch screens.
@@ -155,6 +156,20 @@ export default function MakeApp({ session }: { session: AuthSession | null }) {
     inputRef.current?.blur()
   }
 
+  /** Build mode: opens the event's article page. */
+  const pick = (hit: Hit) => navigate(`/eventos/${hit.slug ?? hit.id}`)
+
+  /** A row click, or Enter and the run button: build mode opens the highlighted suggestion, else the first. */
+  const choose = (hit: Hit) => (mode === 'build' ? pick(hit) : run(hit.title))
+  const submit = (value: string) => {
+    if (mode === 'build') {
+      const hit = hits[Math.max(active, 0)]
+      if (hit) pick(hit)
+      return
+    }
+    run(value)
+  }
+
   const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'ArrowDown' && hits.length) {
       event.preventDefault()
@@ -165,12 +180,12 @@ export default function MakeApp({ session }: { session: AuthSession | null }) {
       setActive((i) => (i <= 0 ? hits.length - 1 : i - 1))
     } else if (event.key === 'Enter') {
       event.preventDefault()
-      run(showList && active >= 0 ? hits[active].title : event.currentTarget.value)
+      if (showList && active >= 0) choose(hits[active])
+      else submit(event.currentTarget.value)
     } else if (event.key === 'Escape') {
       setOpen(false)
     }
   }
-
 
   return (
     <main className="make-shell">
@@ -182,10 +197,7 @@ export default function MakeApp({ session }: { session: AuthSession | null }) {
               <span aria-hidden="true">Fontes</span>
             </a>
             <div className="make-actions">
-              <button className="make-file-name" type="button">
-                Untitled <Icon name="chevron" size={14} />
-              </button>
-              {session ? (
+              {AUTH_ENABLED && (session ? (
                 <AccountMenu session={session} />
               ) : (
                 <a
@@ -198,7 +210,7 @@ export default function MakeApp({ session }: { session: AuthSession | null }) {
                 >
                   Entrar
                 </a>
-              )}
+              ))}
             </div>
           </div>
         </header>
@@ -212,7 +224,7 @@ export default function MakeApp({ session }: { session: AuthSession | null }) {
         </div>
 
         <section className="make-hero" aria-labelledby="make-heading">
-        <h1 id="make-heading">What do you want to make?</h1>
+        <h1 id="make-heading">Todas as fontes, todos os eventos.</h1>
 
         <div className="make-search" ref={searchRef}>
         <div className="make-query" ref={queryRef}>
@@ -271,7 +283,7 @@ export default function MakeApp({ session }: { session: AuthSession | null }) {
                 <span>Construir</span>
               </button>
             </div>
-            <button type="button" className="m-run" aria-label="Executar" onClick={() => run(inputRef.current?.value ?? '')}>
+            <button type="button" className="m-run" aria-label="Executar" onClick={() => submit(inputRef.current?.value ?? '')}>
               <span data-q-run-label="" />
               <svg viewBox="0 0 20 20" aria-hidden="true">
                 <path d="m11.7 4.8 5.2 5.2-5.2 5.2M16.9 10H3.1" />
@@ -291,7 +303,7 @@ export default function MakeApp({ session }: { session: AuthSession | null }) {
                       role="option"
                       aria-selected={i === active}
                       onPointerEnter={() => setActive(i)}
-                      onClick={() => run(hit.title)}
+                      onClick={() => choose(hit)}
                     >
                       {hit.title}
                     </li>

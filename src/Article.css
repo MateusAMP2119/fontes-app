@@ -1,0 +1,757 @@
+/* ============================================================
+   Article: one event as a plain news page on the landing's rail: the date
+   over the headline, the member articles as fonteslabs.com's clips strip
+   under it, then the two summary sentences with the key entities dotted.
+   The headline runs to 860px, the lede to a 680px measure (about 70
+   characters); the strip crosses the whole rail.
+   ============================================================ */
+
+.article {
+  --article-top: clamp(40px, 8vh, 72px);
+  --article-bottom: 56px;
+  position: relative;
+  width: min(1112px, 100%);
+  margin: 0 auto;
+  padding: var(--article-top) 30px var(--article-bottom);
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+/* fontes-spa .m-article-nav: the back button and the date on one row above the headline */
+.article-nav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.article-date {
+  display: block;
+  color: var(--make-muted);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.article h1 {
+  font-size: clamp(26px, 2vw + 16px, 36px);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+/* the story column (date, headline, strip, lede, chart) and, from 1000px, the events beside it: a 320px
+   column behind an 80px gutter, as tall as the story so it runs down to the footer, scrolling on its own
+   under a bottom fade when the list is longer, no scrollbar */
+.article-main {
+  max-width: 680px;
+}
+
+@media (min-width: 1000px) {
+  .article {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 320px;
+    align-items: start;
+    gap: 80px;
+  }
+
+  .article-events {
+    position: absolute;
+    top: var(--article-top);
+    right: 30px;
+    bottom: var(--article-bottom);
+    width: 320px;
+    margin-top: 0;
+    padding-bottom: 64px;
+    overflow-y: auto;
+    scrollbar-width: none;
+    mask-image: linear-gradient(#000 calc(100% - 64px), transparent);
+  }
+
+  .article-events::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* the strip stops at the column's edge instead of bleeding into the gap */
+  .m-clips-track {
+    margin-right: 0;
+    padding-right: 0;
+  }
+}
+
+.article-lede {
+  margin-top: 28px;
+  text-wrap: pretty;
+  font-size: 19px;
+  line-height: 1.55;
+  letter-spacing: -0.005em;
+}
+
+.article-lede + .article-lede {
+  margin-top: 16px;
+}
+
+.article-entity {
+  text-decoration: underline dotted;
+  text-decoration-thickness: 1px;
+  text-decoration-color: color-mix(in srgb, var(--make-text) 48%, transparent);
+  text-underline-offset: 3px;
+}
+
+/* fontes-spa .m-clips: 300px cards at the rail's inset, scroll-snap, no buttons, no scrollbar; the publisher's mark before its name */
+.m-clips {
+  margin-top: 32px;
+}
+
+.m-clips-track {
+  display: flex;
+  gap: 16px;
+  margin: 0 -30px;
+  padding: 0 30px 4px;
+  list-style: none;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: 30px;
+  scrollbar-width: none;
+}
+
+.m-clips-track::-webkit-scrollbar {
+  display: none;
+}
+
+.m-clip {
+  flex: 0 0 300px;
+  scroll-snap-align: start;
+}
+
+.m-clip a {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.m-clip img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border: 1px solid #e6e8ec;
+  background: #f4f4f4;
+}
+
+.m-clip-source {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  color: #9ca0a4;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 14px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.m-clip-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  color: #232529;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.m-clip-source img {
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 1px #e6e8ec;
+}
+
+/* the events: the publishers' marks in overlapping rings, the event's title under them */
+.article-events {
+  margin-top: 40px;
+}
+
+.article-entities h2 {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+  letter-spacing: -0.005em;
+}
+
+.article-events ol {
+  list-style: none;
+}
+
+.article-events ol {
+  display: grid;
+  gap: 24px;
+}
+
+.article-event-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+/* one line, level with the first row of marks */
+.article-event-head time {
+  flex: none;
+  color: var(--make-muted);
+  font-size: 12px;
+  line-height: 24px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* the marks overlap by 6px; the container's padding gives that back so every row starts flush */
+.article-marks {
+  display: flex;
+  flex-wrap: wrap;
+  row-gap: 6px;
+  padding-left: 6px;
+}
+
+/* the feed's publisher marks at 24px */
+.article-marks img {
+  display: block;
+  width: 24px;
+  height: 24px;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 1px #e6e8ec;
+}
+
+.article-marks > * {
+  margin-left: -6px;
+}
+
+.article-event-title {
+  margin-top: 8px;
+  color: var(--make-text);
+  font-size: 15px;
+  line-height: 22px;
+  text-wrap: pretty;
+}
+
+/* the articles under it, one line each, cut with an ellipsis */
+.article-event-links {
+  display: grid;
+  gap: 2px;
+  margin-top: 4px;
+  color: var(--make-muted);
+  font-size: 12px;
+  line-height: 18px;
+  list-style: none;
+}
+
+.article-event-links li {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.article-event-links a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* "Ver mais": the same quiet ink, underlined */
+.article-event-more {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.article-event-more:hover {
+  color: var(--make-text);
+}
+
+.article-event-links a:hover {
+  color: var(--make-text);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+/* Shared entity chart: shadcn-like surface, restrained grid and interactive
+   tooltip. Series stay as straight segments so the data is not smoothed. */
+.article-entities {
+  max-width: 680px;
+  margin-top: 40px;
+}
+
+.article-entities > p {
+  margin-top: 2px;
+  color: var(--make-muted);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.article-chart-shell {
+  margin-top: 16px;
+}
+
+.article-chart {
+  position: relative;
+}
+
+.article-chart svg {
+  display: block;
+  overflow: visible;
+  font-size: 12px;
+  touch-action: pan-y;
+}
+
+.article-grid {
+  stroke: color-mix(in srgb, var(--make-card-line) 72%, transparent);
+  stroke-dasharray: 3 3;
+}
+
+.article-tick {
+  fill: #9ca0a4;
+}
+
+.article-crosshair {
+  stroke: #9ca0a4;
+  stroke-dasharray: 3 3;
+}
+
+.article-chart-tip {
+  position: absolute;
+  top: 8px;
+  z-index: 1;
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--make-card-line);
+  border-radius: 8px;
+  background: var(--make-card);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 0.08);
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.article-chart-tip strong {
+  font-weight: 500;
+}
+
+.article-chart-tip span,
+.article-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.article-chart-tip b,
+.article-legend b {
+  margin-left: auto;
+  padding-left: 12px;
+  color: var(--make-text);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.article-legend b {
+  margin-left: 0;
+  padding-left: 0;
+  color: var(--make-muted);
+  font-weight: 400;
+}
+
+.article-swatch {
+  display: block;
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.article-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-top: 12px;
+  font-size: 12px;
+  line-height: 16px;
+  list-style: none;
+}
+
+.article-empty {
+  color: var(--make-muted);
+  font-size: 15px;
+  line-height: 24px;
+}
+
+/* the skeleton: the feed's shimmer (.m-card-skeleton, Feed.css) cut to this page's measures; the content
+   fades in over it */
+.article-main,
+.article-events {
+  animation: article-in 0.25s ease-out;
+}
+
+@keyframes article-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.article-skel-date {
+  width: 120px;
+  height: 12px;
+  margin-bottom: 16px;
+}
+
+.article-skel-title {
+  display: grid;
+  gap: 12px;
+}
+
+.article-skel-title .m-card-skeleton {
+  height: 30px;
+}
+
+.article-skel-title .m-card-skeleton:last-child {
+  width: 62%;
+}
+
+.article-skel-media {
+  aspect-ratio: 16 / 10;
+  width: 100%;
+  border-radius: 0;
+}
+
+.article-skel-source {
+  width: 96px;
+  height: 11px;
+  margin-top: 12px;
+}
+
+.article-skel-caption {
+  width: 82%;
+  height: 14px;
+  margin-top: 9px;
+}
+
+.article-skel-lede {
+  display: grid;
+  gap: 12px;
+}
+
+.article-skel-lede .m-card-skeleton {
+  height: 15px;
+}
+
+.article-skel-lede .m-card-skeleton:last-child {
+  width: 46%;
+}
+
+.article-skel-heading {
+  width: 150px;
+  height: 14px;
+}
+
+.article-skel-chart {
+  height: 220px;
+  margin-top: 24px;
+}
+
+.article-skel-mark {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px #fff;
+}
+
+.article-skel-time {
+  width: 76px;
+  height: 12px;
+}
+
+.article-skel-line {
+  height: 15px;
+  margin-top: 10px;
+}
+
+.article-skel-line.is-short {
+  width: 68%;
+  margin-top: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .article-main,
+  .article-events {
+    animation: none;
+  }
+}
+
+/* ============================================================
+   Footer: fonteslabs.com's plate (fontes-spa .m-foot, mono), on the rail:
+   three 101px cells of black, the arches ruin bleeding off its corner, the
+   collaboration call over a rule, the coverage links in the last cell.
+   ============================================================ */
+
+.m-foot {
+  width: min(1112px, 100%);
+  margin: 0 auto;
+  padding: 0 30px;
+}
+
+.m-foot-panel {
+  position: relative;
+  height: 303px;
+  overflow: clip;
+  background: #0a0a0a;
+  color: #f4f4f4;
+}
+
+.m-foot-art {
+  position: absolute;
+  right: -280px;
+  bottom: -80px;
+  width: 700px;
+  clip-path: inset(2px 0 0 0);
+  pointer-events: none;
+}
+
+.m-foot-development {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 44px;
+  height: 203px;
+  padding: 36px 44px;
+  border-bottom: 1px solid rgb(244 244 244 / 0.12);
+}
+
+.m-foot-development h2 {
+  font-size: 32px;
+  font-weight: 500;
+  line-height: 36px;
+  letter-spacing: -0.32px;
+}
+
+.m-foot-development h2 + p {
+  max-width: 560px;
+  margin-top: 10px;
+  color: rgb(244 244 244 / 0.64);
+  font-size: 16px;
+  line-height: 24px;
+  text-wrap: pretty;
+}
+
+/* fontes-spa .m-kick--dark: the ring, the light one px outside it (kicker.ts drives --kick-*), the plate over both */
+.m-kick {
+  position: relative;
+  display: block;
+  width: max-content;
+  margin: 0 0 14px;
+  border: 1px solid rgb(244 244 244 / 0.16);
+  border-radius: 13px;
+}
+
+.m-kick-glow {
+  --kick-a: -80deg;
+  --kick-x: 13px;
+  --kick-y: 13px;
+  position: absolute;
+  inset: -1px;
+  border-radius: 13px;
+  background: conic-gradient(from var(--kick-a) at var(--kick-x) var(--kick-y) in oklch, #a3ece900, #a3ece9 20deg, #709ff5 100deg, #709ff500 120deg);
+  opacity: 0;
+  transition: opacity 1s ease-in-out;
+}
+
+.m-kick-glow.is-on {
+  opacity: 1;
+}
+
+.m-kick-plate {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 3px 11px;
+  border-radius: 13px;
+  background: #141414;
+  color: rgb(244 244 244 / 0.84);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+/* fontes-spa .m-cta--light: attio's outline button */
+.m-cta {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid #e6e6e6;
+  border-radius: 10px;
+  background: #fff;
+  color: #232529;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.m-cta svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.2s ease;
+}
+
+.m-cta:hover svg {
+  transform: translate(1px, -1px);
+}
+
+/* fontes-spa .m-cta--dark */
+.m-cta--dark {
+  border-color: #141414;
+  background: #141414;
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.m-cta--dark:hover {
+  background: #2a2a2a;
+}
+
+/* the dark buttons keep their glyph still; the footer's outline CTA nudges its own */
+.m-cta--dark svg,
+.m-cta--dark:hover svg {
+  transform: none;
+  transition: none;
+}
+
+.article-share {
+  margin-top: 32px;
+}
+
+.m-foot-coverage {
+  display: flex;
+  align-items: center;
+  gap: 36px;
+  height: 100px;
+  padding: 0 44px;
+}
+
+.m-foot-coverage > p {
+  max-width: 400px;
+  color: rgb(244 244 244 / 0.48);
+  font-size: 13px;
+  line-height: 18px;
+}
+
+.m-foot-coverage nav {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 28px;
+}
+
+.m-foot-coverage nav a {
+  color: rgb(244 244 244 / 0.72);
+  font-size: 13px;
+  line-height: 18px;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.m-foot-coverage nav a:hover {
+  color: #f4f4f4;
+}
+
+@media (max-width: 900px) {
+  .m-foot-panel {
+    height: auto;
+  }
+
+  .m-foot-art {
+    display: none;
+  }
+
+  .m-foot-development {
+    flex-direction: column;
+    align-items: flex-start;
+    height: auto;
+    gap: 28px;
+    padding: 40px 24px;
+  }
+
+  .m-foot-development h2 {
+    font-size: 30px;
+  }
+
+  .m-foot-coverage {
+    flex-direction: column;
+    align-items: flex-start;
+    height: auto;
+    gap: 22px;
+    padding: 28px 24px 36px;
+  }
+
+  .m-foot-coverage nav {
+    gap: 14px;
+  }
+}
+
+@media (max-width: 700px) {
+  .article {
+    padding: 32px 24px 64px;
+  }
+
+  .m-foot {
+    padding: 0 16px;
+  }
+
+  .m-clips-track {
+    margin-inline: -24px;
+    padding-inline: 24px;
+    scroll-padding-inline: 24px;
+  }
+
+
+  .article-lede {
+    font-size: 17px;
+  }
+}

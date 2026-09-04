@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AuthSession } from './auth'
 import { Sparkline } from './components/Sparkline'
+import { navigate } from './navigate'
 import './Feed.css'
 
 /** One row of GET /api/stories (functions/api/stories.ts), the engine's stories mirrored to the edge. */
@@ -65,7 +66,18 @@ function Row({ story, index }: { story: Story; index: number }) {
   return (
     <article className="m-story">
       <time className="m-story-date" dateTime={story.latest_at}>{shortDay(story.latest_at)}</time>
-      <h3>{story.title}</h3>
+      {/* the title's link stretches over the whole row (Feed.css) */}
+      <h3>
+        <a
+          href={`/historias/${story.slug ?? story.id}`}
+          onClick={(click) => {
+            click.preventDefault()
+            navigate(`/historias/${story.slug ?? story.id}`)
+          }}
+        >
+          {story.title}
+        </a>
+      </h3>
       <div className="m-front-stack">
         {story.thumb || story.image ? (
           <img
@@ -211,7 +223,6 @@ function Skeleton() {
   )
 }
 
-// ponytail: rows go nowhere yet; give them a story page when one exists.
 export default function Feed({ session: _session, queries = [] }: { session: AuthSession | null; queries?: string[] }) {
   const [stories, setStories] = useState<Story[]>([])
   const [status, setStatus] = useState<'loading' | 'more' | 'end' | 'error'>('loading')
@@ -308,11 +319,6 @@ export default function Feed({ session: _session, queries = [] }: { session: Aut
     return () => observer.disconnect()
   }, [status, advance])
 
-  const retry = () => {
-    prefetch(nextOffset.current)
-    void advance()
-  }
-
   return (
     <section className="make-feed" aria-label="Histórias">
       <div className="feed-list">
@@ -323,15 +329,10 @@ export default function Feed({ session: _session, queries = [] }: { session: Aut
           Array.from({ length: SKELETON_ROWS }, (_, index) => <Skeleton key={index} />)}
       </div>
       <div className="m-feed-sentinel" ref={sentinelRef}>
-        {status === 'loading' && stories.length > 0 && <span>A carregar…</span>}
-        {status === 'end' && stories.length === 0 && <span>Nenhuma história encontrada.</span>}
-        {status === 'error' && (
-          <>
-            <span>Não foi possível carregar as histórias.</span>
-            <button type="button" onClick={retry}>
-              Tentar de novo
-            </button>
-          </>
+        {status === 'loading' && stories.length > 0 && <span className="m-feed-loading">A carregar…</span>}
+        {/* ponytail: a failed later page ends the list quietly; no retry control */}
+        {stories.length === 0 && (status === 'end' || status === 'error') && (
+          <p className="m-feed-empty">Não foram encontradas histórias</p>
         )}
       </div>
     </section>

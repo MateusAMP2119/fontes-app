@@ -6,4 +6,7 @@ export const authClient = createAuthClient({
   plugins: [jwtClient({ jwks: { jwksPath: '/.well-known/jwks.json' } })],
 })
 
+// ponytail: flip to true when the account flow ships; hides the login link, the /login route and the session fetch
+export const AUTH_ENABLED = false
+
 export type AuthSession = typeof authClient.$Infer.Session

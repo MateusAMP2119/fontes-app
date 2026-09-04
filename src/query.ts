@@ -5,7 +5,7 @@
  * that grows its label once the field is dirty.
  */
 
-type ModeKey = 'search' | 'build'
+export type ModeKey = 'search' | 'build'
 
 const MODES: Record<ModeKey, { label: string; phrases: string[] }> = {
   search: {
@@ -85,7 +85,8 @@ function paintIcon(canvas: HTMLCanvasElement, mode: ModeKey, elapsed: number, ac
   context.globalAlpha = 1
 }
 
-export function mountQuery(card: HTMLElement): () => void {
+/** `onMode` hears every tab change. */
+export function mountQuery(card: HTMLElement, onMode?: (mode: ModeKey) => void): () => void {
   const input = card.querySelector<HTMLInputElement>('[data-q-input]')
   const buttons = Array.from(card.querySelectorAll<HTMLButtonElement>('[data-q-mode]'))
   const indicator = card.querySelector<HTMLElement>('.m-tabs-ind')
@@ -171,6 +172,7 @@ export function mountQuery(card: HTMLElement): () => void {
 
   const selectMode = (next: ModeKey) => {
     mode = next
+    onMode?.(next)
     activatedAt = performance.now()
     phraseIndex = 0
     for (const button of buttons) {

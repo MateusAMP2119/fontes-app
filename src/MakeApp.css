@@ -86,8 +86,7 @@ body {
 }
 
 .make-brand,
-.make-actions,
-.make-file-name {
+.make-actions {
   display: flex;
   align-items: center;
 }
@@ -115,25 +114,6 @@ body {
   line-height: 1;
   letter-spacing: -0.01em;
   white-space: nowrap;
-}
-
-/* the file control: a ghost button at the mark's height, 14/500, wash on hover */
-.make-file-name {
-  height: 30px;
-  padding: 0 10px;
-  gap: 6px;
-  border-radius: 8px;
-  color: var(--make-icon);
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 20px;
-  letter-spacing: -0.005em;
-  cursor: pointer;
-  transition: background-color 0.15s;
-}
-
-.make-file-name:hover {
-  background: var(--make-hover);
 }
 
 /* login: shadcn primary at the mark's height */
@@ -403,9 +383,9 @@ body {
 .m-suggest { margin: 0; padding: 0; list-style: none; }
 .m-suggest li { padding: 8px 12px; border-radius: 10px; font-size: 14px; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
 .m-suggest li[aria-selected="true"] { background: color-mix(in srgb, var(--make-text) 7%, transparent); }
-/* the stored searches: chips at the foot of the sheet, under a rule when suggestions sit above them; each cross removes its chip */
+/* the stored searches: chips at the foot of the sheet; each cross removes its chip. A rule separates the sheet's sections */
 .m-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 6px 2px; }
-.m-suggest + .m-chips { margin-top: 6px; padding-top: 12px; border-top: 1px solid color-mix(in srgb, var(--make-text) 8%, transparent); }
+.m-sheet > * + * { margin-top: 6px; padding-top: 12px; border-top: 1px solid color-mix(in srgb, var(--make-text) 8%, transparent); }
 .m-chip { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; height: 28px; padding: 0 4px 0 10px; border-radius: 999px; background: var(--make-surface); box-shadow: 0 0 0 1px var(--q-ring), 0 1px 2px rgb(0 0 0 / 0.04); font-size: 13px; line-height: 20px; }
 .m-chip > span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .m-chip button, .m-clear { display: flex; align-items: center; justify-content: center; flex: 0 0 auto; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%; background: color-mix(in srgb, var(--make-text) 8%, transparent); color: inherit; cursor: pointer; }
@@ -413,7 +393,6 @@ body {
 /* clears the typed text; sits at the end of the input line */
 .m-clear { width: 24px; height: 24px; }
 
-.make-file-name:focus-visible,
 .make-login:focus-visible,
 .make-account-trigger:focus-visible,
 .make-account-menu button:focus-visible,
@@ -446,7 +425,6 @@ body {
     font-weight: 500;
   }
 
-  .make-file-name,
   .make-login {
     height: 28px;
   }

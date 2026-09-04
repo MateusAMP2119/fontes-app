@@ -4,8 +4,21 @@
     {
       "name": "fontes-dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 5173,
+      "autoPort": true
+    },
+    {
+      "name": "fontes-spa",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "cd ../fontes-spa && npx astro dev"
+      ],
+      "port": 4176,
       "autoPort": true
     }
   ]

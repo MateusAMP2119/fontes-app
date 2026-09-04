@@ -53,6 +53,24 @@
   text-wrap: balance;
 }
 
+/* the row is one link: the anchor's box stretches over .m-story (position: relative) */
+.m-story h3 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.m-story h3 a::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.m-story:hover h3 {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
 .m-story-date {
   display: block;
   grid-area: date;
@@ -213,12 +231,12 @@
   line-height: 20px;
 }
 
-.m-feed-sentinel span {
+.m-feed-loading {
   position: relative;
   padding-left: 18px;
 }
 
-.m-feed-sentinel span::before {
+.m-feed-loading::before {
   content: "";
   position: absolute;
   top: 5px;
@@ -237,15 +255,14 @@
   }
 }
 
-.m-feed-sentinel button {
-  color: var(--make-accent);
-  font-weight: 450;
-  cursor: pointer;
-}
-
-.m-feed-sentinel button:focus-visible {
-  outline: 2px solid var(--make-accent);
-  outline-offset: 2px;
+/* nothing to list: one quiet line, centred, with room around it */
+.m-feed-empty {
+  margin: 0;
+  padding: 24px 20px;
+  color: var(--make-muted);
+  font-size: 14px;
+  line-height: 20px;
+  text-align: center;
 }
 
 @media (max-width: 900px) {
@@ -264,7 +281,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .m-card-skeleton,
-  .m-feed-sentinel span::before {
+  .m-feed-loading::before {
     animation: none;
   }
 }
