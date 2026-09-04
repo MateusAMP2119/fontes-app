@@ -202,8 +202,7 @@ export default function Feed({ session: _session, queries = [] }: { session: Aut
   }
 
   return (
-    <section className="make-feed" aria-labelledby="feed-heading">
-      <h2 id="feed-heading">Histórias recentes</h2>
+    <section className="make-feed" aria-label="Histórias">
       <div className="feed-list">
         {stories.map((story, index) => (
           <Row story={story} index={index} key={story.id} />

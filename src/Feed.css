@@ -17,18 +17,10 @@
   -webkit-user-select: text;
 }
 
-.make-feed h2 {
-  padding: 0 20px;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 20px;
-}
-
 .feed-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   column-gap: 40px;
-  margin-top: 12px;
 }
 
 /* fontes-spa .m-story, phone cut */
