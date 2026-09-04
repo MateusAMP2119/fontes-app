@@ -8,6 +8,8 @@ type SparklineProps = {
   /** Fill under the line, at low opacity. */
   area?: boolean
   strokeWidth?: number
+  /** Smooth the points into a compact Catmull–Rom curve. */
+  curve?: boolean
 }
 
 export function Sparkline({
@@ -17,6 +19,7 @@ export function Sparkline({
   className,
   area = false,
   strokeWidth = 1.75,
+  curve = false,
 }: SparklineProps) {
   if (values.length < 2) return null
 
@@ -32,9 +35,9 @@ export function Sparkline({
     y: pad + usableH - ((v - min) / span) * usableH,
   }))
 
-  const line = points
-    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${round(p.x)} ${round(p.y)}`)
-    .join(' ')
+  const line = curve ? curvedPath(points, height) : points
+      .map((p, i) => `${i === 0 ? 'M' : 'L'} ${round(p.x)} ${round(p.y)}`)
+      .join(' ')
 
   return (
     <svg
@@ -67,4 +70,24 @@ export function Sparkline({
 
 function round(n: number): number {
   return Math.round(n * 100) / 100
+}
+
+function curvedPath(points: { x: number; y: number }[], height: number): string {
+  let path = `M ${round(points[0].x)} ${round(points[0].y)}`
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const before = points[index - 1] ?? points[index]
+    const start = points[index]
+    const end = points[index + 1]
+    const after = points[index + 2] ?? end
+    const controlOne = {
+      x: start.x + (end.x - before.x) / 6,
+      y: Math.max(0, Math.min(height, start.y + (end.y - before.y) / 6)),
+    }
+    const controlTwo = {
+      x: end.x - (after.x - start.x) / 6,
+      y: Math.max(0, Math.min(height, end.y - (after.y - start.y) / 6)),
+    }
+    path += ` C ${round(controlOne.x)} ${round(controlOne.y)}, ${round(controlTwo.x)} ${round(controlTwo.y)}, ${round(end.x)} ${round(end.y)}`
+  }
+  return path
 }

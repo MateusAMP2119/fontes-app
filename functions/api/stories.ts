@@ -15,6 +15,7 @@ interface StoryRow {
   event_count: number
   article_count: number
   source_count: number
+  popularity: string
   image: string | null
   thumb: string | null
   sources: string
@@ -42,7 +43,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request, waitUntil
   const offset = boundedInteger(url.searchParams.get('offset'), 0, 0, 100_000)
   const { results } = await env.DB.prepare(
     `SELECT id, slug, title, description, first_at, latest_at, summarized_at,
-            event_count, article_count, source_count, image, thumb, sources
+            event_count, article_count, source_count, popularity, image, thumb, sources
      FROM stories
      WHERE latest_at >= strftime('%Y-%m-%dT%H:%M:%S', 'now', '-5 days')
      ORDER BY source_count * 2 + article_count DESC, latest_at DESC, id
@@ -50,7 +51,11 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request, waitUntil
   )
     .bind(limit, offset)
     .all<StoryRow>()
-  const stories = results.map((row) => ({ ...row, sources: JSON.parse(row.sources) as unknown }))
+  const stories = results.map((row) => ({
+    ...row,
+    popularity: JSON.parse(row.popularity) as unknown,
+    sources: JSON.parse(row.sources) as unknown,
+  }))
   if (offset === 0 && env.SYNC_KEY) waitUntil(refreshBehind(env))
   return Response.json(stories, {
     headers: { 'Cache-Control': 'public, max-age=30, stale-while-revalidate=300' },

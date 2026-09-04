@@ -13,6 +13,7 @@ interface StoryPayload {
   event_count: number
   article_count: number
   source_count: number
+  popularity?: number[]
   image: string | null
   thumb: string | null
   sources: unknown[]
@@ -34,20 +35,21 @@ export const onRequestPost: PagesFunction<SyncEnv> = async ({ env, request }) =>
   const { stories, keep } = (await request.json()) as SyncPayload
   const upsert = env.DB.prepare(
     `INSERT INTO stories (id, slug, title, description, first_at, latest_at, summarized_at,
-                          event_count, article_count, source_count, image, thumb, sources, synced_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
+                          event_count, article_count, source_count, popularity, image, thumb, sources, synced_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
      ON CONFLICT(id) DO UPDATE SET
        slug = excluded.slug, title = excluded.title, description = excluded.description,
        first_at = excluded.first_at, latest_at = excluded.latest_at, summarized_at = excluded.summarized_at,
        event_count = excluded.event_count, article_count = excluded.article_count,
-       source_count = excluded.source_count, image = excluded.image, thumb = excluded.thumb,
+       source_count = excluded.source_count, popularity = excluded.popularity,
+       image = excluded.image, thumb = excluded.thumb,
        sources = excluded.sources, synced_at = excluded.synced_at`,
   )
   const statements = stories.map((story) =>
     upsert.bind(
       story.id, story.slug, story.title, story.description, story.first_at, story.latest_at,
       story.summarized_at, story.event_count, story.article_count, story.source_count,
-      story.image, story.thumb, JSON.stringify(story.sources),
+      JSON.stringify(story.popularity ?? []), story.image, story.thumb, JSON.stringify(story.sources),
     ),
   )
   if (keep) {
