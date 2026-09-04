@@ -34,6 +34,7 @@ function friendly(error: unknown) {
   const normalized = message.toLowerCase()
   if (normalized.includes('invalid login credentials')) return 'Email ou palavra-passe incorretos.'
   if (normalized.includes('email not confirmed')) return 'Confirma o teu email antes de entrares.'
+  if (normalized.includes('expired') || normalized.includes('invalid link')) return 'Esta ligação é inválida ou expirou. Pede uma nova.'
   if (normalized.includes('password should be')) return 'A palavra-passe não cumpre os requisitos de segurança.'
   if (normalized.includes('rate limit')) return 'Foram feitas demasiadas tentativas. Volta a tentar dentro de alguns minutos.'
   return message || 'Não foi possível concluir a autenticação. Tenta novamente.'
