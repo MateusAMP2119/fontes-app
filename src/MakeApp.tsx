@@ -1,14 +1,12 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { mountQuery } from './query'
 import { supabase } from './supabase'
 import { navigate } from './navigate'
+import Feed from './Feed'
 import './MakeApp.css'
 
-type IconName =
-  | 'arrow-left'
-  | 'arrow-right'
-  | 'chevron'
+type IconName = 'chevron' | 'log-out' | 'user'
 
 function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   const common = {
@@ -22,29 +20,57 @@ function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   return (
     <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24">
       {name === 'chevron' && <path d="m8.5 10 3.5 3.5 3.5-3.5" {...common} />}
-      {name === 'arrow-left' && <path d="M18 12H6m6-6-6 6 6 6" {...common} />}
-      {name === 'arrow-right' && <path d="M6 12h12m-6-6 6 6-6 6" {...common} />}
+      {name === 'user' && <><circle cx="12" cy="8" r="3.25" {...common} /><path d="M5.5 19c.7-3.1 3-4.75 6.5-4.75S17.8 15.9 18.5 19" {...common} /></>}
+      {name === 'log-out' && <><path d="M10 5H6.75A1.75 1.75 0 0 0 5 6.75v10.5C5 18.22 5.78 19 6.75 19H10" {...common} /><path d="m15 8 4 4-4 4m4-4H9" {...common} /></>}
     </svg>
   )
 }
 
-const examples = [
-  {
-    image: '/make-examples/travel.png',
-    title: 'Travel App Prototype',
-    author: 'Brand Studio',
-  },
-  {
-    image: '/make-examples/climate.png',
-    title: 'Climate Dashboard',
-    author: 'Brand Studio',
-  },
-  {
-    image: '/make-examples/design-system.png',
-    title: 'Design System SaaS Landing Page',
-    author: 'Zayden Cho',
-  },
-]
+function AccountMenu({ session }: { session: Session }) {
+  const [open, setOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const close = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('pointerdown', close)
+    document.addEventListener('keydown', escape)
+    return () => {
+      document.removeEventListener('pointerdown', close)
+      document.removeEventListener('keydown', escape)
+    }
+  }, [open])
+
+  return (
+    <div className="make-account" ref={menuRef}>
+      <button
+        className="make-account-trigger"
+        type="button"
+        aria-label="Abrir menu da conta"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+      >
+        <Icon name="user" size={18} />
+      </button>
+      {open && (
+        <div className="make-account-menu" role="menu">
+          <div className="make-account-email" title={session.user.email}>Conta<br /><span>{session.user.email}</span></div>
+          <div className="make-account-separator" />
+          <button type="button" role="menuitem" onClick={() => supabase.auth.signOut()}>
+            <Icon name="log-out" size={16} />
+            Terminar sessão
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
 
 export default function MakeApp({ session }: { session: Session | null }) {
   const queryRef = useRef<HTMLDivElement>(null)
@@ -65,9 +91,7 @@ export default function MakeApp({ session }: { session: Session | null }) {
                 Untitled <Icon name="chevron" size={14} />
               </button>
               {session ? (
-                <button className="make-login" type="button" onClick={() => supabase.auth.signOut()}>
-                  Sair
-                </button>
+                <AccountMenu session={session} />
               ) : (
                 <a
                   className="make-login"
@@ -130,31 +154,7 @@ export default function MakeApp({ session }: { session: Session | null }) {
         </div>
         </section>
 
-        <section className="make-examples">
-        <div className="make-examples-heading-row">
-          <div className="make-example-actions">
-            <button className="make-see-more" type="button">See more</button>
-            <button className="make-round-button" type="button" aria-label="Previous examples">
-              <Icon name="arrow-left" size={20} />
-            </button>
-            <button className="make-round-button" type="button" aria-label="Next examples">
-              <Icon name="arrow-right" size={20} />
-            </button>
-          </div>
-        </div>
-
-        <div className="make-example-grid">
-          {examples.map((example) => (
-            <article className="make-example" key={example.title}>
-              <button className="make-example-image-button" type="button" aria-label={`Open ${example.title}`}>
-                <img src={example.image} alt="" />
-              </button>
-              <h3>{example.title}</h3>
-              <p>by {example.author}</p>
-            </article>
-          ))}
-        </div>
-        </section>
+        <Feed session={session} />
       </div>
 
     </main>

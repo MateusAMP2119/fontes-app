@@ -167,6 +167,78 @@ body {
   cursor: default;
 }
 
+.make-account {
+  position: relative;
+}
+
+.make-account-trigger {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid var(--make-soft-line);
+  border-radius: 50%;
+  background: var(--make-bg);
+  color: var(--make-text);
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.make-account-trigger:hover,
+.make-account-menu button:hover {
+  background: var(--make-hover);
+}
+
+.make-account-menu {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 224px;
+  padding: 4px;
+  border: 1px solid var(--make-soft-line);
+  border-radius: 8px;
+  background: var(--make-bg);
+  box-shadow: 0 10px 24px rgb(0 0 0 / 0.1), 0 2px 6px rgb(0 0 0 / 0.06);
+}
+
+.make-account-email {
+  padding: 8px;
+  color: var(--make-text);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.make-account-email span {
+  display: block;
+  overflow: hidden;
+  color: var(--make-muted);
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.make-account-separator {
+  height: 1px;
+  margin: 4px -4px;
+  background: var(--make-soft-line);
+}
+
+.make-account-menu button {
+  display: flex;
+  width: 100%;
+  height: 32px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  border-radius: 5px;
+  color: var(--make-text);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
 
 /* ============================================================
    Background: the Make blob and grid, inked in the site's kicker pair.
@@ -256,8 +328,7 @@ body {
    Hero
    ============================================================ */
 
-.make-hero,
-.make-examples {
+.make-hero {
   position: relative;
   z-index: 1;
 }
@@ -320,112 +391,13 @@ body {
 .make-query.is-dirty .m-run span { display: block; }
 .make-query.is-dirty .m-run svg { display: none; }
 
-/* ============================================================
-   Examples: on the header's rail, so the grid's edges are the mark's
-   and the file chip's.
-   ============================================================ */
-
-.make-examples {
-  width: min(1112px, 100%);
-  margin: 56px auto 0;
-  padding: 0 30px 80px;
-}
-
-.make-examples-heading-row,
-.make-example-actions {
-  display: flex;
-  align-items: center;
-}
-
-.make-examples-heading-row {
-  justify-content: flex-end;
-}
-
-.make-example-actions {
-  gap: 8px;
-}
-
-.make-see-more {
-  margin-right: 8px;
-  color: var(--make-accent);
-  font-size: 14px;
-  font-weight: 450;
-  cursor: pointer;
-}
-
-.make-round-button {
-  display: grid;
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
-  place-items: center;
-  border: 1px solid var(--make-soft-line);
-  border-radius: 50%;
-  color: var(--make-icon);
-  cursor: pointer;
-  transition: background-color 120ms ease, border-color 120ms ease;
-}
-
-.make-round-button:hover {
-  background: var(--make-hover);
-  border-color: var(--make-surface-line);
-}
-
-.make-round-button:focus-visible,
 .make-file-name:focus-visible,
 .make-login:focus-visible,
-.make-brand:focus-visible,
-.make-see-more:focus-visible,
-.make-example-image-button:focus-visible {
+.make-account-trigger:focus-visible,
+.make-account-menu button:focus-visible,
+.make-brand:focus-visible {
   outline: 2px solid var(--make-accent);
   outline-offset: 2px;
-}
-
-.make-example-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 24px;
-  margin-top: 16px;
-}
-
-.make-example-image-button {
-  display: block;
-  width: 100%;
-  overflow: hidden;
-  border: 1px solid var(--make-card-line);
-  border-radius: 14px;
-  background: var(--make-card);
-  cursor: pointer;
-}
-
-/* the PNGs carry a baked dark edge with ~11px corners; the clip's larger
-   radius and a 1.5% overscan keep it outside the card */
-.make-example-image-button img {
-  display: block;
-  width: 100%;
-  aspect-ratio: 604 / 341;
-  object-fit: cover;
-  transform: scale(1.015);
-}
-
-.make-example h3 {
-  margin-top: 14px;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 20px;
-}
-
-.make-example p {
-  margin-top: 2px;
-  color: var(--make-muted);
-  font-size: 13px;
-  line-height: 18px;
-}
-
-@media (max-width: 1100px) {
-  .make-example-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 700px) {
@@ -465,29 +437,10 @@ body {
     margin-top: 24px;
   }
 
-  .make-examples {
-    margin-top: 40px;
-    padding: 0 16px 56px;
-  }
-
-  /* a stacked list has no pages to flip */
-  .make-example-actions .make-round-button {
-    display: none;
-  }
-
-  .make-see-more {
-    margin-right: 0;
-  }
-
-  .make-example-grid {
-    grid-template-columns: 1fr;
-    gap: 24px;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .make-shell,
-  .make-round-button,
   .m-tabs-ind,
   .m-run {
     transition: none;
