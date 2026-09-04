@@ -69,6 +69,13 @@ button {
   cursor: default;
 }
 
+/* iOS Safari paints a grey flash over tapped buttons and links; it reads as a glitch on the tab switch */
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
