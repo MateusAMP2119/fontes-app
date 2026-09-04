@@ -258,29 +258,33 @@ export default function MakeApp({ session }: { session: AuthSession | null }) {
             </button>
           </div>
         </div>
-          {showList && (
-            <ul className="m-suggest" id="m-suggest" role="listbox" aria-label="Sugestões">
-              {hits.map((hit, i) => (
-                <li
-                  key={hit.id}
-                  id={`m-suggest-${hit.id}`}
-                  role="option"
-                  aria-selected={i === active}
-                  onPointerEnter={() => setActive(i)}
-                  onClick={() => run(hit.title)}
-                >
-                  {hit.title}
-                </li>
-              ))}
-            </ul>
-          )}
-          {/* the stored search; keyed so a new one pops in again */}
-          {search && (
-            <div className="m-toast" key={search} role="status">
-              <span>{search}</span>
-              <button type="button" aria-label="Limpar pesquisa" onClick={() => run('')}>
-                <Icon name="close" size={14} />
-              </button>
+          {/* one sheet under the card: suggestions on top, the stored search under a rule */}
+          {(showList || search) && (
+            <div className="m-sheet">
+              {showList && (
+                <ul className="m-suggest" id="m-suggest" role="listbox" aria-label="Sugestões">
+                  {hits.map((hit, i) => (
+                    <li
+                      key={hit.id}
+                      id={`m-suggest-${hit.id}`}
+                      role="option"
+                      aria-selected={i === active}
+                      onPointerEnter={() => setActive(i)}
+                      onClick={() => run(hit.title)}
+                    >
+                      {hit.title}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {search && (
+                <div className="m-stored" role="status">
+                  <span>{search}</span>
+                  <button type="button" aria-label="Limpar pesquisa" onClick={() => run('')}>
+                    <Icon name="close" size={14} />
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
