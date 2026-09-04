@@ -10,7 +10,7 @@ const API = import.meta.env.VITE_API_URL as string
 /** The bit of GET /stories a suggestion row needs. */
 type Hit = { id: number; title: string }
 
-type IconName = 'chevron' | 'log-out' | 'user'
+type IconName = 'chevron' | 'close' | 'log-out' | 'user'
 
 function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   const common = {
@@ -24,6 +24,7 @@ function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   return (
     <svg aria-hidden="true" width={size} height={size} viewBox="0 0 24 24">
       {name === 'chevron' && <path d="m8.5 10 3.5 3.5 3.5-3.5" {...common} />}
+      {name === 'close' && <path d="m7 7 10 10M17 7 7 17" {...common} />}
       {name === 'user' && <><circle cx="12" cy="8" r="3.25" {...common} /><path d="M5.5 19c.7-3.1 3-4.75 6.5-4.75S17.8 15.9 18.5 19" {...common} /></>}
       {name === 'log-out' && <><path d="M10 5H6.75A1.75 1.75 0 0 0 5 6.75v10.5C5 18.22 5.78 19 6.75 19H10" {...common} /><path d="m15 8 4 4-4 4m4-4H9" {...common} /></>}
     </svg>
@@ -272,6 +273,15 @@ export default function MakeApp({ session }: { session: AuthSession | null }) {
                 </li>
               ))}
             </ul>
+          )}
+          {/* the stored search; keyed so a new one pops in again */}
+          {search && (
+            <div className="m-toast" key={search} role="status">
+              <span>{search}</span>
+              <button type="button" aria-label="Limpar pesquisa" onClick={() => run('')}>
+                <Icon name="close" size={14} />
+              </button>
+            </div>
           )}
         </div>
         </section>
