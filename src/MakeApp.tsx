@@ -102,7 +102,9 @@ export default function MakeApp({ session }: { session: Session | null }) {
     // ponytail: fixed 120ms debounce; the API takes prefixes, so no min length.
     const timer = window.setTimeout(async () => {
       try {
-        const response = await fetch(`${API}/stories?q=${encodeURIComponent(q)}&limit=6`, {
+        // the API matches whole words, so "vice-presidente" must go up as two
+        const words = q.replace(/[^\p{L}\p{N}]+/gu, ' ')
+        const response = await fetch(`${API}/stories?q=${encodeURIComponent(words)}&limit=6`, {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
           signal: controller.signal,
         })

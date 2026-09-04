@@ -328,9 +328,10 @@ body {
    Hero
    ============================================================ */
 
+/* above the feed (z-index 1) so the query card's suggestions drop over it */
 .make-hero {
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 .make-hero {

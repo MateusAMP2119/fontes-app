@@ -113,7 +113,8 @@ export default function Feed({ session, query = '' }: { session: Session | null;
 
   const fetchPage = useCallback(
     async (offset: number): Promise<Story[]> => {
-      const q = query ? `&q=${encodeURIComponent(query)}` : ''
+      // the API matches whole words, so "vice-presidente" must go up as two
+      const q = query ? `&q=${encodeURIComponent(query.replace(/[^\p{L}\p{N}]+/gu, ' '))}` : ''
       const response = await fetch(`${API}/stories?limit=${PAGE}&offset=${offset}${q}`, {
         headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       })
