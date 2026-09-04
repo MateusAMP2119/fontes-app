@@ -1,7 +1,8 @@
 // The landing feed's read: summarized stories from the `stories` table
-// (fontes-spa/migrations/0005_stories.sql), newest first, served from the
-// edge so a page costs one D1 read. Each first-page read then asks the
-// engine to refresh the table behind the response.
+// (fontes-spa/migrations/0005_stories.sql), the most relevant of the past
+// five days first, served from the edge so a page costs one D1 read. Each
+// first-page read then asks the engine to refresh the table behind the
+// response.
 
 interface StoryRow {
   id: number
@@ -32,6 +33,9 @@ const ENGINE_SYNC = 'https://api.fonteslabs.com/sync'
 const refreshBehind = (env: Env) =>
   fetch(ENGINE_SYNC, { method: 'POST', headers: { Authorization: `Bearer ${env.SYNC_KEY}` } }).catch(() => undefined)
 
+// Relevance is breadth of coverage first, volume second: each outlet counts
+// double an article. ponytail: two columns and a window; a scored column in
+// the mirror if this needs recency decay or de-duplicated outlets.
 export const onRequestGet: PagesFunction<Env> = async ({ env, request, waitUntil }) => {
   const url = new URL(request.url)
   const limit = boundedInteger(url.searchParams.get('limit'), 20, 1, 100)
@@ -40,7 +44,8 @@ export const onRequestGet: PagesFunction<Env> = async ({ env, request, waitUntil
     `SELECT id, slug, title, description, first_at, latest_at, summarized_at,
             event_count, article_count, source_count, image, thumb, sources
      FROM stories
-     ORDER BY latest_at DESC, id
+     WHERE latest_at >= strftime('%Y-%m-%dT%H:%M:%S', 'now', '-5 days')
+     ORDER BY source_count * 2 + article_count DESC, latest_at DESC, id
      LIMIT ? OFFSET ?`,
   )
     .bind(limit, offset)
