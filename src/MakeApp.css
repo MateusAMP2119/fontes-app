@@ -350,6 +350,13 @@ body {
   text-wrap: balance;
 }
 
+/* the query card and, while typing, the suggestion sheet tucked under it */
+.make-search {
+  position: relative;
+  width: min(552px, 100%);
+  margin-top: 28px;
+}
+
 /* the query card from fonteslabs.com's hero, in its own measures */
 .make-query {
   --q-soft: color-mix(in srgb, var(--make-text) 56%, transparent);
@@ -357,9 +364,9 @@ body {
   --q-line: color-mix(in srgb, var(--make-text) 5%, transparent);
   --q-ring: color-mix(in srgb, var(--make-text) 7%, transparent);
   position: relative;
-  width: min(552px, 100%);
+  z-index: 1;
+  width: 100%;
   height: 113px;
-  margin-top: 28px;
   border-radius: 20px;
   background: var(--make-surface);
   box-shadow: 0 0 56px rgb(0 0 0 / 0.08), 0 0 20px rgb(0 0 0 / 0.05), 0 0 0 1px var(--q-ring);
@@ -391,10 +398,10 @@ body {
 .make-query.is-dirty .m-run { width: 94px; }
 .make-query.is-dirty .m-run span { display: block; }
 .make-query.is-dirty .m-run svg { display: none; }
-/* live suggestions: story titles under the card, in the card's own dress */
-.m-suggest { position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 3; margin: 0; padding: 6px; list-style: none; border-radius: 16px; background: var(--make-surface); box-shadow: 0 0 56px rgb(0 0 0 / 0.08), 0 0 20px rgb(0 0 0 / 0.05), 0 0 0 1px var(--q-ring); }
+/* live suggestions: a slightly darker sheet in the flow, its top 20px behind the card, so the feed moves down for it */
+.m-suggest { position: relative; z-index: 0; margin: -20px 8px 0; padding: 26px 6px 6px; list-style: none; border-radius: 0 0 18px 18px; background: color-mix(in srgb, var(--make-text) 4%, var(--make-surface)); box-shadow: 0 10px 28px rgb(0 0 0 / 0.06), 0 0 0 1px var(--q-ring); }
 .m-suggest li { padding: 8px 12px; border-radius: 10px; font-size: 14px; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
-.m-suggest li[aria-selected="true"] { background: var(--make-hover); }
+.m-suggest li[aria-selected="true"] { background: color-mix(in srgb, var(--make-text) 7%, transparent); }
 
 .make-file-name:focus-visible,
 .make-login:focus-visible,
@@ -438,8 +445,14 @@ body {
     padding: 40px 16px 0;
   }
 
-  .make-query {
+  .make-search {
     margin-top: 24px;
+    scroll-margin-top: 12px;
+  }
+
+  /* 44pt rows for thumbs */
+  .m-suggest li {
+    padding: 12px;
   }
 
 }

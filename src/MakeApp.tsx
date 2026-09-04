@@ -79,6 +79,8 @@ function AccountMenu({ session }: { session: Session }) {
 
 export default function MakeApp({ session }: { session: Session | null }) {
   const queryRef = useRef<HTMLDivElement>(null)
+  /** Card plus the suggestion sheet under it; outside-click and scroll target. */
+  const searchRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   useEffect(() => (queryRef.current ? mountQuery(queryRef.current) : undefined), [])
 
@@ -124,7 +126,7 @@ export default function MakeApp({ session }: { session: Session | null }) {
   useEffect(() => {
     if (!open) return
     const close = (event: PointerEvent) => {
-      if (!queryRef.current?.contains(event.target as Node)) setOpen(false)
+      if (!searchRef.current?.contains(event.target as Node)) setOpen(false)
     }
     document.addEventListener('pointerdown', close)
     return () => document.removeEventListener('pointerdown', close)
@@ -142,6 +144,8 @@ export default function MakeApp({ session }: { session: Session | null }) {
     setTyped(value)
     setSearch(value.trim())
     setOpen(false)
+    // drops the phone keyboard so the results are not under it
+    input?.blur()
   }
 
   const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -203,6 +207,7 @@ export default function MakeApp({ session }: { session: Session | null }) {
         <section className="make-hero" aria-labelledby="make-heading">
         <h1 id="make-heading">What do you want to make?</h1>
 
+        <div className="make-search" ref={searchRef}>
         <div className="make-query" ref={queryRef}>
           <label className="m-query-line">
             <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -215,6 +220,10 @@ export default function MakeApp({ session }: { session: Session | null }) {
               aria-label="Pesquisa ou pedido"
               placeholder="Notícias de energia em Espanha"
               autoComplete="off"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              enterKeyHint="search"
               role="combobox"
               aria-autocomplete="list"
               aria-expanded={showList}
@@ -225,7 +234,11 @@ export default function MakeApp({ session }: { session: Session | null }) {
                 setActive(-1)
                 setOpen(true)
               }}
-              onFocus={() => setOpen(true)}
+              onFocus={() => {
+                setOpen(true)
+                // a phone keyboard takes the lower half: put the card at the top so the list fits above it
+                if (matchMedia('(pointer: coarse)').matches) searchRef.current?.scrollIntoView({ block: 'start' })
+              }}
               onKeyDown={onKeyDown}
             />
           </label>
@@ -248,6 +261,7 @@ export default function MakeApp({ session }: { session: Session | null }) {
               </svg>
             </button>
           </div>
+        </div>
           {showList && (
             <ul className="m-suggest" id="m-suggest" role="listbox" aria-label="Sugestões">
               {hits.map((hit, i) => (
