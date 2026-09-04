@@ -51,12 +51,12 @@ function warm(page: Story[]) {
 
 function Row({ story, index }: { story: Story; index: number }) {
   return (
-    <article className="feed-story">
-      <time className="feed-date" dateTime={story.latest_at}>{shortDay(story.latest_at)}</time>
+    <article className="m-story">
+      <time className="m-story-date" dateTime={story.latest_at}>{shortDay(story.latest_at)}</time>
       <h3>{story.title}</h3>
       {story.image ? (
         <img
-          className="feed-thumb"
+          className="m-front-media"
           src={story.image}
           alt=""
           width={96}
@@ -67,9 +67,9 @@ function Row({ story, index }: { story: Story; index: number }) {
           onError={(event) => event.currentTarget.removeAttribute('src')}
         />
       ) : (
-        <span className="feed-thumb" aria-hidden="true" />
+        <span className="m-front-media" aria-hidden="true" />
       )}
-      <ul className="feed-sources" aria-label={`${story.source_count} fontes`}>
+      <ul className="m-sources" aria-label={`${story.source_count} fontes`}>
         {(story.sources ?? [])
           .filter((source) => source.host)
           .slice(0, MAX_LOGOS)
@@ -85,14 +85,14 @@ function Row({ story, index }: { story: Story; index: number }) {
 
 function Skeleton() {
   return (
-    <div className="feed-story feed-story--skeleton" aria-hidden="true">
-      <span className="feed-date feed-bar" />
+    <div className="m-story m-story--skeleton" aria-hidden="true">
+      <span className="m-story-date m-card-skeleton" />
       <h3>
-        <span className="feed-bar" />
-        <span className="feed-bar" />
+        <span className="m-card-skeleton" />
+        <span className="m-card-skeleton" />
       </h3>
-      <span className="feed-thumb feed-bar" />
-      <span className="feed-sources feed-bar" />
+      <span className="m-front-media m-card-skeleton" />
+      <span className="m-sources m-card-skeleton" />
     </div>
   )
 }
@@ -193,8 +193,8 @@ export default function Feed({ session, query = '' }: { session: Session | null;
         {!stories.length && status === 'loading' &&
           Array.from({ length: SKELETON_ROWS }, (_, index) => <Skeleton key={index} />)}
       </div>
-      <div className="feed-status" ref={sentinelRef}>
-        {status === 'loading' && stories.length > 0 && <span className="feed-spinner">A carregar…</span>}
+      <div className="m-feed-sentinel" ref={sentinelRef}>
+        {status === 'loading' && stories.length > 0 && <span>A carregar…</span>}
         {status === 'end' && stories.length === 0 && <span>Nenhuma história encontrada.</span>}
         {status === 'error' && (
           <>

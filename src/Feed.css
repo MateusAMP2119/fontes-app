@@ -1,8 +1,10 @@
 /* ============================================================
-   Feed: summarized stories from the Fontes API as fonteslabs.com's
-   news-list rows: the date over the title, the 96px square clipping
-   beside it, the publishers' marks along the foot. 24px of air between
-   rows, no rule.
+   Feed: summarized stories as fonteslabs.com's phone news list, its rules
+   copied from fontes-spa/src/styles/global.css (the MOBILE block's
+   .m-story rows, the .m-card-skeleton shimmer, the .m-feed-sentinel):
+   the date over the title, the 96px square clipping beside it, the
+   publishers' marks along the foot, 24px of air between rows, no rule.
+   The list keeps two columns on a desk and one on a phone.
    ============================================================ */
 
 .make-feed {
@@ -16,6 +18,7 @@
 }
 
 .make-feed h2 {
+  padding: 0 20px;
   font-size: 14px;
   font-weight: 500;
   line-height: 20px;
@@ -25,11 +28,12 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   column-gap: 40px;
-  row-gap: 24px;
-  margin-top: 16px;
+  margin-top: 12px;
 }
 
-.feed-story {
+/* fontes-spa .m-story, phone cut */
+.m-story {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 96px;
   grid-template-areas:
@@ -39,52 +43,66 @@
   grid-template-rows: auto auto 1fr;
   column-gap: 16px;
   align-items: start;
+  min-height: 0;
+  padding: 12px 20px;
   content-visibility: auto;
-  contain-intrinsic-size: auto 140px;
+  contain-intrinsic-size: auto 164px;
 }
 
-.feed-date {
-  grid-area: date;
-  margin-bottom: 6px;
-  color: #9ca0a4;
-  font-size: 12px;
-  line-height: 16px;
-}
-
-.feed-story h3 {
+.m-story h3 {
   grid-area: title;
+  margin: 0;
+  max-width: none;
   font-size: 18px;
   font-weight: 500;
   line-height: 24px;
   letter-spacing: -0.2px;
+  color: #232529;
+  text-wrap: balance;
 }
 
-.feed-thumb {
+.m-story-date {
+  display: block;
+  grid-area: date;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+  letter-spacing: 0;
+  color: #9ca0a4;
+}
+
+.m-front-media {
   grid-area: thumb;
   display: block;
   width: 96px;
   height: 96px;
+  margin: 0;
   object-fit: cover;
   border: 1px solid #e6e8ec;
   background: #f4f4f4;
   user-select: none;
 }
 
-.feed-sources {
+/* the strip: fontes-spa renders one image, this list draws the marks */
+.m-story .m-sources {
   grid-area: foot;
+  justify-self: start;
   align-self: end;
   display: flex;
   height: 20px;
+  max-width: 200px;
   margin: 0;
   padding: 12px 0 0;
+  box-sizing: content-box;
   list-style: none;
 }
 
-.feed-sources li + li {
+.m-sources li + li {
   margin-left: -4px;
 }
 
-.feed-sources img {
+.m-sources img {
   display: block;
   width: 20px;
   height: 20px;
@@ -94,43 +112,42 @@
   box-shadow: 0 0 0 1px #e6e8ec;
 }
 
-/* first paint: fonteslabs.com's shimmer bars in the row's own grid */
-.feed-story--skeleton h3 {
+/* fontes-spa .m-card-skeleton */
+.m-card-skeleton {
+  display: block;
+  border: 0;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #eceef1 25%, #f6f7f8 37%, #eceef1 63%);
+  background-size: 400% 100%;
+  animation: m-skeleton 1.4s ease infinite;
+}
+
+.m-story--skeleton h3 {
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 
-.feed-story--skeleton h3 .feed-bar:first-child {
-  height: 18px;
+.m-story--skeleton h3 .m-card-skeleton {
+  height: 14px;
 }
 
-.feed-story--skeleton h3 .feed-bar:last-child {
+.m-story--skeleton h3 .m-card-skeleton:last-child {
   width: 70%;
-  height: 18px;
 }
 
-.feed-story--skeleton .feed-date {
+.m-story--skeleton .m-story-date {
   width: 48px;
   height: 12px;
 }
 
-.feed-story--skeleton .feed-sources {
+.m-story--skeleton .m-sources {
   width: 84px;
   height: 20px;
   padding: 0;
   margin-top: 12px;
 }
 
-.feed-bar {
-  display: block;
-  border-radius: 6px;
-  border: 0;
-  background: linear-gradient(90deg, #eceef1 25%, #f6f7f8 37%, #eceef1 63%);
-  background-size: 400% 100%;
-  animation: feed-skeleton 1.4s ease infinite;
-}
-
-@keyframes feed-skeleton {
+@keyframes m-skeleton {
   0% {
     background-position: 100% 50%;
   }
@@ -139,7 +156,8 @@
   }
 }
 
-.feed-status {
+/* fontes-spa .m-feed-sentinel */
+.m-feed-sentinel {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -150,12 +168,12 @@
   line-height: 20px;
 }
 
-.feed-spinner {
+.m-feed-sentinel span {
   position: relative;
   padding-left: 18px;
 }
 
-.feed-spinner::before {
+.m-feed-sentinel span::before {
   content: "";
   position: absolute;
   top: 5px;
@@ -163,24 +181,24 @@
   width: 8px;
   height: 8px;
   border: 1.5px solid #b8c1cf;
-  border-top-color: var(--make-accent);
+  border-top-color: #2463eb;
   border-radius: 50%;
-  animation: feed-spin 0.8s linear infinite;
+  animation: m-feed-spin 0.8s linear infinite;
 }
 
-@keyframes feed-spin {
+@keyframes m-feed-spin {
   to {
     transform: rotate(360deg);
   }
 }
 
-.feed-status button {
+.m-feed-sentinel button {
   color: var(--make-accent);
   font-weight: 450;
   cursor: pointer;
 }
 
-.feed-status button:focus-visible {
+.m-feed-sentinel button:focus-visible {
   outline: 2px solid var(--make-accent);
   outline-offset: 2px;
 }
@@ -191,6 +209,7 @@
   }
 }
 
+/* the phone: fontes-spa's rail is 16px in from the edge, the row 20px more */
 @media (max-width: 700px) {
   .make-feed {
     margin-top: 40px;
@@ -199,8 +218,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .feed-bar,
-  .feed-spinner::before {
+  .m-card-skeleton,
+  .m-feed-sentinel span::before {
     animation: none;
   }
 }
