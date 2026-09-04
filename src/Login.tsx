@@ -1,6 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { isAuthApiError, type AuthError } from '@supabase/supabase-js'
-import { authCallbackError, authCallbackType, supabase } from './supabase'
+import { authClient } from './auth'
 import { navigate } from './navigate'
 import './Login.css'
 
@@ -30,22 +29,20 @@ const copy: Record<Mode, { title: string; description: string; submit: string }>
 }
 
 function friendly(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error ?? '')
+  const candidate = error as { message?: string; code?: string; status?: number } | null
+  const message = candidate?.message ?? (error instanceof Error ? error.message : String(error ?? ''))
   const normalized = message.toLowerCase()
-  const code = isAuthApiError(error) ? error.code : undefined
-  if (code === 'unexpected_failure' && normalized.includes('sending')) {
+  const code = candidate?.code
+  if (normalized.includes('sending') || normalized.includes('email service')) {
     return 'O serviço de email está temporariamente indisponível. Tenta novamente dentro de alguns minutos.'
   }
-  if (code === 'over_email_send_rate_limit') {
+  if (candidate?.status === 429 || code === 'TOO_MANY_REQUESTS') {
     return 'Já foi enviado um email há pouco. Aguarda alguns minutos antes de pedires outro.'
   }
-  if (code === 'over_request_rate_limit') {
-    return 'Foram feitos demasiados pedidos a partir deste dispositivo. Aguarda alguns minutos e tenta novamente.'
-  }
-  if (normalized.includes('invalid login credentials')) return 'Email ou palavra-passe incorretos.'
-  if (normalized.includes('email not confirmed')) return 'Confirma o teu email antes de entrares.'
-  if (normalized.includes('expired') || normalized.includes('invalid link')) return 'Esta ligação é inválida ou expirou. Pede uma nova.'
-  if (normalized.includes('password should be')) return 'A palavra-passe não cumpre os requisitos de segurança.'
+  if (code === 'INVALID_EMAIL_OR_PASSWORD' || normalized.includes('invalid email or password')) return 'Email ou palavra-passe incorretos.'
+  if (code === 'EMAIL_NOT_VERIFIED' || normalized.includes('email not verified')) return 'Confirma o teu email antes de entrares.'
+  if (code === 'INVALID_TOKEN' || normalized.includes('expired') || normalized.includes('invalid token')) return 'Esta ligação é inválida ou expirou. Pede uma nova.'
+  if (code === 'PASSWORD_TOO_SHORT' || normalized.includes('password is too short')) return 'A palavra-passe deve ter pelo menos 8 caracteres.'
   if (normalized.includes('rate limit')) return 'Foram feitas demasiadas tentativas. Volta a tentar dentro de alguns minutos.'
   if (normalized.includes('load failed') || normalized.includes('failed to fetch') || normalized.includes('network')) {
     return 'Não foi possível ligar ao serviço. Verifica a ligação e tenta novamente.'
@@ -137,8 +134,10 @@ function passwordStrength(password: string) {
 }
 
 export default function Login() {
-  const recoveryCallback = authCallbackType === 'recovery'
-  const callbackError = authCallbackError
+  const params = new URLSearchParams(location.search)
+  const resetToken = params.get('token')
+  const callbackError = params.get('error')
+  const recoveryCallback = params.get('mode') === 'reset' && Boolean(resetToken)
   const [mode, setMode] = useState<Mode>(recoveryCallback ? 'reset' : 'login')
   const [busy, setBusy] = useState(false)
   const [password, setPassword] = useState('')
@@ -150,14 +149,10 @@ export default function Login() {
   )
 
   useEffect(() => {
-    if (callbackError) history.replaceState(null, '', `${location.pathname}${location.search}`)
-    const { data } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') setMode('reset')
-      else if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN') && session && !recoveryCallback && !callbackError) {
-        navigate('/')
-      }
+    if (callbackError) history.replaceState(null, '', location.pathname)
+    void authClient.getSession().then(({ data }) => {
+      if (data && !recoveryCallback && !callbackError) navigate('/')
     })
-    return () => data.subscription.unsubscribe()
   }, [callbackError, recoveryCallback])
 
   useEffect(() => {
@@ -179,8 +174,8 @@ export default function Login() {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     const email = String(form.get('email') ?? '').trim().toLowerCase()
-    const redirectTo = `${location.origin}/login`
-    let error: AuthError | null = null
+    const redirectTo = `${location.origin}/login?mode=reset`
+    let error: unknown = null
     let message = ''
     if ((mode === 'signup' || mode === 'reset') && password !== confirmation) {
       setNotice({ text: 'As palavras-passe não coincidem.', error: true })
@@ -190,28 +185,41 @@ export default function Login() {
     setNotice(null)
     try {
       switch (mode) {
-      // On success the SIGNED_IN listener above has already navigated away, so only errors are handled here.
-      case 'login':
-        ;({ error } = await supabase.auth.signInWithPassword({ email, password }))
-        if (!error) return
-        break
-      case 'signup': {
-        const result = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: redirectTo } })
+      case 'login': {
+        const result = await authClient.signIn.email({ email, password, callbackURL: '/' })
         error = result.error
-        if (result.data.session) return
+        if (!error) return navigate('/')
+        break
+      }
+      case 'signup': {
+        const result = await authClient.signUp.email({
+          email,
+          password,
+          name: email.split('@')[0],
+          callbackURL: '/',
+        })
+        error = result.error
         message = 'Verifica o teu email para confirmares a conta.'
         if (!error) setSubmitted(true)
         break
       }
-      case 'forgot':
-        ;({ error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo }))
+      case 'forgot': {
+        const result = await authClient.requestPasswordReset({ email, redirectTo })
+        error = result.error
         message = 'Verifica o teu email: enviámos uma ligação de recuperação.'
         if (!error) setCooldown(60)
         break
-      case 'reset':
-        ;({ error } = await supabase.auth.updateUser({ password }))
-        if (!error) return navigate('/')
+      }
+      case 'reset': {
+        const result = await authClient.resetPassword({ newPassword: password, token: resetToken ?? undefined })
+        error = result.error
+        if (!error) {
+          go('login')
+          setNotice({ text: 'Palavra-passe atualizada. Já podes entrar.' })
+          return
+        }
         break
+      }
       }
     } catch (error) {
       setBusy(false)
@@ -226,9 +234,9 @@ export default function Login() {
     setBusy(true)
     setNotice(null)
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { error } = await authClient.signIn.social({
         provider: 'google',
-        options: { redirectTo: `${location.origin}/` },
+        callbackURL: '/',
       })
       if (error) throw error
     } catch (error) {
@@ -347,6 +355,14 @@ export default function Login() {
             </button>
           </div>
         </form>
+        {mode !== 'reset' && (
+          <p className="login-switch">
+            {mode === 'login' ? 'Não tens conta? ' : 'Já tens conta? '}
+            <button className="login-link" type="button" onClick={() => go(mode === 'login' ? 'signup' : 'login')}>
+              {mode === 'login' ? 'Criar conta' : 'Entrar'}
+            </button>
+          </p>
+        )}
         {(mode === 'login' || mode === 'signup') && (
           <div className="login-oauth">
             <div className="login-divider"><span>ou</span></div>
@@ -355,14 +371,6 @@ export default function Login() {
               Continuar com Google
             </button>
           </div>
-        )}
-        {mode !== 'reset' && (
-          <p className="login-switch">
-            {mode === 'login' ? 'Não tens conta? ' : 'Já tens conta? '}
-            <button className="login-link" type="button" onClick={() => go(mode === 'login' ? 'signup' : 'login')}>
-              {mode === 'login' ? 'Criar conta' : 'Entrar'}
-            </button>
-          </p>
         )}
       </section>
     </main>

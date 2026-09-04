@@ -25,7 +25,9 @@ interface SyncPayload {
 
 const BATCH = 40
 
-export const onRequestPost: PagesFunction<Env> = async ({ env, request }) => {
+type SyncEnv = Env & { SYNC_KEY: string }
+
+export const onRequestPost: PagesFunction<SyncEnv> = async ({ env, request }) => {
   if (!env.SYNC_KEY || request.headers.get('Authorization') !== `Bearer ${env.SYNC_KEY}`) {
     return new Response(null, { status: 401 })
   }

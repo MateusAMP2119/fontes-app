@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Session } from '@supabase/supabase-js'
+import type { AuthSession } from './auth'
 import './Feed.css'
 
 /** One row of GET /api/stories (functions/api/stories.ts), the engine's stories mirrored to the edge. */
@@ -100,7 +100,7 @@ function Skeleton() {
 }
 
 // ponytail: rows go nowhere yet; give them a story page when one exists.
-export default function Feed({ session, query = '' }: { session: Session | null; query?: string }) {
+export default function Feed({ session: _session, query = '' }: { session: AuthSession | null; query?: string }) {
   const [stories, setStories] = useState<Story[]>([])
   const [status, setStatus] = useState<'loading' | 'more' | 'end' | 'error'>('loading')
   const sentinelRef = useRef<HTMLDivElement>(null)
@@ -111,7 +111,7 @@ export default function Feed({ session, query = '' }: { session: Session | null;
   const nextPage = useRef<Promise<Story[]> | null>(null)
   const nextOffset = useRef(0)
   // Signed-in callers get the API's higher rate allowance.
-  const token = session?.access_token
+  const token = undefined
 
   const fetchPage = useCallback(
     async (offset: number): Promise<Story[]> => {

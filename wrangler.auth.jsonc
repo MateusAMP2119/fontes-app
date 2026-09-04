@@ -1,0 +1,32 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "fontes-auth",
+  "main": "worker/auth.ts",
+  "compatibility_date": "2026-09-04",
+  "compatibility_flags": ["nodejs_compat"],
+  "routes": [
+    {
+      "pattern": "builder.fonteslabs.com/api/auth/*",
+      "zone_name": "fonteslabs.com"
+    }
+  ],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+    "redact_query_string": true
+  },
+  "d1_databases": [
+    {
+      "binding": "AUTH_DB",
+      "database_name": "fontes-auth",
+      "database_id": "2ebddf0d-bb3f-4fee-8448-64306706035a",
+      "migrations_dir": "migrations-auth"
+    }
+  ],
+  "send_email": [
+    {
+      "name": "AUTH_EMAIL",
+      "allowed_sender_addresses": ["conta@fonteslabs.com"]
+    }
+  ]
+}

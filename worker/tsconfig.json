@@ -5,7 +5,9 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "strict": true,
-    "noEmit": true
+    "noEmit": true,
+    "types": ["node"],
+    "skipLibCheck": true
   },
-  "include": ["./**/*.ts", "../worker-configuration.d.ts"]
+  "include": ["./**/*.ts", "../worker-configuration-auth.d.ts"]
 }

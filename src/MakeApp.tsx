@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Session } from '@supabase/supabase-js'
 import { mountQuery } from './query'
-import { supabase } from './supabase'
+import { authClient, type AuthSession } from './auth'
 import { navigate } from './navigate'
 import Feed from './Feed'
 import './MakeApp.css'
@@ -31,7 +30,7 @@ function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   )
 }
 
-function AccountMenu({ session }: { session: Session }) {
+function AccountMenu({ session }: { session: AuthSession }) {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -67,7 +66,7 @@ function AccountMenu({ session }: { session: Session }) {
         <div className="make-account-menu" role="menu">
           <div className="make-account-email" title={session.user.email}>Conta<br /><span>{session.user.email}</span></div>
           <div className="make-account-separator" />
-          <button type="button" role="menuitem" onClick={() => supabase.auth.signOut()}>
+          <button type="button" role="menuitem" onClick={() => authClient.signOut()}>
             <Icon name="log-out" size={16} />
             Terminar sessão
           </button>
@@ -77,7 +76,7 @@ function AccountMenu({ session }: { session: Session }) {
   )
 }
 
-export default function MakeApp({ session }: { session: Session | null }) {
+export default function MakeApp({ session }: { session: AuthSession | null }) {
   const queryRef = useRef<HTMLDivElement>(null)
   /** Card plus the suggestion sheet under it; outside-click and scroll target. */
   const searchRef = useRef<HTMLDivElement>(null)
@@ -92,7 +91,7 @@ export default function MakeApp({ session }: { session: Session | null }) {
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(-1)
   const [search, setSearch] = useState('')
-  const token = session?.access_token
+  const token = undefined
 
   useEffect(() => {
     const q = typed.trim()
