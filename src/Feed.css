@@ -1,7 +1,8 @@
 /* ============================================================
-   Feed: summarized stories from the Fontes API, in the example cards'
-   clothes on the header's rail: a 604×341 picture, a title, a byline.
-   The picture is a strip of the story's article previews.
+   Feed: summarized stories from the Fontes API as fonteslabs.com's
+   news-list rows: the date over the title, the 96px square clipping
+   beside it, the publishers' marks along the foot. 24px of air between
+   rows, no rule.
    ============================================================ */
 
 .make-feed {
@@ -20,117 +21,157 @@
   line-height: 20px;
 }
 
-.feed-grid {
+.feed-list {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 24px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 40px;
+  row-gap: 24px;
   margin-top: 16px;
 }
 
-.feed-carousel {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid var(--make-card-line);
-  border-radius: 14px;
-  background: linear-gradient(135deg, var(--make-hover), var(--make-card));
-  aspect-ratio: 604 / 341;
-}
-
-.feed-strip {
-  display: flex;
-  height: 100%;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
-}
-
-.feed-strip::-webkit-scrollbar {
-  display: none;
-}
-
-.feed-strip img {
-  display: block;
-  flex: 0 0 100%;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  scroll-snap-align: start;
-}
-
-.feed-strip img[hidden] {
-  display: none;
-}
-
-.feed-arrow {
-  position: absolute;
-  top: 50%;
+.feed-story {
   display: grid;
-  width: 32px;
-  height: 32px;
-  place-items: center;
-  border: 1px solid var(--make-soft-line);
-  border-radius: 50%;
-  background: var(--make-surface);
-  color: var(--make-icon);
-  opacity: 0;
-  transform: translateY(-50%);
-  transition: opacity 120ms ease, border-color 120ms ease;
-  cursor: pointer;
+  grid-template-columns: minmax(0, 1fr) 96px;
+  grid-template-areas:
+    "date date"
+    "title thumb"
+    "foot thumb";
+  grid-template-rows: auto auto 1fr;
+  column-gap: 16px;
+  align-items: start;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 140px;
 }
 
-.feed-arrow-prev {
-  left: 10px;
-}
-
-.feed-arrow-next {
-  right: 10px;
-}
-
-.feed-carousel:hover .feed-arrow,
-.feed-arrow:focus-visible {
-  opacity: 1;
-}
-
-.feed-arrow:hover {
-  border-color: var(--make-surface-line);
-}
-
-.feed-arrow:focus-visible,
-.feed-status button:focus-visible {
-  outline: 2px solid var(--make-accent);
-  outline-offset: 2px;
-}
-
-/* touch: the strip swipes, arrows would only cover the picture */
-@media (hover: none) {
-  .feed-arrow {
-    display: none;
-  }
+.feed-date {
+  grid-area: date;
+  margin-bottom: 6px;
+  color: #9ca0a4;
+  font-size: 12px;
+  line-height: 16px;
 }
 
 .feed-story h3 {
-  margin-top: 14px;
-  font-size: 14px;
+  grid-area: title;
+  font-size: 18px;
   font-weight: 500;
-  line-height: 20px;
+  line-height: 24px;
+  letter-spacing: -0.2px;
 }
 
-.feed-story p {
-  margin-top: 2px;
-  color: var(--make-muted);
-  font-size: 13px;
-  line-height: 18px;
+.feed-thumb {
+  grid-area: thumb;
+  display: block;
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border: 1px solid #e6e8ec;
+  background: #f4f4f4;
+  user-select: none;
+}
+
+.feed-sources {
+  grid-area: foot;
+  align-self: end;
+  display: flex;
+  height: 20px;
+  margin: 0;
+  padding: 12px 0 0;
+  list-style: none;
+}
+
+.feed-sources li + li {
+  margin-left: -4px;
+}
+
+.feed-sources img {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 1px #e6e8ec;
+}
+
+/* first paint: fonteslabs.com's shimmer bars in the row's own grid */
+.feed-story--skeleton h3 {
+  display: grid;
+  gap: 6px;
+}
+
+.feed-story--skeleton h3 .feed-bar:first-child {
+  height: 18px;
+}
+
+.feed-story--skeleton h3 .feed-bar:last-child {
+  width: 70%;
+  height: 18px;
+}
+
+.feed-story--skeleton .feed-date {
+  width: 48px;
+  height: 12px;
+}
+
+.feed-story--skeleton .feed-sources {
+  width: 84px;
+  height: 20px;
+  padding: 0;
+  margin-top: 12px;
+}
+
+.feed-bar {
+  display: block;
+  border-radius: 6px;
+  border: 0;
+  background: linear-gradient(90deg, #eceef1 25%, #f6f7f8 37%, #eceef1 63%);
+  background-size: 400% 100%;
+  animation: feed-skeleton 1.4s ease infinite;
+}
+
+@keyframes feed-skeleton {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
 }
 
 .feed-status {
   display: flex;
+  align-items: center;
   justify-content: center;
   gap: 12px;
-  min-height: 20px;
-  margin-top: 24px;
+  min-height: 72px;
   color: var(--make-muted);
   font-size: 13px;
   line-height: 20px;
+}
+
+.feed-spinner {
+  position: relative;
+  padding-left: 18px;
+}
+
+.feed-spinner::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  border: 1.5px solid #b8c1cf;
+  border-top-color: var(--make-accent);
+  border-radius: 50%;
+  animation: feed-spin 0.8s linear infinite;
+}
+
+@keyframes feed-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .feed-status button {
@@ -139,9 +180,14 @@
   cursor: pointer;
 }
 
-@media (max-width: 1100px) {
-  .feed-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+.feed-status button:focus-visible {
+  outline: 2px solid var(--make-accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .feed-list {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -150,14 +196,11 @@
     margin-top: 40px;
     padding: 0 16px 56px;
   }
-
-  .feed-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .feed-arrow {
-    transition: none;
+  .feed-bar,
+  .feed-spinner::before {
+    animation: none;
   }
 }

@@ -390,6 +390,10 @@ body {
 .make-query.is-dirty .m-run { width: 94px; }
 .make-query.is-dirty .m-run span { display: block; }
 .make-query.is-dirty .m-run svg { display: none; }
+/* live suggestions: story titles under the card, in the card's own dress */
+.m-suggest { position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 3; margin: 0; padding: 6px; list-style: none; border-radius: 16px; background: var(--make-surface); box-shadow: 0 0 56px rgb(0 0 0 / 0.08), 0 0 20px rgb(0 0 0 / 0.05), 0 0 0 1px var(--q-ring); }
+.m-suggest li { padding: 8px 12px; border-radius: 10px; font-size: 14px; line-height: 20px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+.m-suggest li[aria-selected="true"] { background: var(--make-hover); }
 
 .make-file-name:focus-visible,
 .make-login:focus-visible,

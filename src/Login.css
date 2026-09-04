@@ -24,6 +24,8 @@
 @media (max-width: 640px) {
   .login-page {
     padding-top: 24px;
+    /* iPhone Safari overlays its expanded bottom toolbar on the layout viewport. */
+    padding-bottom: calc(120px + env(safe-area-inset-bottom));
   }
 }
 

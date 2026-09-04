@@ -6,6 +6,11 @@ import { navigate } from './navigate'
 import Feed from './Feed'
 import './MakeApp.css'
 
+const API = import.meta.env.VITE_API_URL as string
+
+/** The bit of GET /stories a suggestion row needs. */
+type Hit = { id: number; title: string }
+
 type IconName = 'chevron' | 'log-out' | 'user'
 
 function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
@@ -74,7 +79,84 @@ function AccountMenu({ session }: { session: Session }) {
 
 export default function MakeApp({ session }: { session: Session | null }) {
   const queryRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   useEffect(() => (queryRef.current ? mountQuery(queryRef.current) : undefined), [])
+
+  // Live suggestions: story titles from the API as the user types. `typed`
+  // follows every keystroke; `search` is what the feed shows, set on Enter,
+  // the run button, or a pick.
+  const [typed, setTyped] = useState('')
+  const [hits, setHits] = useState<Hit[]>([])
+  const [open, setOpen] = useState(false)
+  const [active, setActive] = useState(-1)
+  const [search, setSearch] = useState('')
+  const token = session?.access_token
+
+  useEffect(() => {
+    const q = typed.trim()
+    if (!q) {
+      setHits([])
+      return
+    }
+    const controller = new AbortController()
+    // ponytail: fixed 120ms debounce; the API takes prefixes, so no min length.
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await fetch(`${API}/stories?q=${encodeURIComponent(q)}&limit=6`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          signal: controller.signal,
+        })
+        if (response.ok) setHits(await response.json())
+      } catch {
+        // aborted by a newer keystroke, or offline: keep the last list
+      }
+    }, 120)
+    return () => {
+      window.clearTimeout(timer)
+      controller.abort()
+    }
+  }, [typed, token])
+
+  // Clicks outside the card close the list; blur would fire before a tap on
+  // a row lands on touch screens.
+  useEffect(() => {
+    if (!open) return
+    const close = (event: PointerEvent) => {
+      if (!queryRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    document.addEventListener('pointerdown', close)
+    return () => document.removeEventListener('pointerdown', close)
+  }, [open])
+
+  const showList = open && typed.trim().length > 0 && hits.length > 0
+
+  const run = (value: string) => {
+    const input = inputRef.current
+    if (input && input.value !== value) {
+      input.value = value
+      // query.ts reads dirtiness off the native event
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+    }
+    setTyped(value)
+    setSearch(value.trim())
+    setOpen(false)
+  }
+
+  const onKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'ArrowDown' && hits.length) {
+      event.preventDefault()
+      setOpen(true)
+      setActive((i) => (i + 1) % hits.length)
+    } else if (event.key === 'ArrowUp' && hits.length) {
+      event.preventDefault()
+      setActive((i) => (i <= 0 ? hits.length - 1 : i - 1))
+    } else if (event.key === 'Enter') {
+      event.preventDefault()
+      run(showList && active >= 0 ? hits[active].title : event.currentTarget.value)
+    } else if (event.key === 'Escape') {
+      setOpen(false)
+    }
+  }
 
 
   return (
@@ -125,11 +207,24 @@ export default function MakeApp({ session }: { session: Session | null }) {
               <path d="M12 19.708c4.257 0 7.708-3.451 7.708-7.708S16.257 4.292 12 4.292M12 19.708c-4.257 0-7.708-3.451-7.708-7.708S7.743 4.292 12 4.292M12 19.708c-1.956 0-3.542-3.451-3.542-7.708S10.044 4.292 12 4.292M12 19.708c1.956 0 3.542-3.451 3.542-7.708S13.956 4.292 12 4.292M19.5 12h-15" />
             </svg>
             <input
+              ref={inputRef}
               type="text"
               data-q-input=""
               aria-label="Pesquisa ou pedido"
               placeholder="Notícias de energia em Espanha"
               autoComplete="off"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded={showList}
+              aria-controls="m-suggest"
+              aria-activedescendant={showList && active >= 0 ? `m-suggest-${hits[active].id}` : undefined}
+              onInput={(event) => {
+                setTyped(event.currentTarget.value)
+                setActive(-1)
+                setOpen(true)
+              }}
+              onFocus={() => setOpen(true)}
+              onKeyDown={onKeyDown}
             />
           </label>
           <div className="m-query-bar">
@@ -144,17 +239,33 @@ export default function MakeApp({ session }: { session: Session | null }) {
                 <span>Construir</span>
               </button>
             </div>
-            <button type="button" className="m-run" aria-label="Executar">
+            <button type="button" className="m-run" aria-label="Executar" onClick={() => run(inputRef.current?.value ?? '')}>
               <span data-q-run-label="" />
               <svg viewBox="0 0 20 20" aria-hidden="true">
                 <path d="m11.7 4.8 5.2 5.2-5.2 5.2M16.9 10H3.1" />
               </svg>
             </button>
           </div>
+          {showList && (
+            <ul className="m-suggest" id="m-suggest" role="listbox" aria-label="Sugestões">
+              {hits.map((hit, i) => (
+                <li
+                  key={hit.id}
+                  id={`m-suggest-${hit.id}`}
+                  role="option"
+                  aria-selected={i === active}
+                  onPointerEnter={() => setActive(i)}
+                  onClick={() => run(hit.title)}
+                >
+                  {hit.title}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         </section>
 
-        <Feed session={session} />
+        <Feed session={session} query={search} />
       </div>
 
     </main>

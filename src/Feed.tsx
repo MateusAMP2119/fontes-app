@@ -12,136 +12,193 @@ type Story = {
   article_count: number
   source_count: number
   latest_at: string
-  /** Preview images of the newest articles, newest first. */
-  images: string[]
+  /** Newest preview image, when any article has one. */
+  image: string | null
+  /** Publishers, most articles first. */
+  sources: { name: string; host: string | null }[]
 }
 
 const API = import.meta.env.VITE_API_URL as string
 const PAGE = 20
+const SKELETON_ROWS = 8
+const MAX_LOGOS = 8
 
-const relative = new Intl.RelativeTimeFormat('pt', { numeric: 'auto' })
-function ago(iso: string): string {
-  const hours = Math.round((Date.parse(iso) - Date.now()) / 3_600_000)
-  return Math.abs(hours) < 48
-    ? relative.format(hours, 'hour')
-    : relative.format(Math.round(hours / 24), 'day')
+// fonteslabs.com's per-story date: "Hoje", "Ontem", then "22 ago", the year only when it is not this one
+const dayMonth = new Intl.DateTimeFormat('pt-PT', { day: 'numeric', month: 'short' })
+function shortDay(iso: string): string {
+  const then = new Date(iso)
+  const today = new Date()
+  then.setHours(12, 0, 0, 0)
+  today.setHours(12, 0, 0, 0)
+  const days = Math.round((today.getTime() - then.getTime()) / 864e5)
+  if (days === 0) return 'Hoje'
+  if (days === 1) return 'Ontem'
+  const label = dayMonth.format(then).replace('.', '')
+  return then.getFullYear() === today.getFullYear() ? label : `${label} ${then.getFullYear()}`
 }
 
-const stroke = {
-  fill: 'none',
-  stroke: 'currentColor',
-  strokeWidth: 1.8,
-  strokeLinecap: 'round' as const,
-  strokeLinejoin: 'round' as const,
-}
+const favicon = (host: string) => `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`
 
-/**
- * The story's article previews in a snap-scrolling strip: arrows on hover,
- * a swipe on touch. A preview that fails to load drops out of the strip.
- */
-function Carousel({ images }: { images: string[] }) {
-  const stripRef = useRef<HTMLDivElement>(null)
-  const slide = (direction: -1 | 1) => {
-    const strip = stripRef.current
-    strip?.scrollBy({ left: direction * strip.clientWidth, behavior: 'smooth' })
+/** Puts a page's pictures in the browser cache before its rows exist. */
+function warm(page: Story[]) {
+  for (const story of page) {
+    if (!story.image) continue
+    const picture = new Image()
+    picture.decoding = 'async'
+    picture.src = story.image
   }
+}
+
+function Row({ story, index }: { story: Story; index: number }) {
   return (
-    <div className="feed-carousel">
-      <div className="feed-strip" ref={stripRef}>
-        {images.map((src, index) => (
-          <img
-            key={src}
-            src={src}
-            alt=""
-            loading={index ? 'lazy' : undefined}
-            referrerPolicy="no-referrer"
-            onError={(event) => {
-              event.currentTarget.hidden = true
-            }}
-          />
-        ))}
-      </div>
-      {images.length > 1 && (
-        <>
-          <button type="button" className="feed-arrow feed-arrow-prev" aria-label="Imagem anterior" onClick={() => slide(-1)}>
-            <svg aria-hidden="true" width={20} height={20} viewBox="0 0 24 24">
-              <path d="M18 12H6m6-6-6 6 6 6" {...stroke} />
-            </svg>
-          </button>
-          <button type="button" className="feed-arrow feed-arrow-next" aria-label="Imagem seguinte" onClick={() => slide(1)}>
-            <svg aria-hidden="true" width={20} height={20} viewBox="0 0 24 24">
-              <path d="M6 12h12m-6-6 6 6-6 6" {...stroke} />
-            </svg>
-          </button>
-        </>
+    <article className="feed-story">
+      <time className="feed-date" dateTime={story.latest_at}>{shortDay(story.latest_at)}</time>
+      <h3>{story.title}</h3>
+      {story.image ? (
+        <img
+          className="feed-thumb"
+          src={story.image}
+          alt=""
+          width={96}
+          height={96}
+          loading={index < 6 ? undefined : 'lazy'}
+          decoding="async"
+          referrerPolicy="no-referrer"
+          onError={(event) => event.currentTarget.removeAttribute('src')}
+        />
+      ) : (
+        <span className="feed-thumb" aria-hidden="true" />
       )}
+      <ul className="feed-sources" aria-label={`${story.source_count} fontes`}>
+        {(story.sources ?? [])
+          .filter((source) => source.host)
+          .slice(0, MAX_LOGOS)
+          .map((source) => (
+            <li key={source.name} title={source.name}>
+              <img src={favicon(source.host!)} alt="" width={20} height={20} loading="lazy" decoding="async" />
+            </li>
+          ))}
+      </ul>
+    </article>
+  )
+}
+
+function Skeleton() {
+  return (
+    <div className="feed-story feed-story--skeleton" aria-hidden="true">
+      <span className="feed-date feed-bar" />
+      <h3>
+        <span className="feed-bar" />
+        <span className="feed-bar" />
+      </h3>
+      <span className="feed-thumb feed-bar" />
+      <span className="feed-sources feed-bar" />
     </div>
   )
 }
 
-// ponytail: cards go nowhere yet; give them a story page when one exists.
-export default function Feed({ session }: { session: Session | null }) {
+// ponytail: rows go nowhere yet; give them a story page when one exists.
+export default function Feed({ session, query = '' }: { session: Session | null; query?: string }) {
   const [stories, setStories] = useState<Story[]>([])
   const [status, setStatus] = useState<'loading' | 'more' | 'end' | 'error'>('loading')
   const sentinelRef = useRef<HTMLDivElement>(null)
+  // Bumped per query so a slow page for the old one is dropped, not shown.
+  const generation = useRef(0)
+  // The page after the last one shown, requested as soon as that one
+  // arrived, so appending it costs nothing the reader can see.
+  const nextPage = useRef<Promise<Story[]> | null>(null)
+  const nextOffset = useRef(0)
   // Signed-in callers get the API's higher rate allowance.
   const token = session?.access_token
 
-  const load = useCallback(
-    async (offset: number) => {
-      setStatus('loading')
-      try {
-        const response = await fetch(`${API}/stories?limit=${PAGE}&offset=${offset}`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        })
-        if (!response.ok) throw new Error(`${response.status}`)
-        const page: Story[] = await response.json()
-        setStories((previous) => (offset ? [...previous, ...page] : page))
-        setStatus(page.length < PAGE ? 'end' : 'more')
-      } catch {
-        setStatus('error')
-      }
+  const fetchPage = useCallback(
+    async (offset: number): Promise<Story[]> => {
+      const q = query ? `&q=${encodeURIComponent(query)}` : ''
+      const response = await fetch(`${API}/stories?limit=${PAGE}&offset=${offset}${q}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      })
+      if (!response.ok) throw new Error(`${response.status}`)
+      const page: Story[] = await response.json()
+      warm(page)
+      return page
     },
-    [token],
+    [token, query],
   )
-  useEffect(() => {
-    void load(0)
-  }, [load])
 
-  // Infinite scroll: the next page loads once the tail nears the viewport.
+  const prefetch = useCallback(
+    (offset: number) => {
+      nextOffset.current = offset
+      nextPage.current = fetchPage(offset)
+      nextPage.current.catch(() => {})
+    },
+    [fetchPage],
+  )
+
+  /** Appends the prefetched page and requests the one after it. */
+  const advance = useCallback(async () => {
+    const pending = nextPage.current
+    if (!pending) return
+    nextPage.current = null
+    const mine = generation.current
+    setStatus('loading')
+    try {
+      const page = await pending
+      if (mine !== generation.current) return
+      setStories((previous) => (nextOffset.current ? [...previous, ...page] : page))
+      if (page.length < PAGE) {
+        setStatus('end')
+        return
+      }
+      prefetch(nextOffset.current + page.length)
+      setStatus('more')
+    } catch {
+      setStatus('error')
+    }
+  }, [prefetch])
+
+  useEffect(() => {
+    generation.current += 1
+    setStories([])
+    prefetch(0)
+    void advance()
+  }, [prefetch, advance])
+
+  // Infinite scroll: the buffered page goes in well before the tail is reached.
   useEffect(() => {
     const sentinel = sentinelRef.current
     if (!sentinel || status !== 'more') return
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry?.isIntersecting) void load(stories.length)
+        if (entry?.isIntersecting) void advance()
       },
-      { rootMargin: '800px 0px' },
+      { rootMargin: '1200px 0px' },
     )
     observer.observe(sentinel)
     return () => observer.disconnect()
-  }, [status, stories.length, load])
+  }, [status, advance])
+
+  const retry = () => {
+    prefetch(nextOffset.current)
+    void advance()
+  }
 
   return (
     <section className="make-feed" aria-labelledby="feed-heading">
-      <h2 id="feed-heading">Histórias recentes</h2>
-      <div className="feed-grid">
-        {stories.map((story) => (
-          <article className="feed-story" key={story.id}>
-            <Carousel images={story.images ?? []} />
-            <h3>{story.title}</h3>
-            <p>
-              {story.source_count} fontes · {story.article_count} artigos · {ago(story.latest_at)}
-            </p>
-          </article>
+      <h2 id="feed-heading">{query ? `Resultados para “${query}”` : 'Histórias recentes'}</h2>
+      <div className="feed-list">
+        {stories.map((story, index) => (
+          <Row story={story} index={index} key={story.id} />
         ))}
+        {!stories.length && status === 'loading' &&
+          Array.from({ length: SKELETON_ROWS }, (_, index) => <Skeleton key={index} />)}
       </div>
       <div className="feed-status" ref={sentinelRef}>
-        {status === 'loading' && <span>A carregar…</span>}
+        {status === 'loading' && stories.length > 0 && <span className="feed-spinner">A carregar…</span>}
+        {status === 'end' && stories.length === 0 && <span>Nenhuma história encontrada.</span>}
         {status === 'error' && (
           <>
             <span>Não foi possível carregar as histórias.</span>
-            <button type="button" onClick={() => void load(stories.length)}>
+            <button type="button" onClick={retry}>
               Tentar de novo
             </button>
           </>
