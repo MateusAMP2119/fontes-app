@@ -233,11 +233,7 @@ export default function MakeApp({ session }: { session: AuthSession | null }) {
                 setActive(-1)
                 setOpen(true)
               }}
-              onFocus={() => {
-                setOpen(true)
-                // a phone keyboard takes the lower half: put the card at the top so the list fits above it
-                if (matchMedia('(pointer: coarse)').matches) searchRef.current?.scrollIntoView({ block: 'start' })
-              }}
+              onFocus={() => setOpen(true)}
               onKeyDown={onKeyDown}
             />
           </label>
