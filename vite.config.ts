@@ -5,10 +5,13 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
-    // functions/api/stories only runs on Cloudflare Pages; dev reads the deployed copy. Auth stays local.
+    // functions/api/* and the auth Worker only run on Cloudflare; dev reads the deployed copies.
+    // Without the auth proxy the SPA fallback answers get-session with index.html and the header
+    // shows a phantom account. The Origin rewrite passes Better Auth's CSRF check for sign-in POSTs.
     proxy: {
       '/api/stories': { target: 'https://builder.fonteslabs.com', changeOrigin: true },
       '/api/favicon': { target: 'https://builder.fonteslabs.com', changeOrigin: true },
+      '/api/auth': { target: 'https://builder.fonteslabs.com', changeOrigin: true, headers: { origin: 'https://builder.fonteslabs.com' } },
     },
   },
 })

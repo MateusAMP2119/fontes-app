@@ -523,7 +523,6 @@ export default function Article({ kind, itemKey }: { kind: 'events' | 'stories';
             }}
           >
             <img className="make-mark" src="/mark.png" alt="" width={34} height={34} />
-            <span aria-hidden="true">Fontes</span>
           </a>
         </div>
       </header>

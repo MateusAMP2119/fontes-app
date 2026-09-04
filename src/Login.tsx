@@ -268,7 +268,6 @@ export default function Login() {
         }}
       >
         <img className="make-mark" src="/mark.png" alt="" width={30} height={30} />
-        <span aria-hidden="true">Fontes</span>
       </a>
       <section className="login-card" aria-labelledby="login-title">
         <header>
