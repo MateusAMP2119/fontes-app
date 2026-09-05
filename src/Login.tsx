@@ -7,13 +7,13 @@ type Mode = 'login' | 'signup' | 'forgot' | 'reset'
 
 const copy: Record<Mode, { title: string; description: string; submit: string }> = {
   login: {
-    title: 'Entrar na tua conta',
-    description: 'Introduz o teu email para entrares na tua conta.',
+    title: 'Conta já existente',
+    description: 'Preencher informações da conta para continuar.',
     submit: 'Entrar',
   },
   signup: {
-    title: 'Criar conta',
-    description: 'Introduz o teu email e uma palavra-passe para criares a conta.',
+    title: 'Criar uma conta',
+    description: 'Preencher o formulário para continuar.',
     submit: 'Criar conta',
   },
   forgot: {
@@ -120,7 +120,7 @@ function PasswordInput({
 }
 
 function passwordStrength(password: string) {
-  if (!password) return { score: 0, label: 'Usa pelo menos 8 caracteres.' }
+  if (!password) return { score: 0, label: 'Usar pelo menos 8 caracteres.' }
   const score = [
     password.length >= 8,
     /[a-z]/.test(password) && /[A-Z]/.test(password),
@@ -284,7 +284,6 @@ export default function Login({ initialMode = 'login' }: { initialMode?: Mode } 
                 id="email"
                 name="email"
                 type="email"
-                placeholder="nome@exemplo.pt"
                 // Signup/recovery collect an email address; login requests saved credentials.
                 autoComplete={mode === 'login' ? 'username' : 'email'}
                 autoCapitalize="none"
@@ -301,7 +300,7 @@ export default function Login({ initialMode = 'login' }: { initialMode?: Mode } 
                 <label htmlFor="password">Palavra-passe</label>
                 {mode === 'login' && (
                   <button className="login-link" type="button" onClick={() => go('forgot')}>
-                    Esqueceste a palavra-passe?
+                    Palavra-passe perdida?
                   </button>
                 )}
               </div>
@@ -357,7 +356,7 @@ export default function Login({ initialMode = 'login' }: { initialMode?: Mode } 
         </form>
         {mode !== 'reset' && (
           <p className="login-switch">
-            {mode === 'login' ? 'Não tens conta? ' : 'Já tens conta? '}
+            {mode === 'login' ? 'Sem conta? ' : 'Conta já criada? '}
             <button className="login-link" type="button" onClick={() => go(mode === 'login' ? 'signup' : 'login')}>
               {mode === 'login' ? 'Criar conta' : 'Entrar'}
             </button>

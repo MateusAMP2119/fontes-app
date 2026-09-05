@@ -53,9 +53,10 @@ function Workspace({ path, session }: { path: string; session: AuthSession }) {
   const hasOrg = (orgs.data?.length ?? 0) > 0
   const projects = useProjects(hasOrg)
   if (orgs.isPending) return null
-  if (!hasOrg) return <Onboarding step="org" />
+  if (!hasOrg) return <Onboarding key="org" step="org" />
+  if (!session.user.username) return <Onboarding key="username" step="username" />
   if (projects.pending) return null
-  if (projects.list.length === 0) return <Onboarding step="project" onDone={projects.refresh} />
+  if (projects.list.length === 0) return <Onboarding key="project" step="project" onDone={projects.refresh} />
   // ponytail: first project is the active one; add a switcher when a second project exists
   return <Routes path={path} session={session} project={projects.list[0]} />
 }

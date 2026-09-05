@@ -65,6 +65,11 @@ function createAuth(env: WorkerEnv, waitUntil: (promise: Promise<unknown>) => vo
     secret: env.BETTER_AUTH_SECRET,
     database: env.AUTH_DB,
     trustedOrigins: trustedOrigins(env),
+    user: {
+      additionalFields: {
+        username: { type: 'string', required: false, unique: true },
+      },
+    },
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,
