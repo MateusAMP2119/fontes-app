@@ -2,7 +2,8 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // Story data comes from Cloudflare; authentication stays on the local origin
-// so OAuth callbacks receive the same cookies as the sign-in request.
+// so OAuth callbacks receive the same cookies as the sign-in request. The auth
+// Worker lives in the fontes-api repo and runs on 8787 via its `npm run dev`.
 const AUTH_ORIGIN = 'https://builder.fonteslabs.com'
 const authProxy = { target: 'http://localhost:8787', changeOrigin: true }
 

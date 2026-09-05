@@ -4,7 +4,9 @@ News dashboard builder on a freeform canvas, for building views on Iris. Visual
 language follows Apple Freeform: full-bleed dotted board, floating pills, SF Pro
 system stack.
 
-All news data is mocked — there is no backend and no network layer.
+Story data comes from the deployed Fontes API; the dashboard-builder fixtures in
+`src/news/` are still mocked. Authentication lives in the separate
+[fontes-api](https://github.com/MateusAMP2119/fontes-api) repo (see below).
 
 ## Stack
 
@@ -73,48 +75,24 @@ migrates a legacy v1 payload, and drops items whose type no longer exists.
 - The dashboard grid is measured once, at pick time, with `offsetLeft` /
   `offsetWidth` rather than `getBoundingClientRect` — the frame sits inside a
   `motion.div` that animates `scale`, and client rects are post-transform.
-# Local authentication
+# Authentication
 
-Run `npm run dev` from this directory, then open `http://localhost:5173`.
-This starts Vite and the local auth Worker together. The Worker connects to the
-cloud D1 database `fontes-auth`, also visible in Cloudflare Studio. Keep this port
-fixed: Google callbacks and browser cookies must belong to
-the same origin. Closing the command stops both servers.
+Sign-in, sessions, organizations and projects are served by the
+[fontes-api](https://github.com/MateusAMP2119/fontes-api) Worker under
+`/api/auth/*` and `/api/projects`. This app only ships the Better Auth client
+(`src/auth.ts`) and talks to those routes on its own origin, so cookies never
+cross domains.
 
-For Google sign-in:
+For local development, clone fontes-api next to this repo and run its
+`npm run dev`, which starts the Worker on `http://localhost:8787` against the
+cloud D1 database. Then run `npm run dev` here and open `http://localhost:5173`:
+Vite proxies `/api/auth` and `/api/projects` to the Worker. Keep both ports
+fixed: Google callbacks and browser cookies must belong to the same origin.
+Google credentials, migrations and the account-deletion script live in
+fontes-api.
 
-1. Copy `.dev.vars.example` to `.dev.vars` if that file does not already exist.
-2. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to the existing web client's
-   credentials. Keep this file private; it is gitignored.
-3. Add `http://localhost:5173/api/auth/callback/google` to that client's
-   **Authorized redirect URIs** in Google Cloud Console, preserving existing URLs.
-4. Restart `npm run dev` after changing credentials.
-
-Users, organizations, memberships and projects use cloud D1, shared with production.
-The email binding also uses Cloudflare: signup and reset requests send real emails.
-Story data comes from the deployed site.
-Google sign-in requires real OAuth credentials; placeholders cannot complete the
-code exchange. Startup does not apply database migrations automatically.
-
-Apply auth migrations explicitly with:
-
-```sh
-npx wrangler d1 migrations apply fontes-auth --remote --config wrangler.auth.jsonc
-```
-
-In Cloudflare Studio, inspect `user`, `account`, `organization`, `member` and `project`.
-For a joined overview:
-
-```sql
-SELECT u.email, o.name AS organization, m.role, p.name AS project
-FROM user u
-LEFT JOIN member m ON m.userId = u.id
-LEFT JOIN organization o ON o.id = m.organizationId
-LEFT JOIN project p ON p.organizationId = o.id;
-```
-
-With the dev server running, run `node --test scripts/auth-regression.test.mjs`.
-These browser tests mock auth responses and never create accounts or send email.
-They cover password-manager fills without change events, submission, confirmation,
-password reset and native-control spacing. They do not automate Apple Keychain
-or complete a real Google login.
+With both servers running, `node --test scripts/auth-regression.test.mjs`
+drives the login forms in a browser. These tests mock every auth response and
+never create accounts or send email. They cover password-manager fills without
+change events, submission, confirmation, password reset and native-control
+spacing. They do not automate Apple Keychain or complete a real Google login.

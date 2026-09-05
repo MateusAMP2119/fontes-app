@@ -44,24 +44,6 @@
       ],
       "port": 8789,
       "autoPort": true
-    },
-    {
-      "name": "fontes-auth-local",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": [
-        "run",
-        "dev:auth"
-      ],
-      "port": 8787
-    },
-    {
-      "name": "fontes-dev-local-auth",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": [
-        "run",
-        "dev:local"
-      ],
-      "port": 5173
     }
   ]
 }

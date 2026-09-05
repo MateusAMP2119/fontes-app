@@ -1,3 +1,3 @@
-# Copy to .dev.vars (gitignored). Use the existing Fontes Web OAuth client.
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
+# Copy to .dev.vars (gitignored) for `wrangler pages dev`. Google OAuth
+# credentials belong to the fontes-api Worker, not here.
+SYNC_KEY=
