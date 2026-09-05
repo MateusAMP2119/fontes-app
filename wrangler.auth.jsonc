@@ -8,6 +8,10 @@
     {
       "pattern": "builder.fonteslabs.com/api/auth/*",
       "zone_name": "fonteslabs.com"
+    },
+    {
+      "pattern": "builder.fonteslabs.com/api/projects*",
+      "zone_name": "fonteslabs.com"
     }
   ],
   "observability": {
@@ -20,12 +24,14 @@
       "binding": "AUTH_DB",
       "database_name": "fontes-auth",
       "database_id": "2ebddf0d-bb3f-4fee-8448-64306706035a",
+      "remote": true,
       "migrations_dir": "migrations-auth"
     }
   ],
   "send_email": [
     {
       "name": "AUTH_EMAIL",
+      "remote": true,
       "allowed_sender_addresses": ["conta@fonteslabs.com"]
     }
   ]

@@ -8,7 +8,7 @@
   justify-content: flex-start;
   gap: 24px;
   min-height: 100svh;
-  padding: max(24px, calc((100svh - 524px) / 2)) 24px 24px;
+  padding: 24px;
   overflow-x: hidden;
   color: #09090b;
   font-family: "InterVariable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -21,11 +21,30 @@
   position: fixed;
 }
 
+/* Desktop centers the brand + card group whatever the form's height: auto margins
+   split the free space and collapse to 0 when the form is taller than the viewport,
+   so nothing gets clipped above the scroll start. */
+.login-brand {
+  margin-top: auto;
+}
+
+.login-card {
+  margin-bottom: auto;
+}
+
 @media (max-width: 640px) {
   .login-page {
-    padding-top: 24px;
     /* iPhone Safari overlays its expanded bottom toolbar on the layout viewport. */
     padding-bottom: calc(120px + env(safe-area-inset-bottom));
+  }
+
+  /* Phones keep the form pinned to the top so the keyboard never pushes it around. */
+  .login-brand {
+    margin-top: 0;
+  }
+
+  .login-card {
+    margin-bottom: 0;
   }
 }
 
@@ -129,11 +148,11 @@
   position: absolute;
   top: 50%;
   right: 4px;
+  transform: translateY(-50%);
   display: grid;
   width: 32px;
   height: 32px;
   place-items: center;
-  transform: translateY(-50%);
   border: 0;
   border-radius: 6px;
   background: transparent;
@@ -283,4 +302,11 @@
 .login-link:focus-visible {
   outline: 0;
   box-shadow: 0 0 0 3px rgb(161 161 170 / 0.5);
+}
+
+/* Onboarding steps reuse the login card; the counter sits above the title. */
+.login-step {
+  color: #71717a;
+  font-size: 12px;
+  line-height: 16px;
 }

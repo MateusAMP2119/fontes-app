@@ -4,14 +4,15 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node scripts/dev.mjs",
+    "dev:auth": "wrangler dev --config wrangler.auth.jsonc --port 8787 --var BETTER_AUTH_SECRET:local-dev-secret-please-do-not-use-in-prod-0123 BETTER_AUTH_URL:http://localhost:5173",
+    "dev:local": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
     "deploy": "npm run build && wrangler pages deploy"
   },
   "dependencies": {
-    "@supabase/supabase-js": "2.115.0",
     "better-auth": "1.7.2",
     "motion": "^12.43.0",
     "react": "^19.2.7",

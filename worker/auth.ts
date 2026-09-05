@@ -1,16 +1,35 @@
 import { betterAuth } from 'better-auth'
-import { jwt } from 'better-auth/plugins'
+import { jwt, organization } from 'better-auth/plugins'
 
 type AuthSecrets = {
   BETTER_AUTH_SECRET: string
   GOOGLE_CLIENT_ID: string
   GOOGLE_CLIENT_SECRET: string
+  /** Local dev only: lets `wrangler dev` own the OAuth callback (e.g. http://localhost:5175). */
+  BETTER_AUTH_URL?: string
 }
 
 type WorkerEnv = AuthBindings & AuthSecrets
 
 const BASE_URL = 'https://builder.fonteslabs.com'
 const FROM = { email: 'conta@fonteslabs.com', name: 'Fontes' }
+const TRUSTED_ORIGINS = [BASE_URL, 'https://fontes-9lo.pages.dev', 'https://*.fontes-9lo.pages.dev']
+
+function trustedOrigins(env: WorkerEnv) {
+  return env.BETTER_AUTH_URL && !TRUSTED_ORIGINS.includes(env.BETTER_AUTH_URL)
+    ? [...TRUSTED_ORIGINS, env.BETTER_AUTH_URL]
+    : TRUSTED_ORIGINS
+}
+const PROJECT_NAME_MAX = 80
+
+function isTrustedOrigin(origin: string | null, env: WorkerEnv) {
+  if (!origin) return false
+  return trustedOrigins(env).some((pattern) =>
+    pattern.includes('*')
+      ? new RegExp(`^${pattern.replaceAll('.', '\\.').replace('*', '[a-z0-9-]+')}$`).test(origin)
+      : pattern === origin,
+  )
+}
 
 function escapeHtml(value: string) {
   return value
@@ -38,13 +57,14 @@ function emailHtml(title: string, body: string, action: string, url: string) {
 }
 
 function createAuth(env: WorkerEnv, waitUntil: (promise: Promise<unknown>) => void) {
+  const baseURL = env.BETTER_AUTH_URL ?? BASE_URL
   return betterAuth({
     appName: 'Fontes',
-    baseURL: BASE_URL,
+    baseURL,
     basePath: '/api/auth',
     secret: env.BETTER_AUTH_SECRET,
     database: env.AUTH_DB,
-    trustedOrigins: [BASE_URL, 'https://fontes-9lo.pages.dev', 'https://*.fontes-9lo.pages.dev'],
+    trustedOrigins: trustedOrigins(env),
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,
@@ -103,6 +123,7 @@ function createAuth(env: WorkerEnv, waitUntil: (promise: Promise<unknown>) => vo
       },
     },
     plugins: [
+      organization(),
       jwt({
         jwks: {
           jwksPath: '/.well-known/jwks.json',
@@ -110,16 +131,31 @@ function createAuth(env: WorkerEnv, waitUntil: (promise: Promise<unknown>) => vo
           gracePeriod: 60 * 60 * 24 * 30,
         },
         jwt: {
-          issuer: `${BASE_URL}/api/auth`,
+          issuer: `${baseURL}/api/auth`,
           audience: 'authenticated',
           expirationTime: '15 minutes',
         },
       }),
     ],
+    databaseHooks: {
+      session: {
+        create: {
+          // A new session resumes the user's first organization, so the client derives
+          // onboarding from data instead of from the URL it signed in on.
+          before: async (session) => {
+            const member = await env.AUTH_DB.prepare(
+              'SELECT organizationId FROM member WHERE userId = ? ORDER BY createdAt LIMIT 1',
+            ).bind(session.userId).first<{ organizationId: string }>()
+            return { data: { ...session, activeOrganizationId: member?.organizationId ?? null } }
+          },
+        },
+      },
+    },
     advanced: {
       backgroundTasks: { handler: waitUntil },
       defaultCookieAttributes: {
-        secure: true,
+        // Safari drops Secure cookies over plain http://localhost, so follow the base URL's scheme.
+        secure: baseURL.startsWith('https://'),
         httpOnly: true,
         sameSite: 'lax',
       },
@@ -127,10 +163,47 @@ function createAuth(env: WorkerEnv, waitUntil: (promise: Promise<unknown>) => vo
   })
 }
 
+type Auth = ReturnType<typeof createAuth>
+
+/**
+ * Projects of the session's active organization. Lives here rather than in a Pages
+ * Function because the project table shares AUTH_DB with the organization tables and
+ * the cookie session is validated by the same Better Auth instance.
+ */
+async function projects(request: Request, env: WorkerEnv, auth: Auth): Promise<Response> {
+  if (request.method !== 'GET' && request.method !== 'POST') return new Response(null, { status: 405 })
+  if (request.method === 'POST' && !isTrustedOrigin(request.headers.get('origin'), env)) {
+    return new Response(null, { status: 403 })
+  }
+  const session = await auth.api.getSession({ headers: request.headers })
+  if (!session) return new Response(null, { status: 401 })
+  const organizationId = session.session.activeOrganizationId
+  if (!organizationId) return Response.json([])
+  const member = await env.AUTH_DB.prepare('SELECT 1 FROM member WHERE userId = ? AND organizationId = ?')
+    .bind(session.user.id, organizationId)
+    .first()
+  if (!member) return new Response(null, { status: 403 })
+  if (request.method === 'GET') {
+    const { results } = await env.AUTH_DB.prepare(
+      'SELECT id, organizationId, name, createdAt FROM project WHERE organizationId = ? ORDER BY createdAt',
+    ).bind(organizationId).all()
+    return Response.json(results)
+  }
+  const body = (await request.json().catch(() => null)) as { name?: unknown } | null
+  const name = typeof body?.name === 'string' ? body.name.trim() : ''
+  if (!name || name.length > PROJECT_NAME_MAX) return Response.json({ message: 'Nome inválido.' }, { status: 400 })
+  const project = { id: crypto.randomUUID(), organizationId, name, createdAt: new Date().toISOString() }
+  await env.AUTH_DB.prepare('INSERT INTO project (id, organizationId, name, createdAt) VALUES (?, ?, ?, ?)')
+    .bind(project.id, project.organizationId, project.name, project.createdAt)
+    .run()
+  return Response.json(project, { status: 201 })
+}
+
 export default {
   async fetch(request: Request, env: WorkerEnv, context: ExecutionContext): Promise<Response> {
     const auth = createAuth(env, (promise) => context.waitUntil(promise))
     try {
+      if (new URL(request.url).pathname === '/api/projects') return await projects(request, env, auth)
       return await auth.handler(request)
     } catch (error) {
       console.error(JSON.stringify({

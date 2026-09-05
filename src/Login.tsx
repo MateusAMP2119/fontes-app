@@ -83,7 +83,6 @@ function PasswordInput({
   id,
   name,
   label,
-  value,
   autoComplete,
   creation = false,
   onChange,
@@ -91,7 +90,6 @@ function PasswordInput({
   id: string
   name: string
   label: string
-  value: string
   autoComplete: 'current-password' | 'new-password'
   creation?: boolean
   onChange: (value: string) => void
@@ -103,7 +101,6 @@ function PasswordInput({
         id={id}
         name={name}
         type={visible ? 'text' : 'password'}
-        value={value}
         autoComplete={autoComplete}
         minLength={creation ? 8 : undefined}
         onChange={(event) => onChange(event.target.value)}
@@ -133,12 +130,12 @@ function passwordStrength(password: string) {
   return { score, label: ['Muito fraca', 'Muito fraca', 'Fraca', 'Razoável', 'Forte'][score] }
 }
 
-export default function Login() {
+export default function Login({ initialMode = 'login' }: { initialMode?: Mode } = {}) {
   const params = new URLSearchParams(location.search)
   const resetToken = params.get('token')
   const callbackError = params.get('error')
   const recoveryCallback = params.get('mode') === 'reset' && Boolean(resetToken)
-  const [mode, setMode] = useState<Mode>(recoveryCallback ? 'reset' : 'login')
+  const [mode, setMode] = useState<Mode>(recoveryCallback ? 'reset' : initialMode)
   const [busy, setBusy] = useState(false)
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
@@ -174,6 +171,10 @@ export default function Login() {
     event.preventDefault()
     const form = new FormData(event.currentTarget)
     const email = String(form.get('email') ?? '').trim().toLowerCase()
+    // Password managers can fill the DOM without notifying React. Submit the
+    // actual fields; state is only used for strength and confirmation feedback.
+    const password = String(form.get('password') ?? '')
+    const confirmation = String(form.get('password-confirmation') ?? '')
     const redirectTo = `${location.origin}/login?mode=reset`
     let error: unknown = null
     let message = ''
@@ -215,6 +216,7 @@ export default function Login() {
         error = result.error
         if (!error) {
           go('login')
+          setBusy(false)
           setNotice({ text: 'Palavra-passe atualizada. Já podes entrar.' })
           return
         }
@@ -283,6 +285,7 @@ export default function Login() {
                 name="email"
                 type="email"
                 placeholder="nome@exemplo.pt"
+                // Signup/recovery collect an email address; login requests saved credentials.
                 autoComplete={mode === 'login' ? 'username' : 'email'}
                 autoCapitalize="none"
                 spellCheck={false}
@@ -307,7 +310,6 @@ export default function Login() {
                 id="password"
                 name="password"
                 label="Palavra-passe"
-                value={password}
                 autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                 creation={creatingPassword}
                 onChange={setPassword}
@@ -331,7 +333,6 @@ export default function Login() {
                   id="password-confirmation"
                   name="password-confirmation"
                   label="Confirmação da palavra-passe"
-                  value={confirmation}
                   autoComplete="new-password"
                   creation
                   onChange={setConfirmation}

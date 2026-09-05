@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type RefObject } from 'react'
 import { mountQuery, type ModeKey } from './query'
 import { authClient, AUTH_ENABLED, type AuthSession } from './auth'
 import { navigate } from './navigate'
+import type { Project } from './projects'
 import Feed from './Feed'
 import './MakeApp.css'
 
@@ -10,7 +11,7 @@ const API = import.meta.env.VITE_API_URL as string
 /** The bit of GET /stories or GET /events a suggestion row needs. */
 type Hit = { id: number; slug: string | null; title: string }
 
-type IconName = 'check' | 'chevron' | 'close' | 'log-in' | 'log-out' | 'share'
+type IconName = 'check' | 'chevron' | 'close' | 'log-out' | 'share'
 
 const STROKE = {
   fill: 'none',
@@ -28,7 +29,6 @@ function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
       {name === 'check' && <path d="m5 12 5 5L20 7" {...common} strokeWidth={2} />}
       {name === 'chevron' && <path d="m8.5 10 3.5 3.5 3.5-3.5" {...common} />}
       {name === 'close' && <path d="m7 7 10 10M17 7 7 17" {...common} />}
-      {name === 'log-in' && <><path d="M14 5h3.25c.97 0 1.75.78 1.75 1.75v10.5c0 .97-.78 1.75-1.75 1.75H14" {...common} /><path d="m10 8 4 4-4 4m4-4H4" {...common} /></>}
       {name === 'share' && <path d="M8 9H7a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1m-4 5V3M9 6l3-3 3 3" {...common} strokeWidth={2} />}
       {name === 'log-out' && <><path d="M10 5H6.75A1.75 1.75 0 0 0 5 6.75v10.5C5 18.22 5.78 19 6.75 19H10" {...common} /><path d="m15 8 4 4-4 4m4-4H9" {...common} /></>}
     </svg>
@@ -133,7 +133,7 @@ function SavedMenu() {
   )
 }
 
-function AccountMenu({ session }: { session: AuthSession }) {
+function AccountMenu({ session, project }: { session: AuthSession; project: Project | null }) {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   useDismiss(menuRef, open, setOpen)
@@ -153,6 +153,9 @@ function AccountMenu({ session }: { session: AuthSession }) {
       {open && (
         <div className="make-account-menu" role="menu">
           <div className="make-account-email" title={session.user.email}>Conta<br /><span>{session.user.email}</span></div>
+          {project && (
+            <div className="make-account-email" title={project.name}>Projeto<br /><span>{project.name}</span></div>
+          )}
           <div className="make-account-separator" />
           <button type="button" role="menuitem" onClick={() => authClient.signOut()}>
             <Icon name="log-out" size={16} />
@@ -172,7 +175,7 @@ function greeting(hour = new Date().getHours()) {
   return 'Boa noite'
 }
 
-export default function MakeApp({ session }: { session: AuthSession | null }) {
+export default function MakeApp({ session, project = null }: { session: AuthSession | null; project?: Project | null }) {
   const queryRef = useRef<HTMLDivElement>(null)
   /** Card plus the suggestion sheet under it; outside-click and scroll target. */
   const searchRef = useRef<HTMLDivElement>(null)
@@ -304,26 +307,10 @@ export default function MakeApp({ session }: { session: AuthSession | null }) {
               <SavedMenu />
               <i className="make-divider" aria-hidden="true" />
               <ShareButton />
-              {AUTH_ENABLED && (
+              {AUTH_ENABLED && session && (
                 <>
                   <i className="make-divider" aria-hidden="true" />
-                  {session ? (
-                    <AccountMenu session={session} />
-                  ) : (
-                    <a
-                      className="make-login"
-                      href="/login"
-                      onClick={(event) => {
-                        event.preventDefault()
-                        navigate('/login')
-                      }}
-                    >
-                      <span>
-                        <Icon name="log-in" size={16} />
-                        Entrar
-                      </span>
-                    </a>
-                  )}
+                  <AccountMenu session={session} project={project} />
                 </>
               )}
             </div>
