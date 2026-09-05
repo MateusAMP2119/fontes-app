@@ -1,3 +1,3 @@
-# Copy to .dev.vars (gitignored) for `wrangler pages dev`. Google OAuth
-# credentials belong to the fontes-api Worker, not here.
+# Copy to .dev.vars (gitignored) for `npm run dev:functions`. Google OAuth
+# credentials belong to the fontes-auth Worker, not here.
 SYNC_KEY=

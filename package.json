@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:functions": "wrangler pages dev dist --port 8789",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",

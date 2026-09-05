@@ -3,13 +3,25 @@
   "name": "fontes",
   "pages_build_output_dir": "./dist",
   "compatibility_date": "2026-09-04",
-  // fonteslabs.com's database (fontes-spa owns its migrations); the feed
-  // reads the `stories` table the engine keeps in sync.
   "d1_databases": [
+    // fonteslabs.com's database (fontes-spa owns its migrations); the feed
+    // reads the `stories` table the engine keeps in sync.
     {
       "binding": "DB",
       "database_name": "fontes-articles",
       "database_id": "424dc93c-318a-43bb-9993-0b8e0f82d799"
+    },
+    // The auth Worker's database (fontes-auth owns its migrations); /api/projects
+    // reads the `member` and `project` tables. Remote in dev so local projects
+    // match the sessions the local auth Worker issues against the same database.
+    {
+      "binding": "AUTH_DB",
+      "database_name": "fontes-auth",
+      "database_id": "2ebddf0d-bb3f-4fee-8448-64306706035a",
+      "remote": true
     }
-  ]
+  ],
+  // Session validation for /api/projects. `wrangler pages dev` resolves this to
+  // a locally running `wrangler dev` of fontes-auth through the dev registry.
+  "services": [{ "binding": "AUTH", "service": "fontes-auth" }]
 }

@@ -6,7 +6,7 @@ system stack.
 
 Story data comes from the deployed Fontes API; the dashboard-builder fixtures in
 `src/news/` are still mocked. Authentication lives in the separate
-[fontes-api](https://github.com/MateusAMP2119/fontes-api) repo (see below).
+[fontes-auth](https://github.com/MateusAMP2119/fontes-auth) repo (see below).
 
 ## Stack
 
@@ -20,6 +20,7 @@ Story data comes from the deployed Fontes API; the dashboard-builder fixtures in
 ```sh
 npm install
 npm run dev       # http://localhost:5173
+npm run dev:functions  # Pages Functions on :8789, needs a `dist/` from npm run build
 npm run build
 npm run preview
 npm run lint
@@ -77,21 +78,37 @@ migrates a legacy v1 payload, and drops items whose type no longer exists.
   `motion.div` that animates `scale`, and client rects are post-transform.
 # Authentication
 
-Sign-in, sessions, organizations and projects are served by the
-[fontes-api](https://github.com/MateusAMP2119/fontes-api) Worker under
-`/api/auth/*` and `/api/projects`. This app only ships the Better Auth client
-(`src/auth.ts`) and talks to those routes on its own origin, so cookies never
-cross domains.
+Sign-in, sessions and organizations are served by the
+[fontes-auth](https://github.com/MateusAMP2119/fontes-auth) Worker under
+`/api/auth/*`. This app ships the Better Auth client (`src/auth.ts`) and talks
+to that route on its own origin, so cookies never cross domains.
 
-For local development, clone fontes-api next to this repo and run its
-`npm run dev`, which starts the Worker on `http://localhost:8787` against the
-cloud D1 database. Then run `npm run dev` here and open `http://localhost:5173`:
-Vite proxies `/api/auth` and `/api/projects` to the Worker. Keep both ports
-fixed: Google callbacks and browser cookies must belong to the same origin.
-Google credentials, migrations and the account-deletion script live in
-fontes-api.
+`/api/projects` is this app's own endpoint, a Pages Function in
+`functions/api/projects.ts`. It validates the cookie by asking the auth Worker
+over the `AUTH` service binding and reads the `project` table through the
+`AUTH_DB` binding, which points at the auth database (fontes-auth owns its
+migrations, including that table).
 
-With both servers running, `node --test scripts/auth-regression.test.mjs`
+## Local development
+
+Three servers make up the full local setup; the last one is only needed to
+list or create projects.
+
+1. In a checkout of fontes-auth, `npm run dev` starts the auth Worker on
+   `http://localhost:8787` against the cloud D1 database. Google credentials
+   live in that repo's `.dev.vars`.
+2. Here, `npm run dev` serves the app on `http://localhost:5173` and proxies
+   `/api/auth` to the Worker. Keep both ports fixed: Google callbacks and
+   browser cookies must belong to the same origin.
+3. For projects, `npm run build` once, then `npm run dev:functions` runs the
+   Pages Functions on `http://localhost:8789`; Vite proxies `/api/projects`
+   there. Wrangler's dev registry resolves the `AUTH` binding to the Worker
+   from step 1, and `AUTH_DB` is remote, so sessions and projects line up.
+
+Step 1 and 2 are enough for sign-in, onboarding and the feed. Without step 3,
+the projects list reads as empty and creating one fails.
+
+With the servers running, `node --test scripts/auth-regression.test.mjs`
 drives the login forms in a browser. These tests mock every auth response and
 never create accounts or send email. They cover password-manager fills without
 change events, submission, confirmation, password reset and native-control
