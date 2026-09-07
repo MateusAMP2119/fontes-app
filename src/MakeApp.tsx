@@ -1,3 +1,4 @@
+import { NEWS_API as API } from './api'
 import { useEffect, useRef, useState, type RefObject } from 'react'
 import { mountQuery, type ModeKey } from './query'
 import { authClient, AUTH_ENABLED, type AuthSession } from './auth'
@@ -6,7 +7,6 @@ import type { Project } from './projects'
 import Feed from './Feed'
 import './MakeApp.css'
 
-const API = import.meta.env.VITE_API_URL as string
 
 /** The bit of GET /stories or GET /events a suggestion row needs. */
 type Hit = { id: number; slug: string | null; title: string }

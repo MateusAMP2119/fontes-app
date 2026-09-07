@@ -187,7 +187,7 @@ export default function Login({ initialMode = 'login' }: { initialMode?: Mode } 
     try {
       switch (mode) {
       case 'login': {
-        const result = await authClient.signIn.email({ email, password, callbackURL: '/' })
+        const result = await authClient.signIn.email({ email, password, callbackURL: `${location.origin}/` })
         error = result.error
         if (!error) return navigate('/')
         break
@@ -197,7 +197,7 @@ export default function Login({ initialMode = 'login' }: { initialMode?: Mode } 
           email,
           password,
           name: email.split('@')[0],
-          callbackURL: '/',
+          callbackURL: `${location.origin}/`,
         })
         error = result.error
         message = 'Verifica o teu email para confirmares a conta.'
@@ -238,7 +238,7 @@ export default function Login({ initialMode = 'login' }: { initialMode?: Mode } 
     try {
       const { error } = await authClient.signIn.social({
         provider: 'google',
-        callbackURL: '/',
+        callbackURL: `${location.origin}/`,
       })
       if (error) throw error
     } catch (error) {

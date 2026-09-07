@@ -1,8 +1,10 @@
+import { API } from './api'
 import { createAuthClient } from 'better-auth/react'
 import { inferAdditionalFields, jwtClient, organizationClient } from 'better-auth/client/plugins'
 
 export const authClient = createAuthClient({
-  baseURL: location.origin,
+  baseURL: API,
+  fetchOptions: { credentials: 'include' },
   plugins: [
     jwtClient({ jwks: { jwksPath: '/.well-known/jwks.json' } }),
     organizationClient(),

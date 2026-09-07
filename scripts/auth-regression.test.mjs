@@ -2,7 +2,8 @@ import assert from 'node:assert/strict'
 import { after, before, test } from 'node:test'
 import { chromium } from 'playwright'
 
-const origin = 'http://localhost:5173'
+const origin = process.env.TEST_ORIGIN || 'http://localhost:5173'
+const apiOrigin = process.env.VITE_API_URL || 'https://api.fonteslabs.com'
 const password = 'Autofill-Test-123!'
 let browser
 before(async () => { browser = await chromium.launch() })
@@ -14,7 +15,12 @@ async function form(path = '/') {
   // Never send credentials, create accounts or send email during these tests.
   await page.route('**/api/auth/**', async (route) => {
     const request = route.request()
-    if (request.method() === 'POST') requests.push(request.postDataJSON())
+    assert.equal(new URL(request.url()).origin, new URL(apiOrigin).origin)
+    if (request.method() === 'POST') {
+      const body = request.postDataJSON()
+      if (body.callbackURL) assert.equal(body.callbackURL, `${origin}/`)
+      requests.push(body)
+    }
     await route.fulfill({ json: request.url().includes('get-session') ? null : { user: { id: 'test' }, token: null } })
   })
   await page.goto(origin + path)

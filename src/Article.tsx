@@ -1,9 +1,9 @@
+import { NEWS_API as API } from './api'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { navigate } from './navigate'
 import { mountKicker } from './kicker'
 import './Article.css'
 
-const API = import.meta.env.VITE_API_URL as string
 
 type Entity = { id: number; kind: 'person' | 'org' | 'location'; name: string; slug: string | null }
 
@@ -401,8 +401,8 @@ function Footer() {
   )
 }
 
-// our own origin (functions/api/favicon.ts): Google's service is cut off on phones behind tracker-blocking DNS
-const favicon = (url: string) => `/api/favicon?host=${encodeURIComponent(host(url))}`
+// Publisher icons load directly; this frontend has no favicon proxy.
+const favicon = (url: string) => `https://icons.duckduckgo.com/ip3/${encodeURIComponent(host(url))}.ico`
 
 /** fonteslabs.com's clips strip: the pictured articles as 16:10 cards that scroll by hand; an article without a picture is not shown. */
 function Clips({ articles }: { articles: Clip[] }) {

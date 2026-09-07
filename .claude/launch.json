@@ -12,56 +12,16 @@
       "autoPort": false
     },
     {
-      "name": "fontes-spa",
-      "runtimeExecutable": "sh",
-      "runtimeArgs": [
-        "-c",
-        "cd ../fontes-spa && npx astro dev"
-      ],
-      "port": 4176,
-      "autoPort": true
-    },
-    {
-      "name": "fontes-spa-pages",
-      "runtimeExecutable": "sh",
-      "runtimeArgs": [
-        "-c",
-        "cd ../fontes-spa && npx wrangler pages dev dist --port 8788"
-      ],
-      "port": 8788,
-      "autoPort": true
-    },
-    {
-      "name": "fontes-pages",
+      "name": "fontes-worker",
       "runtimeExecutable": "npx",
       "runtimeArgs": [
         "wrangler",
-        "pages",
         "dev",
-        "dist",
         "--port",
         "8789"
       ],
       "port": 8789,
-      "autoPort": true
-    },
-    {
-      "name": "fontes-auth-local",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": [
-        "run",
-        "dev:auth"
-      ],
-      "port": 8787
-    },
-    {
-      "name": "fontes-dev-local-auth",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": [
-        "run",
-        "dev:local"
-      ],
-      "port": 5173
+      "autoPort": false
     }
   ]
 }

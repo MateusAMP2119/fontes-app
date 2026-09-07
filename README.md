@@ -4,14 +4,16 @@ News dashboard builder on a freeform canvas, for building views on Iris. Visual
 language follows Apple Freeform: full-bleed dotted board, floating pills, SF Pro
 system stack.
 
-All news data is mocked — there is no backend and no network layer.
+This repository contains the frontend only. Authentication and projects use the
+external API at `https://api.fonteslabs.com`; news views also call an external API.
+Dashboard visualization fixtures remain mocked.
 
 ## Stack
 
 - Vite + React 19 + TypeScript
 - `motion` for the board cross-fade; everything else is CSS transitions
 - Plain CSS: `src/index.css` (tokens) and `src/App.css` (everything else)
-- `oxlint` for linting. No test runner is currently wired up.
+- `oxlint` for linting. Auth UI checks use Node’s test runner and Playwright.
 
 ## Scripts
 
@@ -73,48 +75,46 @@ migrates a legacy v1 payload, and drops items whose type no longer exists.
 - The dashboard grid is measured once, at pick time, with `offsetLeft` /
   `offsetWidth` rather than `getBoundingClientRect` — the frame sits inside a
   `motion.div` that animates `scale`, and client rects are post-transform.
-# Local authentication
+## API configuration
 
-Run `npm run dev` from this directory, then open `http://localhost:5173`.
-This starts Vite and the local auth Worker together. The Worker connects to the
-cloud D1 database `fontes-auth`, also visible in Cloudflare Studio. Keep this port
-fixed: Google callbacks and browser cookies must belong to
-the same origin. Closing the command stops both servers.
+`VITE_API_URL` selects the auth and projects API origin (default:
+`https://api.fonteslabs.com`). `VITE_NEWS_API_URL` can select a separate news API;
+it defaults to `https://fontes-api.bymarreco.com`. These are public build-time values, not secrets.
+Set overrides in `.env.local` or Cloudflare's build variables and rebuild.
 
-For Google sign-in:
+`npm run dev` starts only Vite at `http://localhost:5173`. Browser requests go
+directly to the external API, including credentials for auth and projects.
+The API owns database schemas, migrations, OAuth credentials and email delivery.
+Auth callbacks return to the frontend origin.
 
-1. Copy `.dev.vars.example` to `.dev.vars` if that file does not already exist.
-2. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to the existing web client's
-   credentials. Keep this file private; it is gitignored.
-3. Add `http://localhost:5173/api/auth/callback/google` to that client's
-   **Authorized redirect URIs** in Google Cloud Console, preserving existing URLs.
-4. Restart `npm run dev` after changing credentials.
+The external API must allow the frontend origin through its trusted-origin and
+credentialed CORS configuration, including OPTIONS preflight responses. Local
+HTTP development also requires an API cookie setup that supports cross-site
+sessions; production sibling domains under HTTPS avoid that same-site mismatch.
 
-Users, organizations, memberships and projects use cloud D1, shared with production.
-The email binding also uses Cloudflare: signup and reset requests send real emails.
-Story data comes from the deployed site.
-Google sign-in requires real OAuth credentials; placeholders cannot complete the
-code exchange. Startup does not apply database migrations automatically.
+The news service at `https://fontes-api.bymarreco.com` serves `/stories`,
+`/stories/:id`, `/events` and `/events/:id`. It allows public cross-origin reads;
+news calls do not send session cookies. Authentication and projects remain on
+`https://api.fonteslabs.com`.
+Publisher icons load directly from DuckDuckGo's icon service.
 
-Apply auth migrations explicitly with:
+## Deployment
 
-```sh
-npx wrangler d1 migrations apply fontes-auth --remote --config wrangler.auth.jsonc
-```
+Cloudflare Workers Builds deploys this as an assets-only Worker named `fontes-app`:
 
-In Cloudflare Studio, inspect `user`, `account`, `organization`, `member` and `project`.
-For a joined overview:
+- Build command: `npm run build`
+- Deploy command: `npx wrangler deploy`
+- Root directory: repository root
 
-```sql
-SELECT u.email, o.name AS organization, m.role, p.name AS project
-FROM user u
-LEFT JOIN member m ON m.userId = u.id
-LEFT JOIN organization o ON o.id = m.organizationId
-LEFT JOIN project p ON p.organizationId = o.id;
-```
+`wrangler.jsonc` serves `dist` with SPA fallback for routes such as `/login`.
+The custom domains are `app.fonteslabs.com` and `www.app.fonteslabs.com`.
+There are no Worker scripts, Pages functions, database bindings or migrations.
+The old GitHub Pages deployment workflow was removed; Cloudflare owns Git builds.
+For a manual deployment, run `npm run deploy`.
+
+## Auth UI regression checks
 
 With the dev server running, run `node --test scripts/auth-regression.test.mjs`.
 These browser tests mock auth responses and never create accounts or send email.
 They cover password-manager fills without change events, submission, confirmation,
-password reset and native-control spacing. They do not automate Apple Keychain
-or complete a real Google login.
+password reset and native-control spacing. They do not complete a real Google login.

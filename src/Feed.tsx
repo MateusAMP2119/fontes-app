@@ -1,10 +1,11 @@
+import { NEWS_API as API } from './api'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { AuthSession } from './auth'
 import { Sparkline } from './components/Sparkline'
 import { navigate } from './navigate'
 import './Feed.css'
 
-/** One row of GET /api/stories (functions/api/stories.ts), the engine's stories mirrored to the edge. */
+/** One row of the external stories API, the engine's stories mirrored to the edge. */
 type Story = {
   id: number
   slug: string | null
@@ -17,7 +18,7 @@ type Story = {
   latest_at: string
   /** Article arrivals in 12 equal buckets from the story's origin until now. */
   popularity?: number[]
-  /** Feed position, and the move since the position before the latest third of the story's coverage (functions/api/stories.ts). */
+  /** Feed position, and the move since the position before the latest third of the story's coverage. */
   rank?: number
   rank_change?: number
   /** Newest preview image, when any article has one. */
@@ -32,7 +33,6 @@ type StoryDetail = {
   events?: { articles?: { discovered_at?: string }[] }[]
 }
 
-const API = import.meta.env.VITE_API_URL as string
 const PAGE = 20
 const SKELETON_ROWS = 8
 const MAX_LOGOS = 8
@@ -50,8 +50,8 @@ function shortDay(iso: string): string {
   return then.getFullYear() === today.getFullYear() ? label : `${label} ${then.getFullYear()}`
 }
 
-// our own origin (functions/api/favicon.ts): Google's service is cut off on phones behind tracker-blocking DNS
-const favicon = (host: string) => `/api/favicon?host=${encodeURIComponent(host)}`
+// Publisher icons load directly; this frontend has no favicon proxy.
+const favicon = (host: string) => `https://icons.duckduckgo.com/ip3/${encodeURIComponent(host)}.ico`
 
 /** Puts a page's full-size pictures in the browser cache before its rows exist. */
 function warm(page: Story[]) {
@@ -239,7 +239,7 @@ export default function Feed({ session: _session, queries = [] }: { session: Aut
 
   const fetchPage = useCallback(
     async (offset: number): Promise<Story[]> => {
-      // Browsing reads the edge mirror (functions/api/stories.ts) page by
+      // Browsing reads the external news API page by
       // page. Searches ask the engine once per stored term and merge the
       // answers, newest first; the engine matches whole words, so
       // "vice-presidente" must go up as two.
@@ -260,7 +260,7 @@ export default function Feed({ session: _session, queries = [] }: { session: Aut
           .filter((story) => !seen.has(story.id) && seen.add(story.id))
           .sort((a, b) => Date.parse(b.latest_at) - Date.parse(a.latest_at))
       } else {
-        page = await read(`/api/stories?limit=${PAGE}&offset=${offset}`)
+        page = await read(`${API}/stories?limit=${PAGE}&offset=${offset}`)
       }
       warm(page)
       return page

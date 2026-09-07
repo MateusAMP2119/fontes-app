@@ -1,11 +1,12 @@
+import { API } from './api'
 import { useCallback, useEffect, useState } from 'react'
 
 export type Project = { id: string; organizationId: string; name: string; createdAt: string }
 
 async function api(method: 'GET' | 'POST', body?: unknown): Promise<unknown> {
-  const response = await fetch('/api/projects', {
+  const response = await fetch(`${API}/api/projects`, {
     method,
-    credentials: 'same-origin',
+    credentials: 'include',
     headers: body ? { 'content-type': 'application/json' } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   })
