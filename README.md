@@ -84,18 +84,17 @@ npm ci
 npm run setup:api
 cp services/api/.dev.vars.example services/api/.dev.vars
 # Set BETTER_AUTH_SECRET (32+ random characters) and Google credentials.
-npm --prefix services/api run db:init  # once, only for a fresh local database
 npm run dev
 ```
 
-Open `http://localhost:5173`. The app proxies API requests to the local Worker on
-port 8787. The API uses local D1 and verification/reset emails appear at
-`http://localhost:5173/__dev/mail`. Scalar docs are at
-`http://localhost:5173/api/auth/docs`. No Rust installation is required.
+Open `http://localhost:5173`. Port 8787 forwards API requests to a remote
+Cloudflare Worker. It uses the existing Cloudflare D1 database and email binding;
+development writes affect that database. There is no local database or email inbox.
+Scalar docs are at `http://localhost:5173/api/auth/docs`.
 
 ```sh
 npm run check:api
-npm run test:ui  # requires npm run dev in another terminal
+npm run test:ui  # requires a dedicated test environment; creates accounts
 npm run build
 npm run lint
 ```

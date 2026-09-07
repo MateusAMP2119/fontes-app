@@ -16,7 +16,6 @@ export default defineConfig({
       '/api/stories': { target: AUTH_ORIGIN, changeOrigin: true },
       '/api/favicon': { target: AUTH_ORIGIN, changeOrigin: true },
       '/api/auth': authProxy,
-      '/__dev/mail': authProxy,
       '/api/projects': authProxy,
     },
   },

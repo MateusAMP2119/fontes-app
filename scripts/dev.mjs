@@ -28,7 +28,7 @@ function run(args) {
 process.on('SIGINT', () => stop(0))
 process.on('SIGTERM', () => stop(0))
 
-console.log('Auth uses local D1. Verification and reset emails appear at /__dev/mail.')
+console.log('API runs remotely in Cloudflare. Development writes affect the configured Cloudflare D1 database.')
 for (const script of ['dev:api', 'dev:local']) {
   run(['run', script]).on('exit', (code) => stop(code ?? 1))
 }
