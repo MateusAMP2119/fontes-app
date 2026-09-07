@@ -2,10 +2,9 @@
    near-black steps otherwise quantize into visible rings on 8-bit displays. */
 .ob-page{--ob-text:#ededee;--ob-muted:#8d8d93;--ob-border:#2b2b2e;position:fixed;inset:0;overflow:auto;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.038'/%3E%3C/svg%3E") repeat,radial-gradient(150% 105% at 50% -12%,#1b1c1f 0%,#08080a 100%) #0c0c0d;color:var(--ob-text);font-family:InterVariable,Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;line-height:1.5;color-scheme:dark;display:flex;flex-direction:column;padding:38px 48px 100px}
 /* The live header's floating brand card: a 30px mark tile inside a 6px surface pill. */
-.ob-brand{display:flex;width:fit-content;padding:6px;border-radius:13px;background:#171719;box-shadow:0 0 56px #00000073,0 0 20px #0000004d,0 0 0 1px #ffffff12}
+.ob-brand{display:flex;width:fit-content;margin-inline:auto;padding:6px;border-radius:13px;background:#171719;box-shadow:0 0 0 1px #ffffff12,0 1px 3px #00000059}
 .ob-brand:focus-visible{outline:2px solid #aaa5ef;outline-offset:4px}
 .ob-brand img{display:block;width:30px;height:30px;object-fit:cover;border-radius:7px}
-.ob-start .ob-brand{margin:0 auto 22px}
 .ob-stage{flex:1;display:flex;align-items:center;justify-content:center;min-height:590px;padding:36px 0 74px}
 .ob-panel{width:100%;max-width:400px;animation:ob-enter .22s ease-out}
 .ob-panel header{margin-bottom:32px}
@@ -13,6 +12,7 @@
 .ob-panel header p{margin-top:12px;color:var(--ob-muted);font-size:14px;line-height:1.6;text-wrap:pretty}
 .ob-panel strong{font-weight:500;color:var(--ob-text)}
 .ob-start{max-width:340px}.ob-start header{text-align:center;margin-bottom:34px}.ob-start h1{font-size:26px}
+.ob-email header{text-align:center}
 .ob-start-actions{display:flex;flex-direction:column;gap:17px}
 .ob-panel button{cursor:pointer}.ob-panel button:focus-visible,.ob-preview-bar button:focus-visible{outline:2px solid #aaa5ef;outline-offset:4px}
 .ob-button{border:1px solid #2a2a2e;border-radius:999px;padding:11px 22px;min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:10px;background:#202022;color:var(--ob-text);font:inherit;font-size:13px;font-weight:500;transition:background .15s,border-color .15s}

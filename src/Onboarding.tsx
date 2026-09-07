@@ -89,15 +89,15 @@ export default function Onboarding({ preview = false, session = null, onReady }:
     if (draft.step === 'updates') go('done')
   }
   const progress = ['code', 'workspace', 'profile', 'invites', 'updates'].indexOf(draft.step)
-  // The mark heads the start screen and returns to it from every later step.
+  // The mark sits at the page's top edge, so its position never shifts between steps.
   const brand = <a className="ob-brand" href={preview ? '/onboarding-preview' : '/'} onClick={e => { e.preventDefault(); if (preview) go('start'); else void live.changeEmail() }} aria-label="Fontes, início"><img src="/mark.png" width="30" height="30" alt=""/></a>
   return <main className="ob-page" data-theme={light ? 'light' : 'dark'}>
-    {draft.step !== 'start' && brand}
+    {brand}
     <div className="ob-stage">
       <section className={`ob-panel ob-${draft.step}`} aria-labelledby="ob-title" key={draft.step}>
         {progress >= 0 && <div className="ob-progress" aria-label={`Passo ${progress + 1} de 5`}>{Array.from({ length: 5 }, (_, i) => <span key={i} className={i === progress ? 'current' : i < progress ? 'past' : ''}/>)}</div>}
         {draft.step === 'done' && <div className="ob-success"><Icon kind="check"/></div>}
-        <header>{draft.step === 'start' && brand}<h1 id="ob-title" ref={title} tabIndex={-1}>{titles[draft.step]}</h1>{descriptions[draft.step] && <p>{descriptions[draft.step]}</p>}</header>
+        <header><h1 id="ob-title" ref={title} tabIndex={-1}>{titles[draft.step]}</h1>{descriptions[draft.step] && <p>{descriptions[draft.step]}</p>}</header>
         {draft.step === 'start' ? <div className="ob-start-actions">
           <button className="ob-button ob-provider" disabled={live.busy} onClick={() => { if (!preview) { void live.google(); return }; patch({ email: 'mateus@gmail.com', profile: 'Mateus', returning: false }); go('workspace') }}><Google/>Continuar com Google</button>
           <div className="ob-divider"><span>ou</span></div>
