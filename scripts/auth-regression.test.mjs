@@ -24,9 +24,9 @@ test('optimistic verification, authenticated sync and offline recovery', async (
   await page.goto(origin);const button=name=>page.getByRole('button',{name,exact:true});const input=name=>page.getByRole('textbox',{name,exact:true});
   assert.equal(await page.getByRole('navigation',{name:'Ecrãs'}).count(),0);
   await button('Continuar com email').click();await input('Endereço de email').fill(user.email);await button('Continuar com email').click();await input('Código de confirmação').fill('123456');await button('Continuar com código').click();await input('Nome').waitFor();assert.equal(authenticated,false);
-  await input('Nome').fill('Fontes Editorial');await button('Criar ambiente').click();await input('Nome do perfil').fill('Mateus Costa');await button('Continuar').click();await button('Saltar').click();
+  await input('Nome').fill('Fontes Editorial');await button('Criar ambiente').click();await input('Nome do perfil').fill('Mateus Costa');await button('Criar perfil').click();await button('Saltar').click();
   await page.waitForFunction(()=>JSON.parse(localStorage.getItem('fontes:onboarding:v1:test-user')||'null')?.revision>0);
-  offline=true;await button('Começar').click();await page.getByText(/A ligação foi interrompida/).waitFor();await page.reload();await page.getByRole('heading',{name:'A preparar o teu ambiente'}).waitFor();offline=false;await page.evaluate(()=>dispatchEvent(new Event('online')));await page.getByRole('heading',{name:'Tudo pronto'}).waitFor();
+  offline=true;await button('Começar').click();await page.getByText(/A ligação foi interrompida/).waitFor();await page.reload();await page.getByRole('heading',{name:'Comunicados e atualizações'}).waitFor();offline=false;await page.evaluate(()=>dispatchEvent(new Event('online')));await page.locator('.ob-panel').waitFor({state:'detached'});
   assert.ok(writes.at(-1).completed);assert.equal(writes.at(-1).name,'Fontes Editorial');assert.equal(writes.at(-1).profileName,'Mateus Costa');assert.ok(!(await page.evaluate(()=>JSON.stringify(localStorage))).includes('123456'));assert.deepEqual(errors,[]);
  }finally{await browser.close()}
 });
