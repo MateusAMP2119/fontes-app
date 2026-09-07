@@ -1,97 +1,32 @@
 import assert from 'node:assert/strict'
-import { after, before, test } from 'node:test'
+import { test } from 'node:test'
 import { chromium } from 'playwright'
-
-const origin = process.env.TEST_ORIGIN || 'http://localhost:5173'
-const apiOrigin = process.env.VITE_API_URL || 'https://api.fonteslabs.com'
-const password = 'Autofill-Test-123!'
-let browser
-before(async () => { browser = await chromium.launch() })
-after(async () => { await browser?.close() })
-
-async function form(path = '/') {
-  const page = await browser.newPage()
-  const requests = []
-  // Never send credentials, create accounts or send email during these tests.
-  await page.route('**/api/auth/**', async (route) => {
-    const request = route.request()
-    assert.equal(new URL(request.url()).origin, new URL(apiOrigin).origin)
-    if (request.method() === 'POST') {
-      const body = request.postDataJSON()
-      if (body.callbackURL) assert.equal(body.callbackURL, `${origin}/`)
-      requests.push(body)
-    }
-    await route.fulfill({ json: request.url().includes('get-session') ? null : { user: { id: 'test' }, token: null } })
-  })
-  await page.goto(origin + path)
-  await page.locator('#password').waitFor()
-  return { page, requests }
-}
-
-// Model a password manager that updates the DOM without a React change event.
-async function autofill(page, id, value = password) {
-  await page.locator(`#${id}`).evaluate((input, value) => { input.value = value }, value)
-}
-
-test('signup preserves silent autofill across reveal and session refetch', async () => {
-  const { page, requests } = await form()
-  try {
-    await page.locator('#email').fill('autofill@example.test')
-    await autofill(page, 'password')
-    await autofill(page, 'password-confirmation')
-    await page.getByRole('button', { name: 'Mostrar palavra-passe', exact: true }).click()
-    assert.equal(await page.locator('#password').inputValue(), password)
-    await page.getByRole('button', { name: 'Criar conta', exact: true }).click()
-    await page.getByText('Verifica o teu email para confirmares a conta.').waitFor()
-    assert.equal(requests[0].password, password)
-    assert.equal(await page.locator('#password').inputValue(), password)
-  } finally { await page.close() }
-})
-
-test('login submits the filled field, even when React has an older value', async () => {
-  const { page, requests } = await form('/login')
-  try {
-    await page.locator('#email').fill('autofill@example.test')
-    await page.locator('#password').fill('Previously-Typed-123!')
-    await autofill(page, 'password')
-    await page.getByRole('button', { name: 'Entrar', exact: true }).click()
-    await page.waitForFunction(() => location.pathname === '/')
-    assert.equal(requests[0].password, password)
-  } finally { await page.close() }
-})
-
-test('signup rejects mismatched autofilled confirmation', async () => {
-  const { page, requests } = await form()
-  try {
-    await page.locator('#email').fill('autofill@example.test')
-    await autofill(page, 'password')
-    await autofill(page, 'password-confirmation', 'Different-Password-123!')
-    await page.getByRole('button', { name: 'Criar conta', exact: true }).click()
-    await page.getByText('As palavras-passe não coincidem.').waitFor()
-    assert.equal(requests.length, 0)
-  } finally { await page.close() }
-})
-
-test('reset submits autofilled password and leaves login enabled', async () => {
-  const { page, requests } = await form('/login?mode=reset&token=test-only')
-  try {
-    await autofill(page, 'password')
-    await autofill(page, 'password-confirmation')
-    await page.getByRole('button', { name: 'Guardar', exact: true }).click()
-    await page.getByText('Palavra-passe atualizada. Já podes entrar.').waitFor()
-    assert.equal(requests[0].newPassword, password)
-    assert.equal(await page.getByRole('button', { name: 'Entrar', exact: true }).isEnabled(), true)
-  } finally { await page.close() }
-})
-
-test('password reveal button sits at the right edge inside the input', async () => {
-  const { page } = await form()
-  try {
-    const input = await page.locator('#password').boundingBox()
-    const toggle = await page.getByRole('button', { name: 'Mostrar palavra-passe', exact: true }).boundingBox()
-    assert.ok(toggle.x >= input.x)
-    assert.ok(Math.abs(input.x + input.width - toggle.x - toggle.width - 4) < 1)
-    assert.ok(toggle.y >= input.y)
-    assert.ok(toggle.y + toggle.height <= input.y + input.height)
-  } finally { await page.close() }
-})
+const origin = process.env.TEST_ORIGIN || 'http://127.0.0.1:5173'
+test('optimistic verification, authenticated sync and offline recovery', async () => {
+ const browser=await chromium.launch(); const page=await browser.newPage(); let authenticated=false,offline=false; const writes=[],errors=[];
+ const user={id:'test-user',email:'mateus@example.com',emailVerified:true,name:'Mateus',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+ let state={organization:null,project:null,profile:{name:'Mateus'},revision:0,completed:false,changelog:false,daily:false};
+ page.on('pageerror',e=>errors.push(e.message));
+ await page.route('**/api/**',async route=>{
+  const path=new URL(route.request().url()).pathname;
+  if(path.endsWith('/get-session')) return route.fulfill({json:authenticated?{user,session:{id:'session',token:'test',userId:user.id,expiresAt:new Date(Date.now()+3600000).toISOString(),createdAt:user.createdAt,updatedAt:user.updatedAt}}:null});
+  if(path.endsWith('/send-verification-otp')) return route.fulfill({json:{success:true}});
+  if(path.endsWith('/sign-in/email-otp')){await new Promise(r=>setTimeout(r,700));authenticated=true;return route.fulfill({json:{user,token:'test'}})}
+  if(path==='/api/onboarding'){
+   assert.ok(authenticated);
+   if(route.request().method()==='GET') return route.fulfill({json:state});
+   if(offline)return route.fulfill({status:503,json:{message:'offline'}});
+   const b=route.request().postDataJSON();writes.push(b);state={...state,organization:{id:'org',name:b.name,slug:b.slug},project:{id:'project',name:'O meu projeto',organizationId:'org',createdAt:user.createdAt},revision:b.revision,completed:b.completed};return route.fulfill({json:state});
+  }
+  return route.fulfill({json:{}});
+ });
+ try{
+  await page.goto(origin);const button=name=>page.getByRole('button',{name,exact:true});const input=name=>page.getByRole('textbox',{name,exact:true});
+  assert.equal(await page.getByRole('navigation',{name:'Ecrãs'}).count(),0);
+  await button('Continuar com email').click();await input('Endereço de email').fill(user.email);await button('Continuar com email').click();await input('Código de confirmação').fill('123456');await button('Continuar com código').click();await input('Nome').waitFor();assert.equal(authenticated,false);
+  await input('Nome').fill('Fontes Editorial');await button('Criar ambiente').click();await input('Nome do perfil').fill('Mateus Costa');await button('Continuar').click();await button('Saltar').click();
+  await page.waitForFunction(()=>JSON.parse(localStorage.getItem('fontes:onboarding:v1:test-user')||'null')?.revision>0);
+  offline=true;await button('Começar').click();await page.getByText(/A ligação foi interrompida/).waitFor();await page.reload();await page.getByRole('heading',{name:'A preparar o teu ambiente'}).waitFor();offline=false;await page.evaluate(()=>dispatchEvent(new Event('online')));await page.getByRole('heading',{name:'Tudo pronto'}).waitFor();
+  assert.ok(writes.at(-1).completed);assert.equal(writes.at(-1).name,'Fontes Editorial');assert.equal(writes.at(-1).profileName,'Mateus Costa');assert.ok(!(await page.evaluate(()=>JSON.stringify(localStorage))).includes('123456'));assert.deepEqual(errors,[]);
+ }finally{await browser.close()}
+});

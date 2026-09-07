@@ -118,3 +118,21 @@ With the dev server running, run `node --test scripts/auth-regression.test.mjs`.
 These browser tests mock auth responses and never create accounts or send email.
 They cover password-manager fills without change events, submission, confirmation,
 password reset and native-control spacing. They do not complete a real Google login.
+
+## Signup and onboarding
+
+The shared `Onboarding.tsx` screens replace the old password/organization/username
+wizard at `/` and `/login`. Google and email OTP establish the real session;
+workspace/profile/preferences save in order in the background. Confirmed server
+state gates entry into the app. Drafts and pending writes are scoped to the user
+in localStorage; pre-authentication drafts use sessionStorage, and OTPs stay in
+memory. Reload and reconnect resume authenticated pending writes. The light/dark
+choice is stored separately. Permanent API errors remain visible for correction.
+
+Development-only `/onboarding-preview` renders the same screens with simulated
+actions and a screen picker. It makes no API requests. Run the Vite dev server,
+then `node scripts/auth-regression.test.mjs` and
+`node scripts/onboarding-preview.test.mjs` to verify the real mocked-network flow
+and preview. No test sends email or creates a remote account.
+
+Release the matching fontes-api onboarding migration/API before this frontend.
