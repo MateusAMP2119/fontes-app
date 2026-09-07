@@ -13,7 +13,7 @@
 .ob-panel header p{margin-top:12px;color:var(--ob-muted);font-size:14px;line-height:1.6;text-wrap:pretty}
 .ob-panel strong{font-weight:500;color:var(--ob-text)}
 .ob-start{max-width:340px}.ob-start header{text-align:center;margin-bottom:34px}.ob-start h1{font-size:26px}
-.ob-email header{text-align:center}
+.ob-email header{text-align:center}.ob-email .ob-progress{justify-content:center}
 .ob-start-actions{display:flex;flex-direction:column;gap:17px}
 .ob-panel button{cursor:pointer}.ob-panel button:focus-visible,.ob-preview-bar button:focus-visible{outline:2px solid #aaa5ef;outline-offset:4px}
 .ob-button{border:1px solid #2a2a2e;border-radius:var(--ob-control-radius);padding:11px 22px;min-height:var(--ob-control-h);min-width:var(--ob-control-min-w);display:inline-flex;align-items:center;justify-content:center;gap:10px;background:#202022;color:var(--ob-text);font:inherit;font-size:13px;font-weight:500;transition:background .15s,border-color .15s}

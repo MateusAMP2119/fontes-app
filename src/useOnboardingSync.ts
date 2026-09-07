@@ -206,7 +206,7 @@ export function useOnboardingSync(props: Props) {
     if (owner.current) { try { localStorage.removeItem(prefix + owner.current) } catch { /* optional storage */ } }
     generation.current++; owner.current = null; recordOwner.current = null; state.current = null
     record.current = { draft: current.current.draft, revision: 0, invitations: [] }
-    current.current.setDraft(d => ({ ...d, step: 'email', returning: false, email: '', name: '', slug: '', profile: '', invitations: '', changelog: false, daily: false }))
+    current.current.setDraft(d => ({ ...d, step: 'email', returning: false, provider: 'email', email: '', name: '', slug: '', profile: '', invitations: '', changelog: false, daily: false }))
     setReady(false)
   }
   async function copyInvite() {
