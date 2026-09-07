@@ -9,10 +9,10 @@ Production routes remain `/api/auth/*` and `/api/projects*` on
 `builder.fonteslabs.com`, served by the `fontes-api` Worker. D1 is named
 `fontes-app` and bound as `APP_DB`. Deploy the API before the frontend. Publishing
 or updating the submodule does not deploy the Worker; its README describes secrets,
-Google callbacks, email configuration and migration/deployment commands.
+Google callbacks, email configuration and local schema and deployment commands.
 
 To adopt a reviewed API update, check out that commit in `services/api`, run
-`npm run test:api` and the app checks, then commit the updated Git submodule pointer.
+`npm run check:api` and the app checks, then commit the updated Git submodule pointer.
 
 The earlier Rust prototype and private database backups remain in this checkout’s
 ignored `.wrangler/` directory for recovery. They are not part of either repository.

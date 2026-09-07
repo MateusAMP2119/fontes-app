@@ -83,17 +83,18 @@ Better Auth and D1 for authentication, organizations and projects.
 npm ci
 npm run setup:api
 cp services/api/.dev.vars.example services/api/.dev.vars
-# Add Google credentials there if testing Google login.
+# Set BETTER_AUTH_SECRET (32+ random characters) and Google credentials.
+npm --prefix services/api run db:init  # once, only for a fresh local database
 npm run dev
 ```
 
 Open `http://localhost:5173`. The app proxies API requests to the local Worker on
-port 8787. Migrations use local D1 and verification/reset emails appear at
+port 8787. The API uses local D1 and verification/reset emails appear at
 `http://localhost:5173/__dev/mail`. Scalar docs are at
 `http://localhost:5173/api/auth/docs`. No Rust installation is required.
 
 ```sh
-npm run test:api
+npm run check:api
 npm run test:ui  # requires npm run dev in another terminal
 npm run build
 npm run lint

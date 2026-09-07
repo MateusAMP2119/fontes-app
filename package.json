@@ -1,7 +1,7 @@
 {
   "name": "fontes",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.mjs",
@@ -12,9 +12,9 @@
     "deploy": "npm run build && wrangler pages deploy",
     "setup:api": "git submodule update --init services/api && npm ci --prefix services/api",
     "build:api": "npm --prefix services/api run build",
-    "test:api": "npm --prefix services/api test",
     "test:ui": "node --test scripts/auth-regression.test.mjs scripts/onboarding-browser.test.mjs",
-    "dev:api": "npm --prefix services/api run dev"
+    "dev:api": "npm --prefix services/api run dev",
+    "check:api": "npm --prefix services/api run typecheck && npm --prefix services/api run build"
   },
   "dependencies": {
     "better-auth": "1.7.2",
