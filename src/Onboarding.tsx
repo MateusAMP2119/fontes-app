@@ -90,7 +90,7 @@ export default function Onboarding({ preview = false, session = null, onReady }:
   }
   const progress = ['code', 'workspace', 'profile', 'invites', 'updates'].indexOf(draft.step)
   // The mark heads the start screen and returns to it from every later step.
-  const brand = <a className="ob-brand" href={preview ? '/onboarding-preview' : '/'} onClick={e => { e.preventDefault(); if (preview) go('start'); else void live.changeEmail() }} aria-label="Fontes, início"><img src="/mark.png" width="44" height="44" alt=""/></a>
+  const brand = <a className="ob-brand" href={preview ? '/onboarding-preview' : '/'} onClick={e => { e.preventDefault(); if (preview) go('start'); else void live.changeEmail() }} aria-label="Fontes, início"><img src="/mark.png" width="30" height="30" alt=""/></a>
   return <main className="ob-page" data-theme={light ? 'light' : 'dark'}>
     {draft.step !== 'start' && brand}
     <div className="ob-stage">
