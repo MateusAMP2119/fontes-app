@@ -1,6 +1,10 @@
-.ob-page{--ob-text:#ededee;--ob-muted:#8d8d93;--ob-border:#2b2b2e;position:fixed;inset:0;overflow:auto;background:#0c0c0d;color:var(--ob-text);font-family:InterVariable,Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;line-height:1.5;color-scheme:dark;display:flex;flex-direction:column;padding:38px 48px 100px}
-.ob-brand{display:flex;align-items:center;gap:9px;color:var(--ob-text);text-decoration:none;width:fit-content;font-size:23px;font-weight:600;letter-spacing:-1px}
-.ob-brand img{filter:grayscale(1);object-fit:contain;border-radius:5px}
+.ob-page{--ob-text:#ededee;--ob-muted:#8d8d93;--ob-border:#2b2b2e;position:fixed;inset:0;overflow:auto;background:radial-gradient(128% 88% at 50% 8%,#191a1c 0%,#141415 34%,#0d0d0e 68%,#08080a 100%) #0c0c0d;color:var(--ob-text);font-family:InterVariable,Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:14px;line-height:1.5;color-scheme:dark;display:flex;flex-direction:column;padding:38px 48px 100px}
+/* The mark keeps the live header's tile: same radius ratio, hairline ring, soft shadow. */
+.ob-brand{display:flex;width:fit-content;border-radius:9px}
+.ob-brand:focus-visible{outline:2px solid #aaa5ef;outline-offset:4px}
+.ob-brand img{display:block;width:30px;height:30px;object-fit:cover;border-radius:7px;box-shadow:0 0 0 1px #ffffff14,0 1px 3px #00000073}
+.ob-start .ob-brand{margin:0 auto 22px}
+.ob-start .ob-brand img{width:44px;height:44px;border-radius:10px;box-shadow:0 0 0 1px #ffffff1a,0 4px 14px #0000008c}
 .ob-stage{flex:1;display:flex;align-items:center;justify-content:center;min-height:590px;padding:36px 0 74px}
 .ob-panel{width:100%;max-width:400px;animation:ob-enter .22s ease-out}
 .ob-panel header{margin-bottom:32px}
@@ -40,7 +44,7 @@
 .ob-theme-thumb{position:absolute;top:-5px;left:0;width:22px;height:22px;display:grid;place-items:center;border-radius:50%;border:1px solid #47474d;background:#222225;box-shadow:0 1px 3px #0002;transition:transform .18s}
 .ob-theme-toggle[aria-checked=true] .ob-theme-thumb{transform:translateX(12px)}
 .ob-theme-toggle:focus-visible{outline:2px solid #9990d8;outline-offset:3px;border-radius:8px}
-.ob-page[data-theme=light]{--ob-text:#222225;--ob-muted:#73737c;--ob-border:#e4e4e7;background:#fff;color-scheme:light}
+.ob-page[data-theme=light]{--ob-text:#222225;--ob-muted:#73737c;--ob-border:#e4e4e7;background:radial-gradient(128% 88% at 50% 8%,#fff 0%,#fcfcfd 40%,#f4f4f6 100%) #fff;color-scheme:light}
 .ob-page[data-theme=light] .ob-button{background:#f1f1f3;border-color:#e4e4e7;color:#27272b}
 .ob-page[data-theme=light] .ob-button:hover{background:#e8e8ec;border-color:#d3d3da}
 .ob-page[data-theme=light] .ob-provider{background:#fafafa}
@@ -65,6 +69,8 @@
 .ob-page[data-theme=light] .ob-preview-bar button:hover{color:#222225}
 .ob-page[data-theme=light] .ob-preview-bar button[aria-current]{color:#222225;background:#eaeaec}
 .ob-page[data-theme=light] .ob-preview-bar .ob-reset{border-color:#dddde3;color:#5c5c67}
+.ob-page[data-theme=light] .ob-brand img{box-shadow:0 0 0 1px #0000000f,0 1px 2px #0000001f}
+.ob-page[data-theme=light] .ob-start .ob-brand img{box-shadow:0 0 0 1px #00000014,0 4px 14px #00000024}
 .ob-page[data-theme=light] .ob-theme-toggle{color:#45454c}
 .ob-page[data-theme=light] .ob-theme-track{background:#dedee1}
 .ob-page[data-theme=light] .ob-theme-thumb{background:#fff;border-color:#e0e0e3}
