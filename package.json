@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:auth": "VITE_API_URL=http://localhost:8788 vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
