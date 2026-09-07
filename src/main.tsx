@@ -39,8 +39,11 @@ function Gate({ path }: { path: string }) {
   if (!isPending) settled.current = true
   useEffect(() => { if (!session) setReady(null) }, [session])
   if (!settled.current) return null
-  if (session && ready?.userId === session.user.id) return <Routes path={path} session={session} project={ready.state.project} />
-  return <Onboarding session={session} onReady={state => { if (session) setReady({ userId: session.user.id, state }) }} />
+  const opened = !!session && ready?.userId === session.user.id
+  return <>
+    <Onboarding session={session} background={opened} onReady={state => { if (session) setReady({ userId: session.user.id, state }) }} />
+    {opened && <Routes path={path} session={session} project={ready.state.project} />}
+  </>
 }
 
 function App() {

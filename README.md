@@ -134,7 +134,9 @@ For a manual deployment, run `npm run deploy`.
 
 ## Auth UI regression checks
 
-With Vite running, `node scripts/onboarding-mobile.test.mjs` checks mobile layout
+With Vite running, `node --test scripts/onboarding-background.test.mjs` verifies
+workspace confirmation, URL collisions and completion during a sync outage.
+`node scripts/onboarding-mobile.test.mjs` checks mobile layout
 stability and input sizing. `node scripts/onboarding-progress.test.mjs` covers
 restored flows and step counts in Chromium and WebKit.
 
@@ -147,11 +149,15 @@ password reset and native-control spacing. They do not complete a real Google lo
 
 The shared `Onboarding.tsx` screens replace the old password/organization/username
 wizard at `/` and `/login`. Google and email OTP establish the real session;
-workspace/profile/preferences save in order in the background. Confirmed server
-state gates entry into the app. Drafts and pending writes are scoped to the user
+workspace creation waits for server confirmation before advancing. Display names
+can repeat; automatically generated URLs retry with a suffix if taken, while a
+custom URL stays editable on conflict. The step counter only appears for signup.
+The final step persists completion and the pending snapshot locally, then opens
+the app immediately. The sync hook remains mounted in the background and retries
+on reconnect; a reload resumes local completion and pending writes. Drafts and
+pending writes are scoped to the user
 in localStorage; pre-authentication drafts use sessionStorage, and OTPs stay in
-memory. Reload and reconnect resume authenticated pending writes. The light/dark
-choice is stored separately. Permanent API errors remain visible for correction.
+memory. Reload and reconnect resume authenticated pending writes. Appearance follows the system light/dark preference and updates live. Permanent API errors remain visible for correction.
 
 Development-only `/onboarding-preview` renders the same screens with simulated
 actions and a screen picker. It makes no API requests. Run the Vite dev server,

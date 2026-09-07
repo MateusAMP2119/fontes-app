@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { chromium } from 'playwright'
-const origin = process.env.TEST_ORIGIN || 'http://127.0.0.1:5173'
+const origin = process.env.TEST_ORIGIN || 'http://localhost:5173'
 test('optimistic verification, authenticated sync and offline recovery', async () => {
  const browser=await chromium.launch(); const page=await browser.newPage(); let authenticated=false,offline=false; const writes=[],errors=[];
  const user={id:'test-user',email:'mateus@example.com',emailVerified:true,name:'Mateus',createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
@@ -26,7 +26,7 @@ test('optimistic verification, authenticated sync and offline recovery', async (
   await button('Continuar com email').click();await input('Endereço de email').fill(user.email);await button('Continuar com email').click();await input('Código de confirmação').fill('123456');await button('Continuar com código').click();await input('Nome').waitFor();assert.equal(authenticated,false);
   await input('Nome').fill('Fontes Editorial');await button('Criar ambiente').click();await input('Nome do perfil').fill('Mateus Costa');await button('Criar perfil').click();await button('Saltar').click();
   await page.waitForFunction(()=>JSON.parse(localStorage.getItem('fontes:onboarding:v1:test-user')||'null')?.revision>0);
-  offline=true;await button('Começar').click();await page.getByText(/A ligação foi interrompida/).waitFor();await page.reload();await page.getByRole('heading',{name:'Comunicados e atualizações'}).waitFor();offline=false;await page.evaluate(()=>dispatchEvent(new Event('online')));await page.locator('.ob-panel').waitFor({state:'detached'});
+  offline=true;await button('Começar').click();await page.locator('.make-shell').waitFor();await page.reload();await page.locator('.make-shell').waitFor();offline=false;await page.evaluate(()=>dispatchEvent(new Event('online')));await page.waitForFunction(()=>!JSON.parse(localStorage.getItem('fontes:onboarding:v1:test-user')||'null')?.pending);
   assert.ok(writes.at(-1).completed);assert.equal(writes.at(-1).name,'Fontes Editorial');assert.equal(writes.at(-1).profileName,'Mateus Costa');assert.ok(!(await page.evaluate(()=>JSON.stringify(localStorage))).includes('123456'));assert.deepEqual(errors,[]);
  }finally{await browser.close()}
 });

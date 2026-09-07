@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
+import { AnimatePresence, motion, useIsPresent, useReducedMotion } from 'motion/react'
 import './Onboarding.css'
 import { type AuthSession } from './auth'
 import { createAvatar, type Style } from '@dicebear/core'
@@ -7,14 +8,14 @@ import { useOnboardingSync } from './useOnboardingSync'
 import type { Bootstrap } from './onboardingSync'
 
 export type Step = 'start' | 'email' | 'code' | 'workspace' | 'profile' | 'invites' | 'updates'
-export type Draft = { step: Step; returning: boolean; provider: 'email' | 'google'; email: string; name: string; slug: string; profile: string; image: string; invitations: string; changelog: boolean; daily: boolean }
+export type Draft = { step: Step; returning: boolean; provider: 'email' | 'google'; email: string; name: string; slug: string; slugEdited: boolean; profile: string; image: string; invitations: string; changelog: boolean; daily: boolean }
 const key = 'fontes:onboarding-ui-preview:v1'
 const steps: Step[] = ['start', 'email', 'code', 'workspace', 'profile', 'invites', 'updates']
 const labels = ['Início', 'Email', 'Código', 'Ambiente', 'Perfil', 'Convites', 'Atualizações']
 // Each entry path counts only the screens it actually shows: Google skips the email hand-off,
 // and a returning profile just confirms its identity.
 const flows: Record<'email' | 'google' | 'returning', Step[]> = { email: ['email', 'code', 'workspace', 'profile', 'invites', 'updates'], google: ['workspace', 'profile', 'invites', 'updates'], returning: ['email', 'code'] }
-const fresh: Draft = { step: 'start', returning: false, provider: 'email', email: '', name: '', slug: '', profile: '', image: '', invitations: '', changelog: false, daily: false }
+const fresh: Draft = { step: 'start', returning: false, provider: 'email', email: '', name: '', slug: '', slugEdited: false, profile: '', image: '', invitations: '', changelog: false, daily: false }
 // A draft stored before a field existed still opens: the saved values sit on top of the
 // defaults, so only the keys it does carry have to match.
 function saved(value: unknown): Draft | null {
@@ -38,7 +39,10 @@ function restorePending(session: AuthSession | null): Draft {
   } catch { /* No saved draft. */ }
   return initial
 }
-function slug(value: string) { return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48) }
+function slug(value: string) {
+  const base = value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48)
+  return !base ? 'equipa' : base.length < 3 ? `${base}-equipa` : base
+}
 function Icon({ kind }: { kind: 'email' | 'link' | 'arrow' | 'camera' }) {
   return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{kind === 'camera' ? <><path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.2a1 1 0 0 0 .8-.4l.9-1.2a1 1 0 0 1 .8-.4h5.6a1 1 0 0 1 .8.4l.9 1.2a1 1 0 0 0 .8.4h2.2A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5Z"/><circle cx="12" cy="12.5" r="3.4"/></> : kind === 'email' ? <><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></> : kind === 'link' ? <><path d="m10 13 4-4m-6 5-1 1a3.5 3.5 0 0 0 5 5l4-4a3.5 3.5 0 0 0 0-5m0-1 1-1a3.5 3.5 0 0 0-5-5l-4 4a3.5 3.5 0 0 0 0 5"/></> : <path d="m9 5 7 7-7 7"/>}</svg>
 }
@@ -66,19 +70,40 @@ function Avatar({ seed }: { seed: string }) {
 }
 function Field({ label, children }: { label: string; children: ReactNode }) { return <label className="ob-field"><span>{label}</span>{children}</label> }
 
-/** Shared signup/onboarding screens; simulation is available only on the development preview route. */
-export default function Onboarding({ preview = false, session = null, onReady }: { preview?: boolean; session?: AuthSession | null; onReady?: (state: Bootstrap) => void }) {
-  const [draft, setDraft] = useState(() => preview ? restore() : restorePending(session))
-  const [light, setLight] = useState(() => {
-    try { return localStorage.getItem('fontes:theme') === 'light' } catch { return false }
-  })
+function StepPanel({ step, children }: { step: Step; children: ReactNode }) {
+  const present = useIsPresent()
+  const reducedMotion = useReducedMotion()
+  const panel = useRef<HTMLElement>(null)
   useEffect(() => {
-    try { localStorage.setItem('fontes:theme', light ? 'light' : 'dark') } catch { /* In-memory fallback. */ }
+    if (present) panel.current?.querySelector<HTMLHeadingElement>('h1')?.focus({ preventScroll: true })
+  }, [present])
+  return <motion.section ref={panel} className={`ob-panel ob-${step}`} aria-labelledby="ob-title"
+    inert={!present} aria-hidden={!present}
+    initial={{ opacity: reducedMotion ? 1 : 0 }}
+    animate={{ opacity: 1, transition: { duration: reducedMotion ? 0 : .16, ease: 'easeOut' } }}
+    exit={{ opacity: 0, transition: { duration: reducedMotion ? 0 : .12, ease: 'easeIn' } }}>
+    {children}
+  </motion.section>
+}
+
+/** Shared signup/onboarding screens; simulation is available only on the development preview route. */
+export default function Onboarding({ preview = false, session = null, onReady, background = false }: { background?: boolean; preview?: boolean; session?: AuthSession | null; onReady?: (state: Bootstrap) => void }) {
+  const [draft, setDraft] = useState(() => preview ? restore() : restorePending(session))
+  const [light, setLight] = useState(() => !matchMedia('(prefers-color-scheme: dark)').matches)
+  useEffect(() => {
+    const systemTheme = matchMedia('(prefers-color-scheme: dark)')
+    const update = () => setLight(!systemTheme.matches)
+    update()
+    systemTheme.addEventListener('change', update)
+    return () => systemTheme.removeEventListener('change', update)
+  }, [])
+  useEffect(() => {
+    if (background) return
     const themeColor = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
     const previousColor = themeColor?.content
     if (themeColor) themeColor.content = light ? '#ffffff' : '#101012'
     return () => { if (themeColor && previousColor) themeColor.content = previousColor }
-  }, [light])
+  }, [light, background])
   const [code, setCode] = useState('')
   const [notice, setNotice] = useState('')
   // Errors leave the form for the toast; the inline notice keeps the informational lines.
@@ -89,12 +114,10 @@ export default function Onboarding({ preview = false, session = null, onReady }:
   // The last save opens the workspace on its own, so the button only reports that it is running.
   const [finishing, setFinishing] = useState(false)
   const live = useOnboardingSync({ preview, session, draft, setDraft, setNotice, setError: toast, onReady })
-  const title = useRef<HTMLHeadingElement>(null)
   const file = useRef<HTMLInputElement>(null)
   const patch = (value: Partial<Draft>) => setDraft(current => ({ ...current, ...value }))
   const go = (step: Step) => { patch({ step }); setNotice(''); setError(null) }
   useEffect(() => { if (preview) { try { localStorage.setItem(key, JSON.stringify(draft)) } catch { /* In-memory fallback. */ } } }, [draft, preview])
-  useEffect(() => { title.current?.focus({ preventScroll: true }) }, [draft.step])
   const email = draft.email || 'email@email.com'
   const titles: Record<Step, string> = { start: 'Criar conta', email: draft.returning ? 'Perfil existente' : 'Novo perfil', code: 'Email de confirmação', workspace: 'Novo ambiente de trabalho', profile: 'Customizar perfil', invites: 'Convidar membros', updates: 'Comunicados e atualizações' }
   const descriptions: Partial<Record<Step, ReactNode>> = {
@@ -132,7 +155,8 @@ export default function Onboarding({ preview = false, session = null, onReady }:
     if (invalid) { toast(invalid.title || required[draft.step] || 'Campos por preencher'); return }
     if (!preview && draft.step === 'email') { void live.start(); return }
     if (!preview && draft.step === 'code') { live.verify(code); setCode(''); return }
-    if (!preview && ['workspace', 'profile', 'updates'].includes(draft.step)) live.save(draft.step === 'updates')
+    if (!preview && draft.step === 'workspace') { live.save(false, true); return }
+    if (!preview && ['profile', 'updates'].includes(draft.step)) live.save(draft.step === 'updates')
     if (draft.step === 'email') { patch({ profile: draft.profile || draft.email.split('@')[0].replace(/[._-]+/g, ' ') }); go('code') }
     if (draft.step === 'code') { if (draft.returning) setNotice('Pré-visualização concluída'); else go('workspace') }
     if (draft.step === 'workspace') go('profile')
@@ -154,11 +178,23 @@ export default function Onboarding({ preview = false, session = null, onReady }:
   const progress = flow.indexOf(draft.step)
   // The mark anchors the stage: it holds its place while each step's panel grows below it.
   const brand = <a className="ob-brand" href={preview ? '/onboarding-preview' : '/'} onClick={e => { e.preventDefault(); if (preview) go('start'); else void live.changeEmail() }} aria-label="Fontes, início"><img src="/mark.png" width="36" height="36" alt=""/></a>
+  if (background) return live.failed ? <div className="ob-sync-status" role="status">
+    {error?.text || 'Alterações guardadas neste dispositivo. A sincronização será retomada.'}
+    <button type="button" onClick={live.retry}>Tentar novamente</button>
+  </div> : null
   return <main className="ob-page" data-theme={light ? 'light' : 'dark'}>
+    <div className="make-background ob-background" aria-hidden="true">
+      <div className="make-purple-blob">
+        <div className="make-purple-blob-primary" />
+        <div className="make-purple-blob-secondary" />
+      </div>
+      <div className="make-background-grid" />
+    </div>
     <div className="ob-stage">
       {brand}
-      <section className={`ob-panel ob-${draft.step}`} aria-labelledby="ob-title" key={draft.step}>
-        <header><h1 id="ob-title" ref={title} tabIndex={-1}>{titles[draft.step]}</h1>{descriptions[draft.step] && <p>{descriptions[draft.step]}</p>}</header>
+      <AnimatePresence mode="wait" initial={false}>
+      <StepPanel key={draft.step} step={draft.step}>
+        <header><h1 id="ob-title" tabIndex={-1}>{titles[draft.step]}</h1>{descriptions[draft.step] && <p>{descriptions[draft.step]}</p>}</header>
         {draft.step === 'start' ? <div className="ob-start-actions">
           <button className="ob-button ob-provider" disabled={live.busy} onClick={() => { patch({ provider: 'google' }); if (!preview) { void live.google(); return }; patch({ email: 'mateus@gmail.com', profile: 'Mateus', returning: false }); go('workspace') }}><Google/>Continuar com Google</button>
           <div className="ob-divider"><span>ou</span></div>
@@ -167,22 +203,20 @@ export default function Onboarding({ preview = false, session = null, onReady }:
         </div> : <form onSubmit={submit} noValidate>
           {draft.step === 'email' && <>{draft.returning && <><button type="button" className="ob-button ob-provider" disabled={live.busy} onClick={() => { if (!preview) { void live.google(); return }; setNotice('Pré-visualização concluída') }}><Google/>Continuar com Google</button><div className="ob-divider"><span>ou</span></div></>}<input aria-label="Endereço de email" type="email" autoComplete="email" placeholder="Endereço de email" required maxLength={254} value={draft.email} onChange={e => patch({ email: e.target.value })}/><button disabled={live.busy} className="ob-button ob-primary ob-wide">{live.busy ? 'A enviar…' : 'Continuar com email'}</button><button className="ob-subtle ob-centered" type="button" onClick={() => go('start')}>Voltar ao início</button></>}
           {draft.step === 'code' && <><input className="ob-code" aria-label="Código de confirmação" inputMode="numeric" autoComplete="one-time-code" placeholder="Introduzir código" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}/><button className="ob-button ob-primary ob-wide">Continuar com código</button><button type="button" className="ob-subtle ob-resend" disabled={live.busy} onClick={() => preview ? setNotice('Novo código enviado, quaisquer seis dígitos servem nesta pré-visualização') : void live.start()}>Reenviar código</button><button type="button" className="ob-subtle ob-centered" onClick={() => go('start')}>Voltar ao início</button></>}
-          {draft.step === 'workspace' && <><Field label="Nome"><input placeholder="Nome do ambiente de trabalho" autoComplete="organization" required maxLength={80} value={draft.name} onChange={e => patch({ name: e.target.value, slug: draft.slug === slug(draft.name) ? slug(e.target.value) : draft.slug })}/></Field><Field label="URL"><div className="ob-url"><span>fontes.app/</span><input aria-label="URL do ambiente" placeholder="nome-da-equipa" pattern="[a-z0-9][a-z0-9\-]{2,47}" title="URL entre 3 e 48 letras minúsculas, números ou hífenes" required value={draft.slug} onChange={e => patch({ slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') })}/></div></Field><button className="ob-button ob-primary ob-wide">Criar ambiente</button><div className="ob-account-note"><p>Ambiente para <span>{email}</span></p><button type="button" className="ob-subtle" onClick={() => { if (!preview) { void live.changeEmail(); return }; patch({ returning: false, provider: 'email' }); go('email') }}>Utilizar um email diferente</button></div></>}
+          {draft.step === 'workspace' && <><Field label="Nome"><input placeholder="Nome do ambiente de trabalho" autoComplete="organization" disabled={!preview && live.workspaceBusy} required maxLength={80} value={draft.name} onChange={e => patch({ name: e.target.value, slug: !draft.slugEdited ? slug(e.target.value) : draft.slug })}/></Field><Field label="URL"><div className="ob-url"><span>fontes.app/</span><input aria-label="URL do ambiente" disabled={!preview && live.workspaceBusy} placeholder="nome-da-equipa" pattern="[a-z0-9][a-z0-9\-]{2,47}" title="URL entre 3 e 48 letras minúsculas, números ou hífenes" required value={draft.slug} onChange={e => patch({ slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''), slugEdited: true })}/></div></Field><button className="ob-button ob-primary ob-wide" disabled={!preview && (!live.canCreateWorkspace || live.workspaceBusy)}>{live.workspaceBusy ? 'A criar ambiente…' : 'Criar ambiente'}</button><div className="ob-account-note"><p>Ambiente para <span>{email}</span></p><button type="button" className="ob-subtle" onClick={() => { if (!preview) { void live.changeEmail(); return }; patch({ returning: false, provider: 'email' }); go('email') }}>Utilizar um email diferente</button></div></>}
           {draft.step === 'profile' && <><div className="ob-field"><span>Imagem e nome</span><div className="ob-profile-input"><div className="ob-photo-slot"><button type="button" className="ob-photo" aria-label="Carregar imagem de perfil" onClick={() => file.current?.click()}>{draft.image ? <img className="ob-avatar" src={draft.image} alt=""/> : <Avatar seed={draft.email || 'fontes'}/>}<span className="ob-photo-hint" aria-hidden="true"><Icon kind="camera"/></span></button>{draft.image && <button type="button" className="ob-photo-clear" aria-label="Remover imagem" onClick={() => patch({ image: '' })}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>}</div><input aria-label="Nome do perfil" placeholder="Nome de perfil" autoComplete="name" required maxLength={80} value={draft.profile} onChange={e => patch({ profile: e.target.value })}/></div><input ref={file} type="file" accept="image/*" hidden onChange={pickImage}/></div><button className="ob-button ob-primary ob-wide">Criar perfil</button><button type="button" className="ob-subtle ob-centered" onClick={() => go('workspace')}>Voltar</button></>}
           {draft.step === 'invites' && <><div className="ob-copy-row"><button className="ob-copy" type="button" onClick={() => go('updates')}>Saltar<Icon kind="arrow"/></button><button className="ob-copy" type="button" onClick={() => preview ? setNotice('Link de convite disponível com o ambiente ligado à API') : void live.copyInvite()}><Icon kind="link"/>Copiar link</button></div><Field label="Convites"><textarea aria-label="Emails dos membros" placeholder={'nome@equipa.pt\noutro@equipa.pt'} rows={3} value={draft.invitations} onChange={e => patch({ invitations: e.target.value })}/></Field><button className="ob-button ob-primary ob-wide">Enviar convite por email</button></>}
           {draft.step === 'updates' && <><div className="ob-preferences">{([{ key: 'changelog', title: 'Changelog', text: 'Email semanal com novas funcionalidades e atualizações.' }, { key: 'daily', title: 'Resumos diários', text: 'Receber resumos diários curados pela equipa da Fontes.' }] as const).map(item => <label className="ob-preference" key={item.key}><span><strong>{item.title}</strong><small>{item.text}</small></span><input type="checkbox" role="switch" checked={draft[item.key]} onChange={e => patch({ [item.key]: e.target.checked })}/></label>)}</div><div className="ob-actions"><button className="ob-button ob-primary" disabled={finishing && !live.failed}>{finishing && !live.failed ? 'A preparar…' : 'Começar'}<Icon kind="arrow"/></button></div></>}
-          {progress >= 0 && <div className="ob-progress" aria-label={`Passo ${progress + 1} de ${flow.length}`}>{Array.from({ length: flow.length }, (_, i) => <span key={i} className={i === progress ? 'current' : i < progress ? 'past' : ''}/>)}</div>}
+          {!draft.returning && progress >= 0 && <div className="ob-progress" aria-label={`Passo ${progress + 1} de ${flow.length}`}>{Array.from({ length: flow.length }, (_, i) => <span key={i} className={i === progress ? 'current' : i < progress ? 'past' : ''}/>)}</div>}
           {(draft.step === 'invites' || draft.step === 'updates') && <button type="button" className="ob-subtle ob-centered" onClick={() => go(draft.step === 'updates' ? 'invites' : 'profile')}>Voltar</button>}
           {notice && <p className="ob-notice" role="status">{notice}</p>}
         </form>}
         {!preview && notice && draft.step === 'start' && <p className="ob-notice" role="status">{notice}</p>}
         {!preview && live.failed && <div className="ob-actions"><button className="ob-subtle" onClick={live.retry}>Tentar novamente</button><button className="ob-subtle" onClick={() => go('workspace')}>Editar configuração</button></div>}
-      </section>
+      </StepPanel>
+      </AnimatePresence>
     </div>
-    <button className="ob-theme-toggle" type="button" role="switch" aria-checked={light} aria-label="Modo claro" title={light ? 'Ativar modo escuro' : 'Ativar modo claro'} onClick={() => setLight(value => !value)}>
-      <span className="ob-theme-track"><span className="ob-theme-thumb"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg></span></span>
-    </button>
-    {error && <div className="ob-toast" role="alert" key={error.n}><span>{error.text}</span><button type="button" aria-label="Fechar" onClick={() => setError(null)}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>}
+    {error && <div className="ob-toast" role="alert" key={error.n}><span>{error.text}</span></div>}
     {preview && <aside className="ob-preview-bar" aria-label="Controlos da pré-visualização"><span>Pré-visualização</span><nav aria-label="Ecrãs">{steps.map((step, i) => <button key={step} aria-current={draft.step === step ? 'step' : undefined} onClick={() => go(step)}>{labels[i]}</button>)}</nav><button className="ob-reset" onClick={() => { setDraft(fresh); setCode(''); setNotice(''); setError(null) }}>Reiniciar</button></aside>}
   </main>
 }

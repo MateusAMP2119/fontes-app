@@ -22,6 +22,7 @@ for (const engine of [chromium, webkit]) {
       await page.reload()
       await page.locator('#ob-title:focus').waitFor()
       const counter = page.locator('.ob-progress')
+      if (draft.returning) { assert.equal(await counter.count(), 0, 'returning users have no stepper'); continue }
       assert.equal(await counter.getAttribute('aria-label'), expected)
       assert.equal(await counter.locator('.current').count(), 1)
       const [current, total] = expected.match(/\d+/g).map(Number)
