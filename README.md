@@ -98,6 +98,26 @@ news calls do not send session cookies. Authentication and projects remain on
 `https://api.fonteslabs.com`.
 Publisher icons load directly from DuckDuckGo's icon service.
 
+## Progressive web app
+
+Production builds generate a web app manifest and service worker with
+`vite-plugin-pwa`. Install Fontes from the browser's install menu on desktop or
+Android; on iPhone/iPad, use Safari's Share → Add to Home Screen. Installation
+requires HTTPS (localhost also works for testing).
+
+The worker precaches bundled frontend assets, fonts and icons. Opening the app
+offline, including a deep link, shows a Portuguese connection screen and resumes
+when connectivity returns. Losing connectivity in an open app shows a banner
+without unmounting the workspace. Authentication, news and server synchronization
+still require a connection; API responses and credentials are never added to the
+service worker cache. Icons use the existing Fontes mark.
+
+New versions wait until all Fontes windows/tabs are closed before activating, so
+an update does not reload an active workspace. The worker is disabled in Vite dev
+mode. To verify installation and offline behavior locally, run `npm run build`,
+then `npm run preview`, then `node scripts/pwa.test.mjs` in a second terminal.
+The browser check mocks external APIs and does not create accounts or send email.
+
 ## Deployment
 
 Cloudflare Workers Builds deploys this as an assets-only Worker named `fontes-app`:
@@ -113,6 +133,10 @@ The old GitHub Pages deployment workflow was removed; Cloudflare owns Git builds
 For a manual deployment, run `npm run deploy`.
 
 ## Auth UI regression checks
+
+With Vite running, `node scripts/onboarding-mobile.test.mjs` checks mobile layout
+stability and input sizing. `node scripts/onboarding-progress.test.mjs` covers
+restored flows and step counts in Chromium and WebKit.
 
 With the dev server running, run `node --test scripts/auth-regression.test.mjs`.
 These browser tests mock auth responses and never create accounts or send email.

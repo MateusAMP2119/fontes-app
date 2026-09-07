@@ -105,3 +105,72 @@
 @media(max-width:850px){.ob-theme-toggle{left:18px;bottom:70px}}
 .ob-button:disabled{opacity:.5;cursor:default}
 .ob-page:not(:has(.ob-preview-bar)) .ob-theme-toggle{bottom:23px}
+
+/* Paint to the screen edges; inset content, not the page background. */
+/* Safari paints outside fixed elements from the document canvas. Match the
+   onboarding theme there as well, including behind browser chrome. */
+html:has(.ob-page[data-theme=dark]) {
+  background: radial-gradient(150% 105% at 50% -12%, #1b1c1f 0%, #08080a 100%) #1b1c1f;
+  background-attachment: fixed;
+  color-scheme: dark;
+}
+body:has(.ob-page) { background: transparent; }
+html:has(.ob-page[data-theme=dark]) .ob-page { background: transparent; }
+html:has(.ob-page[data-theme=light]) {
+  background: radial-gradient(128% 88% at 50% 8%, #fff 0%, #fcfcfd 40%, #f4f4f6 100%) #fff;
+  background-attachment: fixed;
+  color-scheme: light;
+}
+html:has(.ob-page[data-theme=light]) .ob-page { background: transparent; }
+.ob-toast { top: calc(18px + env(safe-area-inset-top, 0px)); }
+.ob-page {
+  position: relative;
+  min-height: 100dvh;
+  overflow: visible;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-right: calc(48px + env(safe-area-inset-right, 0px));
+  padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+  padding-left: calc(48px + env(safe-area-inset-left, 0px));
+}
+.ob-theme-toggle {
+  left: calc(24px + env(safe-area-inset-left, 0px));
+  bottom: calc(23px + env(safe-area-inset-bottom, 0px));
+}
+.ob-preview-bar { bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+@media (max-width: 850px) {
+  .ob-theme-toggle {
+    left: calc(18px + env(safe-area-inset-left, 0px));
+    bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+  }
+}
+@media (max-width: 600px) {
+  .ob-page {
+    padding-right: calc(25px + env(safe-area-inset-right, 0px));
+    padding-bottom: calc(115px + env(safe-area-inset-bottom, 0px));
+    padding-left: calc(25px + env(safe-area-inset-left, 0px));
+  }
+  .ob-preview-bar { bottom: calc(10px + env(safe-area-inset-bottom, 0px)); }
+}
+.ob-page:not(:has(.ob-preview-bar)) .ob-theme-toggle {
+  bottom: calc(23px + env(safe-area-inset-bottom, 0px));
+}
+
+@media (max-width: 850px), (pointer: coarse) {
+  /* Safari's top/bottom chrome uses the canvas color, not its gradient.
+     A shared mobile surface avoids seams at the browser's viewport edges. */
+  html:has(.ob-page[data-theme=dark]) { background: #101012; }
+  html:has(.ob-page[data-theme=light]) { background: #fff; }
+  .ob-page {
+    overscroll-behavior-y: contain;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  /* Keep the anchor stable as browser chrome and the keyboard change height.
+     Long steps remain scrollable instead of squeezing the form to fit. */
+  .ob-stage { flex: 1 0 auto; padding-top: 64px; }
+  .ob-panel { animation: none; }
+  /* iPhone focus zoom is triggered by small editable text, including the URL. */
+  .ob-panel input:not([type=checkbox]),
+  .ob-panel textarea,
+  .ob-url input:not([type=checkbox]) { font-size: 16px; }
+}

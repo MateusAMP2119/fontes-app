@@ -5,7 +5,7 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 950 } })
 const errors = [], api = []
 page.on('pageerror', error => errors.push(error.message))
 page.on('request', request => { if (request.url().includes('/api/')) api.push(request.url()) })
-await page.goto('http://127.0.0.1:5173/onboarding-preview')
+await page.goto(process.env.ONBOARDING_TEST_URL || 'http://localhost:5173/onboarding-preview')
 const button = name => page.getByRole('button', { name, exact: true })
 const input = name => page.getByRole('textbox', { name, exact: true })
 const progress = () => page.locator('.ob-progress')

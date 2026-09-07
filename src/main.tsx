@@ -1,3 +1,4 @@
+import PwaConnection from './PwaConnection'
 import { StrictMode, useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { flushSync } from 'react-dom'
@@ -51,6 +52,6 @@ function App() {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <PwaConnection><App /></PwaConnection>
   </StrictMode>,
 )

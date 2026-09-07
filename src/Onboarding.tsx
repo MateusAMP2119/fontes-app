@@ -74,6 +74,10 @@ export default function Onboarding({ preview = false, session = null, onReady }:
   })
   useEffect(() => {
     try { localStorage.setItem('fontes:theme', light ? 'light' : 'dark') } catch { /* In-memory fallback. */ }
+    const themeColor = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
+    const previousColor = themeColor?.content
+    if (themeColor) themeColor.content = light ? '#ffffff' : '#101012'
+    return () => { if (themeColor && previousColor) themeColor.content = previousColor }
   }, [light])
   const [code, setCode] = useState('')
   const [notice, setNotice] = useState('')
@@ -90,7 +94,7 @@ export default function Onboarding({ preview = false, session = null, onReady }:
   const patch = (value: Partial<Draft>) => setDraft(current => ({ ...current, ...value }))
   const go = (step: Step) => { patch({ step }); setNotice(''); setError(null) }
   useEffect(() => { if (preview) { try { localStorage.setItem(key, JSON.stringify(draft)) } catch { /* In-memory fallback. */ } } }, [draft, preview])
-  useEffect(() => { title.current?.focus() }, [draft.step])
+  useEffect(() => { title.current?.focus({ preventScroll: true }) }, [draft.step])
   const email = draft.email || 'email@email.com'
   const titles: Record<Step, string> = { start: 'Criar conta', email: draft.returning ? 'Perfil existente' : 'Novo perfil', code: 'Email de confirmação', workspace: 'Novo ambiente de trabalho', profile: 'Customizar perfil', invites: 'Convidar membros', updates: 'Comunicados e atualizações' }
   const descriptions: Partial<Record<Step, ReactNode>> = {
@@ -141,7 +145,12 @@ export default function Onboarding({ preview = false, session = null, onReady }:
     }
     if (draft.step === 'updates') { if (preview) setNotice('Pré-visualização concluída'); else setFinishing(true) }
   }
-  const flow = flows[draft.returning ? 'returning' : draft.provider === 'google' ? 'google' : 'email']
+  // Restored/OAuth flows may return to email, and an existing identity can still
+  // need setup. Count the screens in the current phase, not a stale entry path.
+  const authenticating = draft.step === 'email' || draft.step === 'code'
+  const flow = authenticating
+    ? flows[draft.returning ? 'returning' : 'email']
+    : flows[draft.returning || draft.provider === 'google' ? 'google' : 'email']
   const progress = flow.indexOf(draft.step)
   // The mark anchors the stage: it holds its place while each step's panel grows below it.
   const brand = <a className="ob-brand" href={preview ? '/onboarding-preview' : '/'} onClick={e => { e.preventDefault(); if (preview) go('start'); else void live.changeEmail() }} aria-label="Fontes, início"><img src="/mark.png" width="36" height="36" alt=""/></a>
