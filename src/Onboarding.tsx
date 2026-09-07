@@ -89,11 +89,11 @@ export default function Onboarding({ preview = false, session = null, onReady }:
     if (draft.step === 'updates') go('done')
   }
   const progress = ['code', 'workspace', 'profile', 'invites', 'updates'].indexOf(draft.step)
-  // The mark sits at the page's top edge, so its position never shifts between steps.
+  // The mark anchors the stage: it holds its place while each step's panel grows below it.
   const brand = <a className="ob-brand" href={preview ? '/onboarding-preview' : '/'} onClick={e => { e.preventDefault(); if (preview) go('start'); else void live.changeEmail() }} aria-label="Fontes, início"><img src="/mark.png" width="30" height="30" alt=""/></a>
   return <main className="ob-page" data-theme={light ? 'light' : 'dark'}>
-    {brand}
     <div className="ob-stage">
+      {brand}
       <section className={`ob-panel ob-${draft.step}`} aria-labelledby="ob-title" key={draft.step}>
         {progress >= 0 && <div className="ob-progress" aria-label={`Passo ${progress + 1} de 5`}>{Array.from({ length: 5 }, (_, i) => <span key={i} className={i === progress ? 'current' : i < progress ? 'past' : ''}/>)}</div>}
         {draft.step === 'done' && <div className="ob-success"><Icon kind="check"/></div>}
