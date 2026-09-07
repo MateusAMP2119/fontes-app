@@ -49,7 +49,7 @@ await page.setContent(`<style>${css}</style>
 <main class="ob-page"><div class="ob-stage"><section class="ob-panel ob-workspace"><header><h1>Criar novo ambiente de trabalho</h1><p>Ambientes de trabalho estão desenhados para colaboração.</p></header>
 <form>
   <label class="ob-field" id="name"><span>Nome</span><input placeholder="Nome do ambiente de trabalho"></label>
-  <label class="ob-field" id="url"><span>URL</span><input placeholder="a-tua-equipa"></label>
+  <label class="ob-field" id="url"><span>URL</span><input placeholder="nome-da-equipa"></label>
   <button class="ob-button ob-primary ob-wide" id="create">Criar ambiente</button>
   <div class="ob-account-note"><p id="for">Ambiente para <span>zz@xx.com</span></p><button type="button" class="ob-subtle" id="other">Utilizar um email diferente</button></div>
   <div class="ob-progress"><span class="current"></span><span></span></div>

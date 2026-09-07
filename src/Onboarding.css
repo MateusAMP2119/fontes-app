@@ -60,8 +60,8 @@
 .ob-notice{font-size:12px;color:#9ec7fb;line-height:1.6;margin-top:8px}
 .ob-preview-bar{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:16px;max-width:calc(100% - 32px);padding:9px 13px;border:1px solid #303035;border-radius:12px;background:#171719f5;box-shadow:0 8px 30px #0004;font-size:11px;z-index:5}.ob-preview-bar>span{color:#777780;white-space:nowrap}.ob-preview-bar nav{display:flex;gap:3px;overflow:auto}.ob-preview-bar button{border:0;background:transparent;color:#8e8e98;font:inherit;padding:6px 8px;border-radius:6px;white-space:nowrap;cursor:pointer}.ob-preview-bar button:hover{color:#efeff2}.ob-preview-bar button[aria-current]{color:#efeff2;background:#303035}.ob-preview-bar .ob-reset{border-left:1px solid #343439;border-radius:0;padding-left:14px;color:#bcbcc5}
 /* The error toast is a quiet plate on the page's own stroke; left/right auto centring keeps ob-enter's transform free. */
-.ob-toast{position:fixed;top:18px;left:0;right:0;width:fit-content;max-width:min(440px,calc(100% - 32px));margin-inline:auto;z-index:7;display:flex;align-items:center;gap:8px;padding:8px 8px 8px 14px;border:1px solid var(--ob-border);border-radius:10px;background:#161618;color:var(--ob-text);font-size:13px;line-height:1.5;text-align:left;text-wrap:pretty;animation:ob-enter .22s ease-out}
-.ob-toast button{display:grid;place-items:center;width:22px;height:22px;flex-shrink:0;padding:0;border:0;background:none;color:var(--ob-muted);cursor:pointer;transition:color .15s}.ob-toast button:hover{color:var(--ob-text)}.ob-toast button:focus-visible{outline:2px solid #95c1fb;outline-offset:2px;border-radius:6px}
+.ob-toast{position:fixed;top:18px;left:0;right:0;width:fit-content;max-width:min(440px,calc(100% - 32px));margin-inline:auto;z-index:7;display:flex;align-items:center;gap:6px;padding:6px 6px 6px 13px;border:1px solid #553233;border-radius:99px;background:#161618;color:var(--ob-text);font-size:12px;line-height:1.5;text-align:left;text-wrap:pretty;animation:ob-enter .22s ease-out}
+.ob-toast button{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;flex-shrink:0;padding:0;border:0;background:none;color:var(--ob-muted);cursor:pointer;transition:color .15s}.ob-toast button:hover{color:var(--ob-text)}.ob-toast button:focus-visible{outline:2px solid #95c1fb;outline-offset:2px}
 @keyframes ob-enter{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:600px){.ob-panel form>.ob-centered{margin-top:-16px}.ob-page{padding:0 25px 115px}.ob-stage{min-height:530px;padding-bottom:30px}.ob-panel h1{font-size:23px}.ob-preview-bar{bottom:10px;gap:4px;padding:7px;max-width:calc(100% - 16px);width:max-content}.ob-preview-bar>span{display:none}.ob-preview-bar button{padding:7px 6px;font-size:10px}.ob-preview-bar .ob-reset{padding-left:8px}.ob-panel header p{font-size:13px}.ob-panel form,.ob-start-actions,.ob-wide{display:flex;width:min(100%,270px);margin-inline:auto}.ob-panel header{width:min(100%,270px);margin-inline:auto}}
 @media(prefers-reduced-motion:reduce){.ob-panel,.ob-toast{animation:none}.ob-page *{transition:none!important}}
@@ -97,7 +97,7 @@
 .ob-page[data-theme=light] .ob-preview-bar button:hover{color:#222225}
 .ob-page[data-theme=light] .ob-preview-bar button[aria-current]{color:#222225;background:#eaeaec}
 .ob-page[data-theme=light] .ob-preview-bar .ob-reset{border-color:#dddde3;color:#5c5c67}
-.ob-page[data-theme=light] .ob-toast{background:#fff;border-color:#e0e0e5}
+.ob-page[data-theme=light] .ob-toast{background:#fff;border-color:#ebc7c7}
 .ob-page[data-theme=light] .ob-brand{background:#fff;box-shadow:0 0 56px #00000014,0 0 20px #0000000d,0 0 0 1px #26262612}
 .ob-page[data-theme=light] .ob-theme-toggle{color:#45454c}
 .ob-page[data-theme=light] .ob-theme-track{background:#dedee1}

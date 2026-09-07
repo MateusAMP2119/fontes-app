@@ -10,7 +10,7 @@ export class SyncError extends Error {
 export async function onboardingRequest<T>(path = '', body?: unknown): Promise<T> {
   const response = await fetch(`${API}/api/onboarding${path}`, { method: body ? 'POST' : 'GET', credentials: 'include', headers: body ? { 'content-type': 'application/json' } : undefined, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(20000) })
   const result = await response.json().catch(() => ({}))
-  if (!response.ok) throw new SyncError(response.status, result.message || 'Não foi possível guardar. Tenta novamente.', result.step)
+  if (!response.ok) throw new SyncError(response.status, result.message || 'Erro ao guardar', result.step)
   return result
 }
 export function inviteToken() { return Array.from(crypto.getRandomValues(new Uint8Array(32)), b => b.toString(16).padStart(2, '0')).join('') }

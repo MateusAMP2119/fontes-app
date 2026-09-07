@@ -39,7 +39,7 @@ export function useOnboardingSync(props: Props) {
       return
     }
     try { localStorage.setItem(prefix + owner.current, JSON.stringify(record.current)) }
-    catch { current.current.setError('O armazenamento local está indisponível. Mantém esta página aberta até terminar.') }
+    catch { current.current.setError('Armazenamento local indisponível, progresso só nesta página') }
   }
   function schedule() {
     clearTimeout(timer.current)
@@ -83,7 +83,7 @@ export function useOnboardingSync(props: Props) {
         if (error.step === 'workspace') current.current.setDraft(d => ({ ...d, step: 'workspace' }))
         if (error.status === 401) current.current.setDraft(d => ({ ...d, step: 'email' }))
       } else {
-        current.current.setError('A ligação foi interrompida. Vamos tentar guardar novamente; o teu progresso está neste dispositivo.')
+        current.current.setError('Ligação interrompida, nova tentativa em instantes')
         schedule()
       }
     } finally {
@@ -140,7 +140,7 @@ export function useOnboardingSync(props: Props) {
       } catch (error) {
         if (epoch !== generation.current) return
         setFailed(true)
-        current.current.setError(error instanceof SyncError ? error.message : 'Não foi possível carregar o ambiente. Vamos tentar novamente.')
+        current.current.setError(error instanceof SyncError ? error.message : 'Ambiente indisponível, nova tentativa em instantes')
         if (!(error instanceof SyncError) || error.status >= 500) timer.current = setTimeout(() => { void load() }, 5000)
       }
     }
@@ -169,9 +169,9 @@ export function useOnboardingSync(props: Props) {
     current.current.setError('')
     try {
       const result = await authClient.emailOtp.sendVerificationOtp({ email: current.current.draft.email.trim(), type: 'sign-in' })
-      if (result.error) throw new Error(result.error.message || 'Não foi possível enviar o código.')
+      if (result.error) throw new Error(result.error.message || 'Erro ao enviar o código')
       current.current.setDraft(d => ({ ...d, step: 'code', email: d.email.trim(), profile: d.profile || d.email.split('@')[0].replace(/[._-]+/g, ' ') }))
-    } catch (error) { current.current.setError(error instanceof Error ? error.message : 'Não foi possível enviar o código.') }
+    } catch (error) { current.current.setError(error instanceof Error ? error.message : 'Erro ao enviar o código') }
     finally { setBusy(false) }
   }
   function verify(code: string) {
@@ -181,10 +181,10 @@ export function useOnboardingSync(props: Props) {
     current.current.setDraft(d => (d.returning ? d : { ...d, step: 'workspace' }))
     const email = current.current.draft.email
     void authClient.signIn.emailOtp({ email, otp: code }).then(result => {
-      if (result.error) throw new Error('Código inválido ou expirado. Pede um novo código e tenta novamente.')
+      if (result.error) throw new Error('Código inválido ou expirado')
     }).catch(error => {
       current.current.setDraft(d => ({ ...d, step: 'code' }))
-      current.current.setError(error instanceof Error ? error.message : 'Não foi possível confirmar o código.')
+      current.current.setError(error instanceof Error ? error.message : 'Erro ao confirmar o código')
     }).finally(() => { verifyRunning.current = false })
   }
   async function google() {
@@ -192,15 +192,15 @@ export function useOnboardingSync(props: Props) {
     try {
       const result = await authClient.signIn.social({ provider: 'google', callbackURL: location.origin + '/' + location.search })
       if (result.error) throw new Error(result.error.message)
-    } catch { current.current.setError('Não foi possível continuar com Google. Tenta novamente.'); setBusy(false) }
+    } catch { current.current.setError('Erro no login com Google'); setBusy(false) }
   }
   async function changeEmail() {
     // Wait for verification before signing out so its late response cannot restore
     // an identity after the user has chosen a different email.
-    if (verifyRunning.current) { current.current.setError('A confirmar o email. Tenta novamente dentro de instantes.'); return }
+    if (verifyRunning.current) { current.current.setError('Confirmação do email em curso'); return }
     if (current.current.session) {
       const result = await authClient.signOut()
-      if (result.error) { current.current.setError('Não foi possível sair. Tenta novamente.'); return }
+      if (result.error) { current.current.setError('Erro ao sair'); return }
     }
     if (owner.current) { try { localStorage.removeItem(prefix + owner.current) } catch { /* optional storage */ } }
     generation.current++; owner.current = null; recordOwner.current = null; state.current = null
@@ -215,8 +215,8 @@ export function useOnboardingSync(props: Props) {
       persist()
       void drain()
     }
-    try { await navigator.clipboard.writeText(`${location.origin}/?invite=${token}`); current.current.setNotice('Link copiado. O convite fica ativo assim que for guardado.') }
-    catch { current.current.setError('Não foi possível copiar o link. Verifica as permissões do navegador.') }
+    try { await navigator.clipboard.writeText(`${location.origin}/?invite=${token}`); current.current.setNotice('Link copiado, ativo assim que for guardado') }
+    catch { current.current.setError('Link não copiado, sem acesso à área de transferência') }
   }
   return { busy, failed, start, verify, google, save, invite, copyInvite, changeEmail,
     retry: () => { if (!initialized.current) location.reload(); else void drain() },
