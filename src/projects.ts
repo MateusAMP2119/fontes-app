@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 
-export type Project = { id: string; organizationId: string; name: string; createdAt: string }
+export type Project = { id: string; organizationId: string; name: string; createdAt: string; ownerId: string | null; visibility: 'private' | 'public' }
 
 async function api(method: 'GET' | 'POST', body?: unknown): Promise<unknown> {
   const response = await fetch('/api/projects', {
@@ -13,24 +13,28 @@ async function api(method: 'GET' | 'POST', body?: unknown): Promise<unknown> {
   return response.json()
 }
 
-export const createProject = (name: string) => api('POST', { name }) as Promise<Project>
+export const createProject = (name: string, visibility: Project['visibility'] = 'private') => api('POST', { name, visibility }) as Promise<Project>
 
 /** Projects of the session's active organization. `enabled` false skips the request (no org yet). */
 export function useProjects(enabled: boolean) {
   const [list, setList] = useState<Project[] | null>(null)
+  const [error, setError] = useState(false)
   const [version, setVersion] = useState(0)
   useEffect(() => {
     if (!enabled) return
     let live = true
     setList(null)
+    setError(false)
     api('GET')
-      .then((rows) => live && setList(rows as Project[]))
-      // ponytail: a failed list reads as "no projects" so the user can still act; a 401 is already caught by the session gate
-      .catch(() => live && setList([]))
+      .then((rows) => {
+        if (!Array.isArray(rows)) throw new Error('Invalid project response')
+        if (live) setList(rows as Project[])
+      })
+      .catch(() => { if (live) setError(true) })
     return () => {
       live = false
     }
   }, [enabled, version])
   const refresh = useCallback(() => setVersion((value) => value + 1), [])
-  return { list: list ?? [], pending: enabled && list === null, refresh }
+  return { list: list ?? [], pending: enabled && list === null && !error, error, refresh }
 }

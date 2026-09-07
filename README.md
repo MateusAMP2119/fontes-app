@@ -4,14 +4,14 @@ News dashboard builder on a freeform canvas, for building views on Iris. Visual
 language follows Apple Freeform: full-bleed dotted board, floating pills, SF Pro
 system stack.
 
-All news data is mocked — there is no backend and no network layer.
+News data is read through the Pages API. Account and workspace data use Fontes API.
 
 ## Stack
 
 - Vite + React 19 + TypeScript
 - `motion` for the board cross-fade; everything else is CSS transitions
 - Plain CSS: `src/index.css` (tokens) and `src/App.css` (everything else)
-- `oxlint` for linting. No test runner is currently wired up.
+- `oxlint` for linting; Node and Playwright for regression tests.
 
 ## Scripts
 
@@ -73,48 +73,32 @@ migrates a legacy v1 payload, and drops items whose type no longer exists.
 - The dashboard grid is measured once, at pick time, with `offsetLeft` /
   `offsetWidth` rather than `getBoundingClientRect` — the frame sits inside a
   `motion.div` that animates `scale`, and client rects are post-transform.
-# Local authentication
+## API and authentication
 
-Run `npm run dev` from this directory, then open `http://localhost:5173`.
-This starts Vite and the local auth Worker together. The Worker connects to the
-cloud D1 database `fontes-auth`, also visible in Cloudflare Studio. Keep this port
-fixed: Google callbacks and browser cookies must belong to
-the same origin. Closing the command stops both servers.
-
-For Google sign-in:
-
-1. Copy `.dev.vars.example` to `.dev.vars` if that file does not already exist.
-2. Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to the existing web client's
-   credentials. Keep this file private; it is gitignored.
-3. Add `http://localhost:5173/api/auth/callback/google` to that client's
-   **Authorized redirect URIs** in Google Cloud Console, preserving existing URLs.
-4. Restart `npm run dev` after changing credentials.
-
-Users, organizations, memberships and projects use cloud D1, shared with production.
-The email binding also uses Cloudflare: signup and reset requests send real emails.
-Story data comes from the deployed site.
-Google sign-in requires real OAuth credentials; placeholders cannot complete the
-code exchange. Startup does not apply database migrations automatically.
-
-Apply auth migrations explicitly with:
+The backend lives in [fontes-api](https://github.com/MateusAMP2119/fontes-api),
+pinned as a Git submodule at `services/api`. It is one TypeScript Worker with
+Better Auth and D1 for authentication, organizations and projects.
 
 ```sh
-npx wrangler d1 migrations apply fontes-auth --remote --config wrangler.auth.jsonc
+npm ci
+npm run setup:api
+cp services/api/.dev.vars.example services/api/.dev.vars
+# Add Google credentials there if testing Google login.
+npm run dev
 ```
 
-In Cloudflare Studio, inspect `user`, `account`, `organization`, `member` and `project`.
-For a joined overview:
+Open `http://localhost:5173`. The app proxies API requests to the local Worker on
+port 8787. Migrations use local D1 and verification/reset emails appear at
+`http://localhost:5173/__dev/mail`. Scalar docs are at
+`http://localhost:5173/api/auth/docs`. No Rust installation is required.
 
-```sql
-SELECT u.email, o.name AS organization, m.role, p.name AS project
-FROM user u
-LEFT JOIN member m ON m.userId = u.id
-LEFT JOIN organization o ON o.id = m.organizationId
-LEFT JOIN project p ON p.organizationId = o.id;
+```sh
+npm run test:api
+npm run test:ui  # requires npm run dev in another terminal
+npm run build
+npm run lint
 ```
 
-With the dev server running, run `node --test scripts/auth-regression.test.mjs`.
-These browser tests mock auth responses and never create accounts or send email.
-They cover password-manager fills without change events, submission, confirmation,
-password reset and native-control spacing. They do not automate Apple Keychain
-or complete a real Google login.
+The submodule pins the API version; frontend builds and Pages deployment do not
+require cloning it. Deploy the API separately with its configured secrets and
+routes before releasing the app. See [integration notes](docs/api.md).

@@ -3,6 +3,7 @@ import { mountQuery, type ModeKey } from './query'
 import { authClient, AUTH_ENABLED, type AuthSession } from './auth'
 import { navigate } from './navigate'
 import type { Project } from './projects'
+import OrganizationAccessCode from './OrganizationAccessCode'
 import Feed from './Feed'
 import './MakeApp.css'
 
@@ -156,6 +157,7 @@ function AccountMenu({ session, project }: { session: AuthSession; project: Proj
           {project && (
             <div className="make-account-email" title={project.name}>Projeto<br /><span>{project.name}</span></div>
           )}
+          <OrganizationAccessCode key={session.session.activeOrganizationId} />
           <div className="make-account-separator" />
           <button type="button" role="menuitem" onClick={() => authClient.signOut()}>
             <Icon name="log-out" size={16} />

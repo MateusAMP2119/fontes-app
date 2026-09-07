@@ -33,6 +33,9 @@ function friendly(error: unknown) {
   const message = candidate?.message ?? (error instanceof Error ? error.message : String(error ?? ''))
   const normalized = message.toLowerCase()
   const code = candidate?.code
+  if (code === 'AUTH_SERVICE_UNAVAILABLE' || code === 'GOOGLE_NOT_CONFIGURED') return 'O serviço de autenticação está temporariamente indisponível. Tenta novamente.'
+  if (normalized === 'account_exists_use_email') return 'Já existe uma conta com este email. Entra com a tua palavra-passe ou recupera-a.'
+  if (normalized === 'access_denied') return 'O início de sessão com Google foi cancelado. Podes tentar novamente.'
   if (normalized.includes('sending') || normalized.includes('email service')) {
     return 'O serviço de email está temporariamente indisponível. Tenta novamente dentro de alguns minutos.'
   }

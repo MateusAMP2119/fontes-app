@@ -1,16 +1,20 @@
 {
   "name": "fontes",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "dev:auth": "wrangler dev --config wrangler.auth.jsonc --port 8787 --var BETTER_AUTH_SECRET:local-dev-secret-please-do-not-use-in-prod-0123 BETTER_AUTH_URL:http://localhost:5173",
     "dev:local": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "deploy": "npm run build && wrangler pages deploy"
+    "deploy": "npm run build && wrangler pages deploy",
+    "setup:api": "git submodule update --init services/api && npm ci --prefix services/api",
+    "build:api": "npm --prefix services/api run build",
+    "test:api": "npm --prefix services/api test",
+    "test:ui": "node --test scripts/auth-regression.test.mjs scripts/onboarding-browser.test.mjs",
+    "dev:api": "npm --prefix services/api run dev"
   },
   "dependencies": {
     "better-auth": "1.7.2",
@@ -19,12 +23,10 @@
     "react-dom": "^19.2.7"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260904.1",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
-    "better-sqlite3": "12.6.2",
     "oxlint": "^1.71.0",
     "playwright": "^1.61.1",
     "typescript": "~6.0.2",

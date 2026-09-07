@@ -28,7 +28,7 @@ function run(args) {
 process.on('SIGINT', () => stop(0))
 process.on('SIGTERM', () => stop(0))
 
-console.log('Auth uses cloud D1 fontes-auth; changes appear in Cloudflare Studio.')
-for (const script of ['dev:auth', 'dev:local']) {
+console.log('Auth uses local D1. Verification and reset emails appear at /__dev/mail.')
+for (const script of ['dev:api', 'dev:local']) {
   run(['run', script]).on('exit', (code) => stop(code ?? 1))
 }

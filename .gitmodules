@@ -1,0 +1,3 @@
+[submodule "services/api"]
+	path = services/api
+	url = https://github.com/MateusAMP2119/fontes-api.git

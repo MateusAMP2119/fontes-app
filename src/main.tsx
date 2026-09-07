@@ -44,18 +44,48 @@ function Gate({ path }: { path: string }) {
   if (!settled.current) return null
   // First contact is account creation; /login stays the returning-user entry.
   if (!session) return <Login initialMode="signup" />
-  return <Workspace path={path} session={session} />
+  return <Workspace key={session.user.id} path={path} session={session} />
 }
 
 /** Mounted only with a session, so the organization and project lookups never run signed out. */
 function Workspace({ path, session }: { path: string; session: AuthSession }) {
   const orgs = authClient.useListOrganizations()
-  const hasOrg = (orgs.data?.length ?? 0) > 0
-  const projects = useProjects(hasOrg)
-  if (orgs.isPending) return null
-  if (!hasOrg) return <Onboarding key="org" step="org" />
+  const activeId = session.session.activeOrganizationId
+  const desiredId = orgs.data?.find((org) => org.id === activeId)?.id ?? orgs.data?.[0]?.id
+  const [activationError, setActivationError] = useState(false)
+  const [attempt, setAttempt] = useState(0)
+  useEffect(() => {
+    if (!desiredId || desiredId === activeId) return
+    let live = true
+    setActivationError(false)
+    authClient.organization.setActive({ organizationId: desiredId })
+      .then(async ({ error }) => {
+        if (error) throw error
+        await authClient.getSession({ query: { disableCookieCache: true } })
+      })
+      .catch(() => { if (live) setActivationError(true) })
+    return () => { live = false }
+  }, [desiredId, activeId, attempt])
+  if (orgs.error) return <LoadError retry={() => { void orgs.refetch() }} />
+  if (orgs.isPending) return <p role="status">A carregar organizações…</p>
+  if (!desiredId) return <Onboarding key="org" step="org" onDone={() => { void orgs.refetch() }} />
+  if (activationError) return <LoadError retry={() => setAttempt((value) => value + 1)} />
+  if (activeId !== desiredId) return <p role="status">A selecionar organização…</p>
   if (!session.user.username) return <Onboarding key="username" step="username" />
-  if (projects.pending) return null
+  return <ProjectWorkspace key={session.user.id + ':' + desiredId} path={path} session={session} />
+}
+
+function LoadError({ retry }: { retry: () => void }) {
+  return <main className="login-page"><section className="login-card">
+    <p role="alert">Não foi possível carregar o espaço de trabalho.</p>
+    <button className="login-button" onClick={retry}>Tentar novamente</button>
+  </section></main>
+}
+
+function ProjectWorkspace({ path, session }: { path: string; session: AuthSession }) {
+  const projects = useProjects(true)
+  if (projects.error) return <LoadError retry={projects.refresh} />
+  if (projects.pending) return <p role="status">A carregar projetos…</p>
   if (projects.list.length === 0) return <Onboarding key="project" step="project" onDone={projects.refresh} />
   // ponytail: first project is the active one; add a switcher when a second project exists
   return <Routes path={path} session={session} project={projects.list[0]} />

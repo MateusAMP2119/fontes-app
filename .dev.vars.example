@@ -1,3 +1,2 @@
-# Copy to .dev.vars (gitignored). Use the existing Fontes Web OAuth client.
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
+# API credentials live in services/api/.dev.vars.
+# Run npm run setup:api, then copy that repository’s .dev.vars.example.

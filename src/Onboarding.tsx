@@ -1,6 +1,7 @@
 import { useRef, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent } from 'react'
 import { authClient } from './auth'
 import { createProject } from './projects'
+import { USERNAME_PATTERN, validUsername } from './onboarding-validation'
 import './Login.css'
 
 export type OnboardingStep = 'org' | 'username' | 'project'
@@ -15,7 +16,7 @@ const copy: Record<OnboardingStep, { title: string; description: string; label: 
   },
   username: {
     title: 'Escolher nome de utilizador',
-    description: 'Este nome serve de identificador dentro da organização.',
+    description: 'Usa 3 a 30 letras minúsculas, números ou underscores. O nome é único no Fontes.',
     label: 'Nome de utilizador',
     submit: 'Continuar',
     failed: 'Não foi possível guardar o nome de utilizador. Tentar novamente.',
@@ -37,17 +38,17 @@ function slugFor(name: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
-  return `${base || 'org'}-${Math.random().toString(36).slice(2, 6)}`
+  return `${base || 'org'}-${crypto.randomUUID().slice(0, 12)}`
 }
 
 function OrganizationCodeInput({ value, onChange }: { value: string; onChange: (value: string) => void }) {
   const inputs = useRef<Array<HTMLInputElement | null>>([])
-  const digits = Array.from({ length: 4 }, (_, index) => value[index] ?? '')
+  const digits = Array.from({ length: 4 }, (_, index) => value[index]?.trim() ?? '')
 
   function update(index: number, digit: string) {
     const next = [...digits]
     next[index] = digit
-    onChange(next.join(''))
+    onChange(next.map((digit) => digit || ' ').join(''))
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>, index: number) {
@@ -62,7 +63,7 @@ function OrganizationCodeInput({ value, onChange }: { value: string; onChange: (
     if (!pasted) return
     const next = [...digits]
     for (const [offset, digit] of [...pasted].entries()) next[index + offset] = digit
-    onChange(next.join(''))
+    onChange(next.map((digit) => digit || ' ').join(''))
     inputs.current[Math.min(index + pasted.length, 3)]?.focus()
   }
 
@@ -108,7 +109,7 @@ export default function Onboarding({ step, onDone }: { step: OnboardingStep; onD
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [findingOrganization, setFindingOrganization] = useState(false)
-  const [joinPreview, setJoinPreview] = useState(false)
+  const submitting = useRef(false)
   const [joinCode, setJoinCode] = useState('')
   const [joinCodeError, setJoinCodeError] = useState(false)
   const text = copy[step]
@@ -116,8 +117,14 @@ export default function Onboarding({ step, onDone }: { step: OnboardingStep; onD
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const name = String(new FormData(event.currentTarget).get('name') ?? '').trim()
-    if (!name) return
+    if (submitting.current) return
+    const form = new FormData(event.currentTarget)
+    const name = String(form.get('name') ?? '').trim()
+    if (!name || (step === 'username' && !validUsername(name))) {
+      setError(step === 'username' ? 'Usa 3 a 30 letras minúsculas, números ou underscores.' : 'Introduz um nome.')
+      return
+    }
+    submitting.current = true
     setBusy(true)
     setError(null)
     try {
@@ -128,25 +135,49 @@ export default function Onboarding({ step, onDone }: { step: OnboardingStep; onD
         const { error } = await authClient.updateUser({ username: name })
         if (error) throw error
       } else {
-        await createProject(name)
+        await createProject(name, form.get('visibility') === 'public' ? 'public' : 'private')
       }
+      if (step === 'username') await authClient.getSession({ query: { disableCookieCache: true } })
       onDone?.()
       setBusy(false)
     } catch {
       setBusy(false)
       setError(text.failed)
+    } finally {
+      submitting.current = false
     }
   }
 
-  function previewJoin(event: FormEvent<HTMLFormElement>) {
+  async function joinOrganization(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (joinCode.length !== 4) {
+    if (submitting.current) return
+    if (!/^\d{4}$/.test(joinCode)) {
       setJoinCodeError(true)
-      setJoinPreview(false)
       return
     }
+    const name = String(new FormData(event.currentTarget).get('organization-name') ?? '').trim()
+    if (!name) { setError('Introduz o nome ou identificador da organização.'); return }
+    submitting.current = true
+    setBusy(true)
+    setError(null)
     setJoinCodeError(false)
-    setJoinPreview(true)
+    try {
+      const response = await fetch('/api/auth/organization-access/join', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name, code: joinCode }),
+      })
+      const result = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(result?.message ?? 'Não foi possível entrar na organização.')
+      if (typeof result?.organizationId !== 'string') throw new Error('Não foi possível entrar na organização.')
+      const active = await authClient.organization.setActive({ organizationId: result.organizationId })
+      if (active.error) throw new Error('Entraste na organização. Recarrega a página para continuar.')
+      await authClient.getSession({ query: { disableCookieCache: true } })
+      onDone?.()
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Não foi possível entrar na organização.')
+    } finally {
+      submitting.current = false
+      setBusy(false)
+    }
   }
 
   return (
@@ -165,29 +196,27 @@ export default function Onboarding({ step, onDone }: { step: OnboardingStep; onD
         <header>
           <h1 id="onboarding-title">{isOrganizationSearch ? 'Encontrar organização' : text.title}</h1>
           {isOrganizationSearch ? (
-            <p>Procurar por organização através de nome e código.</p>
+            <p>Pede o identificador e o código atual a um administrador da organização.</p>
           ) : (
             <>
               <p>{text.description}</p>
-              {step === 'project' && <p>Projetos podem ser partilhados dentro de uma equipa ou para alguma entidade externas.</p>}
+              {step === 'project' && <p>Os projetos públicos ficam disponíveis aos membros da organização.</p>}
             </>
           )}
         </header>
         {isOrganizationSearch ? (
-          <form onSubmit={previewJoin}>
+          <form onSubmit={joinOrganization}>
             <div className="login-field">
-              <label htmlFor="organization-name">Nome da organização</label>
-              <input id="organization-name" name="organization-name" type="text" maxLength={80} autoComplete="off" autoFocus required />
+              <label htmlFor="organization-name">Nome ou identificador da organização</label>
+              <input id="organization-name" name="organization-name" type="text" maxLength={160} autoComplete="off" autoFocus required />
             </div>
-            <OrganizationCodeInput value={joinCode} onChange={setJoinCode} />
+            <OrganizationCodeInput value={joinCode} onChange={(value) => { setJoinCode(value); setJoinCodeError(false); setError(null) }} />
             {joinCodeError && (
               <p className="login-field-error" role="alert">Introduz os quatro dígitos do código.</p>
             )}
-            {joinPreview && (
-              <p className="login-notice" role="status">Pré-visualização: a entrada numa organização será ligada mais tarde.</p>
-            )}
+            {error && <p className="login-notice login-error" role="alert">{error}</p>}
             <div className="login-buttons">
-              <button className="login-button" type="submit">Encontrar organização</button>
+              <button className="login-button" type="submit" disabled={busy}>{busy ? 'A entrar…' : 'Entrar na organização'}</button>
             </div>
           </form>
         ) : (
@@ -199,7 +228,9 @@ export default function Onboarding({ step, onDone }: { step: OnboardingStep; onD
                 id="name"
                 name="name"
                 type="text"
-                maxLength={80}
+                maxLength={step === 'username' ? 30 : 80}
+                pattern={step === 'username' ? USERNAME_PATTERN : undefined}
+                disabled={busy}
                 autoComplete={step === 'username' ? 'username' : 'off'}
                 autoFocus
                 required
@@ -226,7 +257,7 @@ export default function Onboarding({ step, onDone }: { step: OnboardingStep; onD
             )}
             <div className="login-buttons">
               <button className="login-button" type="submit" disabled={busy}>
-                {busy ? 'A criar…' : text.submit}
+                {busy ? 'A guardar…' : text.submit}
               </button>
             </div>
           </form>
@@ -237,9 +268,10 @@ export default function Onboarding({ step, onDone }: { step: OnboardingStep; onD
             <button
               className="login-link"
               type="button"
+              disabled={busy}
               onClick={() => {
                 setFindingOrganization((finding) => !finding)
-                setJoinPreview(false)
+                setError(null)
                 setJoinCode('')
                 setJoinCodeError(false)
               }}

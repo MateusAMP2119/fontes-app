@@ -5,3 +5,7 @@ dist/
 .mcp.json
 .wrangler/
 .dev.vars
+
+.env*
+.dev.vars*
+!.dev.vars.example
