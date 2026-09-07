@@ -4,16 +4,16 @@
 /* The live header's floating brand card: a 30px mark tile inside a 6px surface pill. */
 .ob-brand{display:flex;width:fit-content;margin-inline:auto;padding:6px;border-radius:13px;background:#171719;box-shadow:0 0 0 1px #ffffff12,0 1px 3px #00000059}
 .ob-brand:focus-visible{outline:2px solid #aaa5ef;outline-offset:4px}
-.ob-brand img{display:block;width:30px;height:30px;object-fit:cover;border-radius:7px}
+.ob-brand img{display:block;width:36px;height:36px;object-fit:cover;border-radius:8px}
 .ob-stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:590px;padding:max(64px,calc((100dvh - 400px) / 2)) 0 74px}
 .ob-stage .ob-brand{margin-bottom:22px}
-.ob-panel{width:100%;max-width:400px;animation:ob-enter .22s ease-out}
+.ob-panel{width:100%;max-width:400px;text-align:center;animation:ob-enter .22s ease-out}
 .ob-panel header{margin-bottom:32px}
 .ob-panel h1{font-size:24px;font-weight:550;line-height:1.25;letter-spacing:-.65px;outline:none;text-wrap:balance}
 .ob-panel header p{margin-top:12px;color:var(--ob-muted);font-size:14px;line-height:1.6;text-wrap:pretty}
 .ob-panel strong{font-weight:500;color:var(--ob-text)}
-.ob-start{max-width:340px}.ob-start header{text-align:center;margin-bottom:34px}.ob-start h1{font-size:26px}
-.ob-email header{text-align:center}.ob-email .ob-progress{justify-content:center}
+.ob-start{max-width:340px}.ob-start header{margin-bottom:34px}.ob-start h1{font-size:26px}
+.ob-email{max-width:340px}
 .ob-start-actions{display:flex;flex-direction:column;gap:17px}
 .ob-panel button{cursor:pointer}.ob-panel button:focus-visible,.ob-preview-bar button:focus-visible{outline:2px solid #aaa5ef;outline-offset:4px}
 .ob-button{border:1px solid #2a2a2e;border-radius:var(--ob-control-radius);padding:11px 22px;min-height:var(--ob-control-h);min-width:var(--ob-control-min-w);display:inline-flex;align-items:center;justify-content:center;gap:10px;background:#202022;color:var(--ob-text);font:inherit;font-size:13px;font-weight:500;transition:background .15s,border-color .15s}
@@ -21,23 +21,29 @@
 .ob-divider{display:flex;align-items:center;gap:15px;color:#66666d;font-size:12px}.ob-divider:before,.ob-divider:after{content:'';flex:1;height:1px;background:#242426}
 .ob-account{text-align:center;color:var(--ob-muted);font-size:13px;padding-top:12px}.ob-link{background:none;border:0;color:#d1d1d5;text-decoration:underline;text-underline-offset:4px;font:inherit;margin-left:4px}
 .ob-panel form{display:flex;flex-direction:column;gap:24px}
-.ob-panel input:not([type=checkbox]),.ob-panel textarea{display:block;width:100%;min-width:0;height:var(--ob-control-h);border:1px solid #38383c;border-radius:var(--ob-control-radius);padding:11px 13px;background:#121213;color:var(--ob-text);font:inherit;font-size:14px;outline:none;transition:border-color .15s,box-shadow .15s}
+.ob-panel input:not([type=checkbox]),.ob-panel textarea{display:block;width:100%;min-width:0;height:var(--ob-control-h);border:1px solid #38383c;border-radius:var(--ob-control-radius);padding:11px 13px;background:#121213;color:var(--ob-text);font:inherit;font-size:14px;text-align:left;outline:none;transition:border-color .15s,box-shadow .15s}
 .ob-panel input::placeholder,.ob-panel textarea::placeholder{color:#65656d}.ob-panel input:not([type=checkbox]):focus,.ob-panel textarea:focus{border-color:#83838d;box-shadow:0 0 0 2px #ffffff08}
 .ob-panel textarea{height:auto;resize:vertical;min-height:100px;line-height:1.8}
+.ob-panel input.ob-code,.ob-panel input[type=email]{text-align:center}
 .ob-field{display:flex;flex-direction:column;gap:10px}.ob-field>span{font-size:13px;color:#a1a1a8}
 .ob-subtle{border:0;background:none;color:var(--ob-muted);font:inherit;font-size:13px;padding:8px 0;min-height:36px}.ob-subtle:hover{color:#ededee}.ob-centered{align-self:center;margin-top:-10px}
-.ob-progress{display:flex;align-items:center;gap:8px;margin-bottom:30px;height:8px}.ob-progress span{width:7px;height:7px;border-radius:9px;background:#404044}.ob-progress .past{background:#77777e}.ob-progress .current{width:25px;background:linear-gradient(90deg,#efeff1,#8e8e95)}
+.ob-resend{margin-top:-12px}
+.ob-progress{display:flex;align-items:center;justify-content:center;gap:8px;height:8px;order:1}
+/* The counter sits at the form's foot: the step's own trailing rows (the back links, the account note, the actions) follow it, and a notice stays last. */
+.ob-panel form>.ob-centered,.ob-panel form>.ob-account-note,.ob-panel form>.ob-actions{order:2}
+.ob-panel form>.ob-notice{order:3}
+.ob-progress span{width:7px;height:7px;border-radius:9px;background:#404044}.ob-progress .past{background:#77777e}.ob-progress .current{width:25px;background:linear-gradient(90deg,#efeff1,#8e8e95)}
 .ob-url{display:flex;align-items:center;height:var(--ob-control-h);border:1px solid #38383c;border-radius:var(--ob-control-radius);background:#121213;overflow:hidden}.ob-url:focus-within{border-color:#83838d;box-shadow:0 0 0 2px #ffffff08}.ob-url>span{padding-left:13px;color:#73737c;font-size:13px;white-space:nowrap}.ob-url input:not([type=checkbox]){height:100%;border:0;padding-left:2px;background:transparent;box-shadow:none;font-size:13px}
 .ob-account-note{text-align:center;color:#6e6e77;font-size:12px;margin-top:-2px}.ob-account-note span{color:#b0b0b8}.ob-account-note button{font-size:12px}
 .ob-profile-input{display:flex;gap:18px;align-items:center}.ob-avatar{width:64px;height:64px;border-radius:50%;flex-shrink:0}
-.ob-actions{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:8px}.ob-action-group{display:flex;align-items:center;gap:20px}
-.ob-copy{display:flex;align-items:center;gap:9px;align-self:flex-start;padding:3px 0;background:none;border:0;color:#c5c5cb;font:inherit;font-size:13px}.ob-copy:hover{color:white}
-.ob-preferences{border-top:1px solid var(--ob-border)}.ob-preference{display:flex;align-items:center;gap:26px;justify-content:space-between;padding:20px 0;border-bottom:1px solid var(--ob-border);cursor:pointer}.ob-preference>span{display:grid;gap:5px}.ob-preference strong{font-size:14px}.ob-preference small{font-size:13px;line-height:1.6;color:var(--ob-muted)}
+.ob-actions{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:8px}.ob-action-group{display:flex;align-items:center;gap:20px}
+.ob-copy{display:flex;align-items:center;gap:9px;align-self:center;padding:3px 0;background:none;border:0;color:#c5c5cb;font:inherit;font-size:13px}.ob-copy:hover{color:white}
+.ob-preferences{border-top:1px solid var(--ob-border)}.ob-preference{display:flex;align-items:center;gap:26px;justify-content:space-between;padding:20px 0;border-bottom:1px solid var(--ob-border);cursor:pointer}.ob-preference>span{display:grid;gap:5px;text-align:left}.ob-preference strong{font-size:14px}.ob-preference small{font-size:13px;line-height:1.6;color:var(--ob-muted)}
 .ob-preference input{appearance:none;position:relative;width:31px;height:19px;flex-shrink:0;border:0;border-radius:99px;background:#505057;cursor:pointer;transition:background .15s}.ob-preference input:before{content:'';position:absolute;top:3px;left:3px;width:13px;height:13px;border-radius:50%;background:#fff;box-shadow:0 1px 2px #0005;transition:transform .15s}.ob-preference input:checked{background:#8178d6}.ob-preference input:checked:before{transform:translateX(12px)}.ob-preference input:focus-visible{outline:2px solid #aaa5ef;outline-offset:4px}
-.ob-code-links{display:flex;justify-content:space-between;margin-top:-12px;gap:20px}.ob-notice{font-size:12px;color:#bcb7e3;line-height:1.6;margin-top:8px}.ob-success{display:grid;place-items:center;width:44px;height:44px;border:1px solid #45404f;border-radius:50%;background:#211e29;margin-bottom:26px;color:#c4b2ef}.ob-success svg{width:23px;height:23px}
+.ob-notice{font-size:12px;color:#bcb7e3;line-height:1.6;margin-top:8px}.ob-success{display:grid;place-items:center;width:44px;height:44px;border:1px solid #45404f;border-radius:50%;background:#211e29;margin-bottom:26px;color:#c4b2ef}.ob-success svg{width:23px;height:23px}
 .ob-preview-bar{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:16px;max-width:calc(100% - 32px);padding:9px 13px;border:1px solid #303035;border-radius:12px;background:#171719f5;box-shadow:0 8px 30px #0004;font-size:11px;z-index:5}.ob-preview-bar>span{color:#777780;white-space:nowrap}.ob-preview-bar nav{display:flex;gap:3px;overflow:auto}.ob-preview-bar button{border:0;background:transparent;color:#8e8e98;font:inherit;padding:6px 8px;border-radius:6px;white-space:nowrap;cursor:pointer}.ob-preview-bar button:hover{color:#efeff2}.ob-preview-bar button[aria-current]{color:#efeff2;background:#303035}.ob-preview-bar .ob-reset{border-left:1px solid #343439;border-radius:0;padding-left:14px;color:#bcbcc5}
 @keyframes ob-enter{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
-@media(max-width:600px){.ob-page{padding:0 25px 115px}.ob-stage{min-height:530px;padding-bottom:30px}.ob-panel h1{font-size:23px}.ob-brand img{width:36px;height:36px;border-radius:8px}.ob-preview-bar{bottom:10px;gap:4px;padding:7px;max-width:calc(100% - 16px);width:max-content}.ob-preview-bar>span{display:none}.ob-preview-bar button{padding:7px 6px;font-size:10px}.ob-preview-bar .ob-reset{padding-left:8px}.ob-url>span{font-size:12px;padding-left:10px}.ob-url input:not([type=checkbox]){font-size:12px}.ob-panel header p{font-size:13px}}
+@media(max-width:600px){.ob-panel form>.ob-centered{margin-top:-16px}.ob-page{padding:0 25px 115px}.ob-stage{min-height:530px;padding-bottom:30px}.ob-panel h1{font-size:23px}.ob-preview-bar{bottom:10px;gap:4px;padding:7px;max-width:calc(100% - 16px);width:max-content}.ob-preview-bar>span{display:none}.ob-preview-bar button{padding:7px 6px;font-size:10px}.ob-preview-bar .ob-reset{padding-left:8px}.ob-url>span{font-size:12px;padding-left:10px}.ob-url input:not([type=checkbox]){font-size:12px}.ob-panel header p{font-size:13px}.ob-panel form,.ob-start-actions,.ob-wide{display:flex;width:min(100%,270px);margin-inline:auto}.ob-panel header{width:min(100%,270px);margin-inline:auto}}
 @media(prefers-reduced-motion:reduce){.ob-panel{animation:none}.ob-page *{transition:none!important}}
 
 /* Small sun switch stays separate from the development screen picker. */
