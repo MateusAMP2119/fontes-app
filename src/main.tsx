@@ -41,7 +41,7 @@ function Gate({ path }: { path: string }) {
   const settled = useRef(false)
   if (!isPending) settled.current = true
   useEffect(() => { if (!session) setReady(null) }, [session])
-  if (!settled.current) return <OnboardingLayout />
+  if (!settled.current) return <OnboardingLayout pending />
   const opened = !!session && ready?.userId === session.user.id
   return <>
     <Onboarding session={session} background={opened} onBlocked={() => setReady(null)} onReady={state => { if (session) { setReady({ userId: session.user.id, state }); restoreDestination() } }} />

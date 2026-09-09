@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import './Onboarding.css'
 
 /** Keep authentication, recovery and setup on the same stable surface. */
-export default function OnboardingLayout({ children, brand, footer }: { children?: ReactNode; brand?: ReactNode; footer?: ReactNode }) {
+export default function OnboardingLayout({ children, brand, footer, pending = false }: { children?: ReactNode; brand?: ReactNode; footer?: ReactNode; pending?: boolean }) {
   const [light, setLight] = useState(() => !matchMedia('(prefers-color-scheme: dark)').matches)
   useEffect(() => {
     const media = matchMedia('(prefers-color-scheme: dark)')
@@ -21,10 +21,10 @@ export default function OnboardingLayout({ children, brand, footer }: { children
       <div className="make-purple-blob"><div className="make-purple-blob-primary"/><div className="make-purple-blob-secondary"/></div>
       <div className="make-background-grid"/>
     </div>
-    <div className="ob-stage">
+    {!pending && <div className="ob-stage">
       {brand || <span className="ob-brand"><img src="/mark.png" width="36" height="36" alt="Fontes"/></span>}
       {children}
-    </div>
+    </div>}
     {footer}
   </main>
 }

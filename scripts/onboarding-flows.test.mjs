@@ -578,3 +578,37 @@ for (const kind of ['conflict','expired','revoked']) test(`a late ${kind} on bac
  assert.equal(await p.getByRole('switch',{name:/Novidades da Fontes/}).isEnabled(),true)
  assert.equal(await p.getByRole('switch',{name:/Novidades da Fontes/}).evaluate(el=>el.checked),true)
 })
+
+test('Google return paints its logo and first form together after session and setup confirmation',async t=>{
+ const f=await fixture(t,{state:{...blank(),hasPassword:false}}),p=f.page
+ let releaseSession,releaseSetup
+ await p.addInitScript(()=>{
+  sessionStorage.setItem('fontes:onboarding:v1:pending',JSON.stringify({draft:{step:'start',provider:'google'}}))
+  window.logoOnlyFrames=0
+  const inspect=()=>{if(document.querySelector('.ob-brand')&&!document.querySelector('.ob-panel h1'))window.logoOnlyFrames++;requestAnimationFrame(inspect)}
+  requestAnimationFrame(inspect)
+ })
+ await p.route('**/get-session',async route=>{await new Promise(r=>{releaseSession=r});return route.fallback()})
+ await p.route('**/api/onboarding',async route=>{await new Promise(r=>{releaseSetup=r});return route.fallback()})
+ await p.goto(origin);await p.locator('.ob-page').waitFor();await assertEventually(()=>!!releaseSession)
+ assert.equal(await p.locator('.ob-brand').count(),0)
+ releaseSession();await assertEventually(()=>!!releaseSetup)
+ assert.equal(await p.locator('.ob-brand').count(),0)
+ releaseSetup();await p.locator('.ob-workspace').waitFor();await p.locator('.ob-brand').waitFor()
+ await p.getByLabel('Passo 1 de 4').waitFor();await delay(60)
+ assert.equal(await p.evaluate(()=>window.logoOnlyFrames),0)
+})
+
+test('email sign-in retains the complete form while the authenticated setup request is pending',async t=>{
+ const f=await fixture(t,{authenticated:false,state:{...workspace(),completed:true}}),p=f.page
+ let release
+ await p.route('**/api/onboarding',async route=>{await new Promise(r=>{release=r});return route.fallback()})
+ await p.goto(origin+'/login');await f.input('Endereço de email').fill(user.email)
+ await p.locator('input[autocomplete=current-password]').fill('existing-test-password');await f.button('Iniciar sessão').click()
+ await assertEventually(()=>!!release)
+ assert.equal(await p.getByRole('heading',{name:'Iniciar sessão',exact:true}).isVisible(),true)
+ assert.equal(await f.input('Endereço de email').inputValue(),user.email)
+ assert.equal(await f.button('Iniciar sessão').isDisabled(),true)
+ assert.equal(await p.locator('.ob-brand').isVisible(),true)
+ release();await p.locator('.make-shell').waitFor()
+})

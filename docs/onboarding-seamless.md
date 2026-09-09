@@ -34,7 +34,7 @@ The published onboarding keeps every forward onboarding form usable while earlie
 
 ## Verification
 
-The final-step follow-up build contains asset `index-BBWCE5P0.js`, SHA-256 `52f5895390bbcdca9b1ae1561fe3d6d3b035e0ca9e7bcd28c353ed0f9d3269c7`. The preceding live release was code commit `5708ca320797b86282d55c3649bb125fe84cfec2`; its live evidence remains recorded below.
+The latest screen-presentation build contains asset `index-Bcyi8BkQ.js`, SHA-256 `ac51af19eaf1beeace9622989bc23b1331729bad799f766c0b6841c9dd6659af`. The preceding live release was code commit `5708ca320797b86282d55c3649bb125fe84cfec2`; its live evidence remains recorded below.
 
 | Requirement | Evidence |
 | --- | --- |
@@ -50,8 +50,8 @@ The final-step follow-up build contains asset `index-BBWCE5P0.js`, SHA-256 `52f5
 
 Final verification results:
 
-- Production-build Chromium: 46 tests passed, zero failures. An additional targeted run covers Google callbacks at both `/` and `/login`.
-- Production-build WebKit: 41 tests passed, zero failures. An additional targeted run covers Google callbacks at both `/` and `/login`.
+- Production-build Chromium: 49 tests passed, zero failures, including Google callbacks at both `/` and `/login`.
+- Production-build WebKit: 44 tests passed, zero failures, including Google callbacks at both `/` and `/login`.
 - API onboarding controller with real SQL in SQLite: 12 tests passed, zero failures. Auth and email transport are substituted in these isolated controller tests.
 - Preview, mobile, progress and layout checks passed.
 - Service-worker checks passed: installation, offline navigation, mounted form preservation, reconnection and static-only caching.
@@ -88,3 +88,13 @@ The regression deliberately holds the final response indefinitely and verifies t
 A real Google signup was completed in the in-app browser using `mateuscosta464@gmail.com`: Google authentication, workspace `Fontes Google QA`, existing Google name/image, invitation skip, default-off email preferences, final app entry, reload, sign-out and returning Google login. The browser was signed out afterward. No password was created for this Google account. This live run used the preceding release and exposed a real progress defect: the four Google steps were labelled 4/7 through 7/7. The follow-up preserves the Google entry path across the authentication redirect and reload, including callbacks to `/login`; its regression verifies 1/4 through 4/4 without email-code or password setup.
 
 The changed final-entry behavior and corrected Google counters are covered by production-build browser tests. The live Google run described here must not be mistaken for a new-account run of the follow-up build.
+
+## Google return and signup presentation
+
+The user identified a logo-only pause immediately after returning from Google. Two loading branches rendered the brand before session/setup confirmation supplied the first form. Initial confirmation now keeps the page background without painting a partial screen; the logo and confirmed form appear together. This removes the staged logo/form presentation, not the network time needed to establish the authenticated account. An already visible email/login form remains mounted during the setup check, with duplicate authentication submissions disabled.
+
+The new browser regression holds session and setup responses separately and samples animation frames. It verifies zero frames with a logo but no form, followed by the correct first Google setup screen. A second regression verifies that the complete email login form remains visible until authenticated entry is ready. The existing completed-account regression still checks that signup never flashes during restoration.
+
+Signup panels now share a 360px maximum width, including the final Começar action. Phone forms use the available width instead of the former 270px cap. Email, confirmation code, workspace, profile and invitation labels stay visible after typing. The first document also preloads the existing mark and font. No new transition delay, progress animation or spinner was added.
+
+The final markup was checked through the full signup preview and mobile suites in Chromium and WebKit. Mobile tests cover fixed brand anchors, keyboard-height viewport changes, readable inputs, scroll reachability and horizontal overflow. All 18 desktop/mobile screen captures and four recovery/auth captures are available in the workspace folder `docs/onboarding-screen-polish-2026-09-09/`.

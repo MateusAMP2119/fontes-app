@@ -7,13 +7,12 @@
 .ob-brand img{display:block;width:36px;height:36px;object-fit:cover;border-radius:8px}
 .ob-stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:590px;padding:max(64px,calc((100dvh - 400px) / 2)) 0 74px}
 .ob-stage .ob-brand{margin-bottom:22px}
-.ob-panel{width:100%;max-width:400px;text-align:center}
+.ob-panel{width:100%;max-width:360px;text-align:center}
 .ob-panel header{margin-bottom:32px}
 .ob-panel h1{font-size:24px;font-weight:550;line-height:1.25;letter-spacing:-.65px;outline:none;text-wrap:balance}
 .ob-panel header p{margin-top:12px;color:var(--ob-muted);font-size:14px;line-height:1.6;text-wrap:pretty}
 .ob-panel strong{font-weight:500;color:var(--ob-text)}
-.ob-start{max-width:340px}.ob-start header{margin-bottom:34px}.ob-start h1{font-size:26px}
-.ob-email{max-width:340px}
+.ob-start header{margin-bottom:32px}
 .ob-start-actions{display:flex;flex-direction:column;gap:17px}
 .ob-panel button{cursor:pointer}.ob-panel button:focus-visible,.ob-preview-bar button:focus-visible{outline:2px solid #95c1fb;outline-offset:4px}
 .ob-button{border:1px solid #2a2a2e;border-radius:var(--ob-control-radius);padding:11px 22px;min-height:var(--ob-control-h);min-width:var(--ob-control-min-w);display:inline-flex;align-items:center;justify-content:center;gap:10px;background:#202022;color:var(--ob-text);font:inherit;font-size:13px;font-weight:500;transition:background .15s,border-color .15s}
@@ -25,7 +24,7 @@
 .ob-panel input::placeholder,.ob-panel textarea::placeholder{color:#65656d}.ob-panel input:not([type=checkbox],[type=file]):focus,.ob-panel textarea:focus{border-color:#83838d;box-shadow:0 0 0 2px #ffffff08}
 .ob-panel textarea{height:auto;resize:vertical;min-height:100px;line-height:1.8}
 .ob-panel input.ob-code,.ob-panel input[type=email]{text-align:center}
-.ob-field{display:flex;flex-direction:column;gap:10px}.ob-field>span{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.ob-field{display:flex;flex-direction:column;gap:10px}.ob-field>span{display:block;text-align:left;font-size:13px;color:var(--ob-text)}
 .ob-subtle{border:0;background:none;color:var(--ob-muted);font:inherit;font-size:13px;padding:8px 0;min-height:36px}.ob-subtle:hover{color:#ededee}.ob-centered{align-self:center;margin-top:-10px}
 .ob-resend{margin-top:-12px}
 /* Profile's back link closes the form on the workspace step's rhythm: same 8px under the counter as its account note. */
@@ -52,7 +51,7 @@
 /* A touch screen has no hover, so the cross stays out. */
 @media(hover:none){.ob-photo-clear{opacity:1}}
 .ob-photo-clear:hover{background:#2a2a2e;color:#fff}
-.ob-actions{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:8px}
+.ob-actions{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:8px}.ob-actions>.ob-primary{width:100%}
 .ob-copy-row{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:0 8px;margin-bottom:-18px}
 .ob-copy{display:flex;align-items:center;gap:9px;align-self:center;padding:3px 0;background:none;border:0;color:#c5c5cb;font:inherit;font-size:13px}.ob-copy:hover{color:white}
 .ob-preferences{border-top:1px solid var(--ob-border)}.ob-preference{display:flex;align-items:center;gap:26px;justify-content:space-between;padding:20px 0;border-bottom:1px solid var(--ob-border);cursor:pointer}.ob-preference>span{display:grid;gap:5px;text-align:left}.ob-preference strong{font-size:14px}.ob-preference small{font-size:13px;line-height:1.6;color:var(--ob-muted)}
@@ -62,7 +61,7 @@
 /* The error toast is a quiet plate on the page's own stroke; left/right auto centring keeps ob-enter's transform free. */
 .ob-toast{position:fixed;top:18px;left:0;right:0;width:fit-content;max-width:min(440px,calc(100% - 32px));margin-inline:auto;z-index:7;display:flex;align-items:center;padding:6px 13px;border:1px solid #553233;border-radius:99px;background:#161618;color:#e08a85;font-size:12px;line-height:1.5;text-align:left;text-wrap:pretty;animation:ob-enter .22s ease-out}
 @keyframes ob-enter{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
-@media(max-width:600px){.ob-panel form>.ob-centered{margin-top:-16px}.ob-page{padding:0 25px 115px}.ob-stage{min-height:530px;padding-bottom:30px}.ob-panel h1{font-size:23px}.ob-preview-bar{bottom:10px;gap:4px;padding:7px;max-width:calc(100% - 16px);width:max-content}.ob-preview-bar>span{display:none}.ob-preview-bar button{padding:7px 6px;font-size:10px}.ob-preview-bar .ob-reset{padding-left:8px}.ob-panel header p{font-size:13px}.ob-panel form,.ob-start-actions,.ob-wide{display:flex;width:min(100%,270px);margin-inline:auto}.ob-panel header{width:min(100%,270px);margin-inline:auto}}
+@media(max-width:600px){.ob-panel form>.ob-centered{margin-top:-16px}.ob-page{padding:0 25px 115px}.ob-stage{min-height:530px;padding-bottom:30px}.ob-panel h1{font-size:23px}.ob-preview-bar{bottom:10px;gap:4px;padding:7px;max-width:calc(100% - 16px);width:max-content}.ob-preview-bar>span{display:none}.ob-preview-bar button{padding:7px 6px;font-size:10px}.ob-preview-bar .ob-reset{padding-left:8px}.ob-panel header p{font-size:13px}.ob-panel form,.ob-start-actions,.ob-wide{display:flex;width:100%;margin-inline:auto}.ob-panel header{width:100%;margin-inline:auto}}
 @media(prefers-reduced-motion:reduce){.ob-panel,.ob-toast{animation:none}.ob-page *{transition:none!important}}
 
 .ob-page[data-theme=light]{--ob-text:#222225;--ob-muted:#73737c;--ob-border:#e4e4e7;background:radial-gradient(128% 88% at 50% 8%,#fff 0%,#fcfcfd 40%,#f4f4f6 100%) #fff;color-scheme:light}
