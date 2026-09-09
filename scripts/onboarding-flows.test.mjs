@@ -147,10 +147,10 @@ test('email and workspace forms appear before stalled requests finish',async t=>
  await f.button('Continuar com email').click();await p.locator('section.ob-code').waitFor();await p.getByText('Envio de código em curso para',{exact:false}).waitFor()
  await f.input('Código de confirmação').fill('123456');assert.equal(await p.locator('.ob-code button[type="submit"], .ob-code button.ob-primary').isDisabled(),true)
  releaseEmail();await f.button('Continuar com código').click();await p.locator('.ob-password').waitFor()
- assert.equal(await p.locator('.ob-workspace').count(),0);assert.equal(await f.button('Guardar palavra-passe').isDisabled(),true);assert.equal(f.writes.length,0)
+ assert.equal(await p.locator('.ob-workspace').count(),0);assert.equal(await f.button('Guardar palavra-passe').isDisabled(),false);assert.equal(f.writes.length,0)
  await p.route('**/api/onboarding/password',async route=>{await new Promise(r=>{releasePassword=r});await route.fallback()})
  releaseVerify();await p.locator('.ob-password').waitFor();await p.locator('input[autocomplete="new-password"]').fill('password-verified');await f.button('Guardar palavra-passe').click()
- await p.locator('.ob-workspace').waitFor();await f.input('Nome').fill('Draft during password save');assert.equal(await f.button('Criar ambiente').isDisabled(),true)
+ await p.locator('.ob-workspace').waitFor();await f.input('Nome').fill('Draft during password save');assert.equal(await f.button('Criar ambiente').isDisabled(),false)
  releasePassword();await p.waitForFunction(()=>!document.querySelector('.ob-workspace .ob-primary').disabled);assert.equal(await f.input('Nome').inputValue(),'Draft during password save')
  await p.route('**/api/onboarding',async route=>{if(route.request().method()==='POST'){await new Promise(r=>{releaseWorkspace=r})}await route.fallback()})
  await f.button('Criar ambiente').click();await p.locator('.ob-profile').waitFor();await f.input('Nome do perfil').fill('Draft during creation')
@@ -197,7 +197,7 @@ test('profile and preferences save after a typing pause without completing onboa
  let release
  await p.route('**/api/onboarding/password',async route=>{await new Promise(r=>{release=r});await route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},status:400,json:{message:'Palavra-passe recusada.'}})})
  await p.goto(origin);await p.locator('input[autocomplete="new-password"]').fill('test-only-password');await f.button('Guardar palavra-passe').click()
- await f.input('Nome').fill('Preservar nome');assert.equal(await f.button('Criar ambiente').isDisabled(),true)
+ await f.input('Nome').fill('Preservar nome');assert.equal(await f.button('Criar ambiente').isDisabled(),false)
  release();await p.locator('.ob-password').waitFor();await p.getByRole('alert').filter({hasText:'Palavra-passe recusada'}).waitFor()
  const stored=await p.evaluate(()=>JSON.stringify(localStorage));assert.ok(stored.includes('Preservar nome'));assert.ok(!stored.includes('test-only-password'));assert.equal(f.writes.length,0)
  })
@@ -231,7 +231,7 @@ test('invalid OTP returns from password draft to code without workspace writes',
  let release
  await p.route('**/sign-in/email-otp',async route=>{await new Promise(r=>{release=r});return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},status:400,json:{message:'Invalid code'}})})
  await p.goto(origin);await f.button('Continuar com email').click();await f.input('Endereço de email').fill(user.email);await f.button('Continuar com email').click();await f.input('Código de confirmação').fill('000000');await f.button('Continuar com código').click()
- await p.locator('.ob-password').waitFor();assert.equal(await f.button('Guardar palavra-passe').isDisabled(),true);release()
+ await p.locator('.ob-password').waitFor();assert.equal(await f.button('Guardar palavra-passe').isDisabled(),false);release()
  await p.locator('section.ob-code').waitFor();await p.getByRole('alert').waitFor();assert.equal(f.writes.length,0)
 })
 
@@ -246,4 +246,67 @@ test('explicit login ignores a stale completed signup draft',async t=>{
  const f=await fixture(t,{authenticated:false}),p=f.page
  await p.addInitScript(()=>sessionStorage.setItem('fontes:onboarding:v1:pending',JSON.stringify({draft:{step:'updates',email:'stale@example.com',returning:false,provider:'email'}})))
  await p.goto(origin+'/login');await p.getByRole('heading',{name:'Perfil existente',exact:true}).waitFor();await p.locator('input[autocomplete="current-password"]').waitFor();assert.equal(await p.locator('section.ob-code').count(),0)
+})
+
+
+test('password form keeps its input and focus while session bootstrap is pending',async t=>{
+ const f=await fixture(t,{authenticated:false,state:{...blank(),passwordRequired:true}}),p=f.page
+ let releaseVerify,releaseBootstrap
+ await p.route('**/sign-in/email-otp',async route=>{await new Promise(r=>{releaseVerify=r});await route.fallback()})
+ await p.route('**/api/onboarding',async route=>{if(route.request().method()==='GET')await new Promise(r=>{releaseBootstrap=r});await route.fallback()})
+ await p.goto(origin);await f.button('Continuar com email').click();await f.input('Endereço de email').fill(user.email);await f.button('Continuar com email').click()
+ await f.input('Código de confirmação').fill('123456');await f.button('Continuar com código').click()
+ const input=p.locator('input[autocomplete="new-password"]')
+ await input.fill('half-typed-password')
+ await input.evaluate(el=>{window.passwordInput=el;el.focus()})
+ releaseVerify()
+ for(let i=0;!releaseBootstrap&&i<100;i++)await delay(20)
+ assert.ok(releaseBootstrap);await delay(200)
+ assert.equal(await input.evaluate(el=>el===window.passwordInput&&el===document.activeElement),true)
+ assert.equal(await input.inputValue(),'half-typed-password')
+ releaseBootstrap();await p.waitForFunction(()=>!document.querySelector('[role="status"]')?.textContent?.includes('A recuperar'))
+ await delay(200)
+ assert.equal(await input.evaluate(el=>el===window.passwordInput&&el===document.activeElement),true)
+ assert.equal(await input.inputValue(),'half-typed-password')
+})
+
+test('password and workspace submit instantly before verification, then sync in order',async t=>{
+ const f=await fixture(t,{authenticated:false,state:{...blank(),passwordRequired:true}}),p=f.page
+ let releaseVerify,releasePassword
+ await p.route('**/sign-in/email-otp',async route=>{await new Promise(r=>{releaseVerify=r});await route.fallback()})
+ await p.route('**/api/onboarding/password',async route=>{await new Promise(r=>{releasePassword=r});await route.fallback()})
+ await p.goto(origin);await f.button('Continuar com email').click();await f.input('Endereço de email').fill(user.email);await f.button('Continuar com email').click()
+ await f.input('Código de confirmação').fill('123456');await f.button('Continuar com código').click()
+ await p.locator('input[autocomplete="new-password"]').fill('queued-secret-password');await f.button('Guardar palavra-passe').click()
+ await f.input('Nome').fill('Instant workspace');await f.button('Criar ambiente').click()
+ await f.input('Nome do perfil').fill('Uninterrupted profile')
+ assert.equal(f.authenticated,false);assert.equal(f.writes.length,0)
+ assert.ok(!JSON.stringify(f.calls).includes('queued-secret-password'))
+ releaseVerify()
+ for(let i=0;!releasePassword&&i<100;i++)await delay(20)
+ assert.ok(releasePassword)
+ assert.equal(await f.input('Nome do perfil').inputValue(),'Uninterrupted profile')
+ assert.equal(f.writes.length,0)
+ releasePassword()
+ await p.waitForFunction(()=>!document.querySelector('.ob-profile .ob-primary').disabled)
+ assert.equal(await f.input('Nome do perfil').inputValue(),'Uninterrupted profile')
+ assert.equal(f.writes[0].name,'Instant workspace')
+ assert.equal(f.calls.filter(c=>c.path==='/api/onboarding/password').length,1)
+ const stored=await p.evaluate(()=>JSON.stringify(localStorage)+JSON.stringify(sessionStorage))
+ assert.ok(!stored.includes('queued-secret-password'));assert.ok(!stored.includes('123456'))
+})
+
+
+test('queued workspace resumes after password succeeds but configuration fetch fails',async t=>{
+ const f=await fixture(t,{state:{...blank(),passwordRequired:true}}),p=f.page
+ let releasePassword,fail=false
+ await p.route('**/api/onboarding/password',async route=>{await new Promise(r=>{releasePassword=r});await route.fallback()})
+ await p.route('**/api/onboarding',async route=>{if(fail&&route.request().method()==='GET')return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},status:503,json:{message:'Confirmação indisponível.'}});return route.fallback()})
+ await p.goto(origin);await p.locator('input[autocomplete="new-password"]').fill('queued-secret-password');await f.button('Guardar palavra-passe').click()
+ await f.input('Nome').fill('Retry workspace');await f.button('Criar ambiente').click();await f.input('Nome do perfil').fill('Retry profile')
+ fail=true;releasePassword();await p.getByRole('alert').filter({hasText:'Confirmação indisponível'}).waitFor()
+ assert.equal(f.writes.length,0);fail=false;await f.button('Tentar novamente').click()
+ await p.waitForFunction(()=>!document.querySelector('.ob-profile .ob-primary').disabled)
+ assert.equal(await f.input('Nome do perfil').inputValue(),'Retry profile');assert.equal(f.writes[0].name,'Retry workspace')
+ assert.equal(f.calls.filter(c=>c.path==='/api/onboarding/password').length,1)
 })

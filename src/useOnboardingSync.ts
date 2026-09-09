@@ -21,6 +21,9 @@ export function useOnboardingSync(props: Props) {
   const state = useRef<Bootstrap | null>(null)
   const running = useRef(false)
   const authRunning = useRef(false)
+  // Credentials wait in memory for verification, never in the persisted draft.
+  const pendingPassword = useRef<string | null>(null)
+  const passwordRunning = useRef(false)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const attempts = useRef(0)
   const reload = useRef<() => Promise<void>>(async () => {})
@@ -151,6 +154,7 @@ export function useOnboardingSync(props: Props) {
     if (!props.session) {
       if (previousUser.current) {
         previousUser.current = undefined
+        pendingPassword.current = null; setSavingPassword(false)
         record.current = { draft: { ...fresh }, revision: 0, invitations: [] }
         setBootstrap(null); setLoading(false); setFailed(false); setWorkspaceBusy(false); setSyncStatus('idle')
         setInvitation(null); setInvitationErrors([]); setInviteLink('')
@@ -168,12 +172,14 @@ export function useOnboardingSync(props: Props) {
     setLoading(true)
     try { sessionStorage.removeItem(prefix + 'pending') } catch { /* optional storage */ }
     const initial = current.current.draft.email.toLowerCase() === session.user.email.toLowerCase() ? current.current.draft : { ...fresh }
-    record.current = { draft: { ...initial, email: session.user.email, profile: initial.profile || session.user.name || session.user.email.split('@')[0] }, revision: 0, invitations: [] }
+    if (initial !== current.current.draft) { pendingPassword.current = null; setSavingPassword(false) }
+    const pendingSetup = initial === current.current.draft ? record.current.pending : undefined
+    record.current = { pending: pendingSetup, draft: { ...initial, email: session.user.email, profile: initial.profile || session.user.name || session.user.email.split('@')[0] }, revision: 0, invitations: [] }
     let restored = false
     try {
       const value = JSON.parse(localStorage.getItem(prefix + session.user.id) || 'null')
       const draft = saved(value?.draft)
-      if (draft && draft.email === session.user.email && Number.isSafeInteger(value.revision) && Array.isArray(value.invitations)) {
+      if (!pendingSetup && pendingPassword.current === null && draft && draft.email === session.user.email && Number.isSafeInteger(value.revision) && Array.isArray(value.invitations)) {
         restored = true
         // Only accept known shapes. Legacy local completion is never authoritative.
         record.current = { draft, revision: value.revision, invitations: value.invitations.filter((i: Invitation) => typeof i.email === 'string' && /^[a-f0-9]{64}$/.test(i.token)),
@@ -199,6 +205,8 @@ export function useOnboardingSync(props: Props) {
         let step: Step = result.passwordRequired ? 'password' : token ? 'join' : result.organization ? 'profile' : 'workspace'
         if (!result.passwordRequired && !token && result.organization && ['profile', 'invites', 'updates'].includes(d.step)) step = d.step
         if (!result.passwordRequired && !token && record.current.pending?.workspace && d.step === 'profile') step = 'profile'
+        // A late bootstrap must not rewind screens already being filled locally.
+        if (!token && (pendingPassword.current !== null || passwordRunning.current) && ['workspace', 'profile'].includes(d.step)) step = d.step
         if (step === 'invites' && result.canInvite === false) step = 'updates'
         current.current.setDraft({ ...d, step, email: session.user.email,
           name: keep ? d.name : result.organization?.name || d.name,
@@ -226,11 +234,11 @@ export function useOnboardingSync(props: Props) {
         current.current.onBlocked?.()
         current.current.setError(error instanceof SyncError ? error.message : 'Ambiente indisponível. Nova tentativa em instantes.')
         if (transient(error)) timer.current = setTimeout(() => { void load() }, error instanceof SyncError && error.retryAfter ? error.retryAfter : 5000)
-      } finally { if (epoch === generation.current) setLoading(false) }
+      } finally { if (epoch === generation.current) { setLoading(false); void flushPassword() } }
     }
     reload.current = load
     void load()
-    const online = () => { if (record.current.pending) void drain(); else void load() }
+    const online = () => { if (record.current.pending && state.current && !state.current.passwordRequired) void drain(); else void load() }
     const storage = (e: StorageEvent) => { if (e.key === prefix + session.user.id && !running.current) void load() }
     addEventListener('online', online)
     addEventListener('storage', storage)
@@ -238,10 +246,12 @@ export function useOnboardingSync(props: Props) {
   }, [props.session?.user.id, props.session?.session.id, props.preview])
 
   function save(completed = false, workspace = false) {
-    if (!state.current || state.current.passwordRequired || state.current.accessLost || (workspace && workspaceBusy)) return
-    if (completed && (!state.current.project || !state.current.organization)) { current.current.setError('Ambiente de trabalho por confirmar.'); return }
+    const queuedCredential = pendingPassword.current !== null || passwordRunning.current
+    if ((!state.current || state.current.passwordRequired) && !(workspace && queuedCredential)) return
+    if (state.current?.accessLost || (workspace && workspaceBusy)) return
+    if (completed && (!state.current?.project || !state.current.organization)) { current.current.setError('Ambiente de trabalho por confirmar.'); return }
     const d = current.current.draft
-    record.current.pending = { organizationId: state.current.organization?.id, operationId: crypto.randomUUID(), revision: 0, name: d.name.trim(), slug: d.slug,
+    record.current.pending = { organizationId: state.current?.organization?.id, operationId: crypto.randomUUID(), revision: 0, name: d.name.trim(), slug: d.slug,
       profileName: d.profile.trim(), profileImage: d.image, completed, automaticSlug: workspace && !d.slugEdited, workspace, changelog: d.changelog, daily: d.daily }
     record.current.draft = d
     setSyncStatus('saving')
@@ -280,7 +290,7 @@ export function useOnboardingSync(props: Props) {
     authRunning.current = true; setBusy(true); current.current.setError('')
     try { const result = await action(); if (result.error) throw new Error(message); return true }
     catch { current.current.setError(message); return false }
-    finally { authRunning.current = false; setBusy(false) }
+    finally { authRunning.current = false; setBusy(false); void flushPassword() }
   }
   async function start() {
     if (authRunning.current) return
@@ -296,7 +306,10 @@ export function useOnboardingSync(props: Props) {
     const email = current.current.draft.email
     if (!current.current.draft.returning && !new URL(location.href).searchParams.has('invite')) current.current.setDraft(d => ({ ...d, step: 'password' }))
     const verified = await authenticate(() => authClient.signIn.emailOtp({ email, otp: code }), 'Código inválido ou expirado. Nova tentativa disponível.')
-    if (!verified) current.current.setDraft(d => ({ ...d, step: 'code' }))
+    if (!verified) {
+      pendingPassword.current = null; setSavingPassword(false)
+      current.current.setDraft(d => ({ ...d, step: 'code' }))
+    }
   }
   async function login(password: string) {
     await authenticate(() => authClient.signIn.email({ email: current.current.draft.email.trim().toLowerCase(), password }), 'Email ou palavra-passe inválidos. A recuperação de acesso está disponível.')
@@ -305,20 +318,35 @@ export function useOnboardingSync(props: Props) {
     const callback = new URL(location.href); callback.searchParams.delete('error'); callback.searchParams.delete('error_description')
     await authenticate(() => authClient.signIn.social({ provider: 'google', callbackURL: callback.href, errorCallbackURL: callback.href }), 'Não foi possível iniciar sessão com Google.')
   }
-  async function setPassword(newPassword: string) {
-    if (authRunning.current) return
-    const epoch = generation.current
-    authRunning.current = true; setBusy(true); setSavingPassword(true)
+  function setPassword(newPassword: string) {
+    if (pendingPassword.current !== null || passwordRunning.current) return
+    pendingPassword.current = newPassword
+    setSavingPassword(true)
     current.current.setError('')
     if (!new URL(location.href).searchParams.has('invite')) current.current.setDraft(d => ({ ...d, step: 'workspace' }))
-    try { await onboardingRequest('/password', { newPassword }); if (epoch === generation.current && !pageHidden.current) await reload.current() }
-    catch (e) {
+    void flushPassword()
+  }
+  async function flushPassword() {
+    if (pendingPassword.current === null || passwordRunning.current || authRunning.current || !owner.current || !state.current || pageHidden.current) return
+    const epoch = generation.current
+    const newPassword = pendingPassword.current
+    pendingPassword.current = null
+    // Existing accounts do not need their password replaced after OTP login.
+    if (!state.current.passwordRequired) { setSavingPassword(false); void drain(); return }
+    passwordRunning.current = true
+    try {
+      await onboardingRequest('/password', { newPassword })
+      if (epoch === generation.current && !pageHidden.current) await reload.current()
+    } catch (e) {
       if (epoch !== generation.current || pageHidden.current) return
+      passwordRunning.current = false
       current.current.setError(e instanceof SyncError ? e.message : 'Não foi possível guardar a palavra-passe. Nova tentativa disponível.')
-      authRunning.current = false
       if (e instanceof SyncError && e.status === 401) await changeEmail()
-      else await reload.current()
-    } finally { authRunning.current = false; setBusy(false); setSavingPassword(false) }
+      else {
+        current.current.setDraft(d => ({ ...d, step: 'password' }))
+        await reload.current()
+      }
+    } finally { passwordRunning.current = false; setSavingPassword(false) }
   }
   async function acceptInvite() {
     if (authRunning.current || !invitation) return
@@ -337,7 +365,8 @@ export function useOnboardingSync(props: Props) {
     await reload.current()
   }
   async function changeEmail() {
-    if (authRunning.current) { current.current.setError('Autenticação em curso.'); return }
+    if (authRunning.current || passwordRunning.current) { current.current.setError('Autenticação em curso.'); return }
+    pendingPassword.current = null; setSavingPassword(false)
     if (current.current.session) {
       try { const result = await authClient.signOut(); if (result.error) throw new Error() }
       catch { current.current.setError('Não foi possível terminar a sessão.'); return }
@@ -370,8 +399,8 @@ export function useOnboardingSync(props: Props) {
     else record.current.invitations = record.current.invitations.map(i => i.token === token ? { token: i.token, email: i.email, organizationId: i.organizationId, ...(!i.organizationId ? { status: 'failed' as const, error: i.error } : {}) } : i)
     updateInvitations(); void drain()
   }
-  return { busy, failed, loading, savingPassword, restoring: !props.preview && !!props.session && !bootstrap && !failed, workspaceBusy, syncStatus, sendingCode, organizationId: bootstrap?.organization?.id, canSaveProfile: !!bootstrap?.organization && !workspaceBusy && !bootstrap.passwordRequired, canCreateWorkspace: !!bootstrap && !loading && !bootstrap.passwordRequired && !bootstrap.accessLost,
+  return { busy, failed, loading, savingPassword, restoring: !props.preview && !!props.session && !bootstrap && !failed, workspaceBusy, syncStatus, sendingCode, organizationId: bootstrap?.organization?.id, canSaveProfile: !!bootstrap?.organization && !workspaceBusy && !bootstrap.passwordRequired, canCreateWorkspace: savingPassword || (!!bootstrap && !loading && !bootstrap.passwordRequired && !bootstrap.accessLost),
     canEditWorkspace: bootstrap?.canEditWorkspace !== false, canInvite: bootstrap?.canInvite !== false,
     invitation, invitationErrors, inviteLink, start, verify, login, google, setPassword, acceptInvite, dismissInvite, save, invite, copyInvite, changeEmail, retryInvitation,
-    retry: () => { if (record.current.pending) void drain(); else void reload.current() } }
+    retry: () => { if (record.current.pending && state.current && !state.current.passwordRequired) void drain(); else void reload.current() } }
 }
