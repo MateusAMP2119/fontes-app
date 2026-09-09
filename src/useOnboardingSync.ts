@@ -27,6 +27,7 @@ export function useOnboardingSync(props: Props) {
   const [loading, setLoading] = useState(false)
   const [workspaceBusy, setWorkspaceBusy] = useState(false)
   const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle')
+  const [savingPassword, setSavingPassword] = useState(false)
   const [sendingCode, setSendingCode] = useState(false)
   const [bootstrap, setBootstrap] = useState<Bootstrap | null>(null)
   const [invitation, setInvitation] = useState<{ name: string; role: string } | null>(null)
@@ -146,7 +147,7 @@ export function useOnboardingSync(props: Props) {
     setLoading(true)
     try { sessionStorage.removeItem(prefix + 'pending') } catch { /* optional storage */ }
     const initial = current.current.draft.email.toLowerCase() === session.user.email.toLowerCase() ? current.current.draft : { ...fresh }
-    record.current = { draft: { ...initial, email: session.user.email, profile: initial.profile || session.user.name }, revision: 0, invitations: [] }
+    record.current = { draft: { ...initial, email: session.user.email, profile: initial.profile || session.user.name || session.user.email.split('@')[0] }, revision: 0, invitations: [] }
     let restored = false
     try {
       const value = JSON.parse(localStorage.getItem(prefix + session.user.id) || 'null')
@@ -181,7 +182,7 @@ export function useOnboardingSync(props: Props) {
         current.current.setDraft({ ...d, step, email: session.user.email,
           name: keep ? d.name : result.organization?.name || d.name,
           slug: keep ? d.slug : result.organization?.slug || d.slug,
-          profile: keep ? d.profile : result.profile.name || d.profile,
+          profile: (keep ? d.profile : result.profile.name || d.profile) || session.user.name || session.user.email.split('@')[0],
           image: keep ? d.image : result.profile.image || '',
           changelog: keep ? d.changelog : result.changelog, daily: keep ? d.daily : result.daily })
         setWorkspaceBusy(!!record.current.pending?.workspace)
@@ -272,7 +273,7 @@ export function useOnboardingSync(props: Props) {
   async function verify(code: string) {
     if (authRunning.current) return
     const email = current.current.draft.email
-    if (!current.current.draft.returning && !new URL(location.href).searchParams.has('invite')) current.current.setDraft(d => ({ ...d, step: 'workspace' }))
+    if (!current.current.draft.returning && !new URL(location.href).searchParams.has('invite')) current.current.setDraft(d => ({ ...d, step: 'password' }))
     const verified = await authenticate(() => authClient.signIn.emailOtp({ email, otp: code }), 'Código inválido ou expirado. Nova tentativa disponível.')
     if (!verified) current.current.setDraft(d => ({ ...d, step: 'code' }))
   }
@@ -285,14 +286,16 @@ export function useOnboardingSync(props: Props) {
   }
   async function setPassword(newPassword: string) {
     if (authRunning.current) return
-    authRunning.current = true; setBusy(true)
+    authRunning.current = true; setBusy(true); setSavingPassword(true)
+    current.current.setError('')
+    if (!new URL(location.href).searchParams.has('invite')) current.current.setDraft(d => ({ ...d, step: 'workspace' }))
     try { await onboardingRequest('/password', { newPassword }); await reload.current() }
     catch (e) {
       current.current.setError(e instanceof SyncError ? e.message : 'Não foi possível guardar a palavra-passe. Nova tentativa disponível.')
       authRunning.current = false
       if (e instanceof SyncError && e.status === 401) await changeEmail()
       else await reload.current()
-    } finally { authRunning.current = false; setBusy(false) }
+    } finally { authRunning.current = false; setBusy(false); setSavingPassword(false) }
   }
   async function acceptInvite() {
     if (authRunning.current || !invitation) return
@@ -344,7 +347,7 @@ export function useOnboardingSync(props: Props) {
     else record.current.invitations = record.current.invitations.map(i => i.token === token ? { token: i.token, email: i.email, organizationId: i.organizationId, ...(!i.organizationId ? { status: 'failed' as const, error: i.error } : {}) } : i)
     updateInvitations(); void drain()
   }
-  return { busy, failed, loading, restoring: !props.preview && !!props.session && !bootstrap && !failed, workspaceBusy, syncStatus, sendingCode, organizationId: bootstrap?.organization?.id, canSaveProfile: !!bootstrap?.organization && !workspaceBusy && !bootstrap.passwordRequired, canCreateWorkspace: !!bootstrap && !loading && !bootstrap.passwordRequired && !bootstrap.accessLost,
+  return { busy, failed, loading, savingPassword, restoring: !props.preview && !!props.session && !bootstrap && !failed, workspaceBusy, syncStatus, sendingCode, organizationId: bootstrap?.organization?.id, canSaveProfile: !!bootstrap?.organization && !workspaceBusy && !bootstrap.passwordRequired, canCreateWorkspace: !!bootstrap && !loading && !bootstrap.passwordRequired && !bootstrap.accessLost,
     canEditWorkspace: bootstrap?.canEditWorkspace !== false, canInvite: bootstrap?.canInvite !== false,
     invitation, invitationErrors, inviteLink, start, verify, login, google, setPassword, acceptInvite, dismissInvite, save, invite, copyInvite, changeEmail, retryInvitation,
     retry: () => { if (record.current.pending) void drain(); else void reload.current() } }
