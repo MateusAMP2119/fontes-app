@@ -241,3 +241,9 @@ test('invalid OTP returns from password draft to code without workspace writes',
  await p.getByRole('heading',{name:'Criar conta',exact:true}).waitFor();assert.equal(await p.locator('.make-shell').count(),0);assert.equal(await p.locator('.ob-updates').count(),0)
  await f.button('Continuar com email').click();assert.equal(await f.input('Endereço de email').inputValue(),'')
  })
+
+test('explicit login ignores a stale completed signup draft',async t=>{
+ const f=await fixture(t,{authenticated:false}),p=f.page
+ await p.addInitScript(()=>sessionStorage.setItem('fontes:onboarding:v1:pending',JSON.stringify({draft:{step:'updates',email:'stale@example.com',returning:false,provider:'email'}})))
+ await p.goto(origin+'/login');await p.getByRole('heading',{name:'Perfil existente',exact:true}).waitFor();await p.locator('input[autocomplete="current-password"]').waitFor();assert.equal(await p.locator('section.ob-code').count(),0)
+})
