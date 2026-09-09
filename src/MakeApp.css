@@ -341,9 +341,7 @@ body {
   z-index: 0;
   inset: 0;
   overflow: hidden;
-  background:
-    radial-gradient(ellipse 42% 72% at 69% 42%, rgb(112 159 245 / 0.14), rgb(163 236 233 / 0.07) 42%, transparent 72%),
-    var(--make-bg);
+  background: var(--make-bg);
   pointer-events: none;
 }
 

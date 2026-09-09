@@ -319,10 +319,6 @@ export default function MakeApp({ session, project = null }: { session: AuthSess
         </header>
 
         <div className="make-background" aria-hidden="true">
-          <div className="make-purple-blob">
-            <div className="make-purple-blob-primary" />
-            <div className="make-purple-blob-secondary" />
-          </div>
           <div className="make-background-grid" />
         </div>
 

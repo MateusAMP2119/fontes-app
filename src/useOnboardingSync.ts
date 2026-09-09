@@ -344,7 +344,7 @@ export function useOnboardingSync(props: Props) {
     else record.current.invitations = record.current.invitations.map(i => i.token === token ? { token: i.token, email: i.email, organizationId: i.organizationId, ...(!i.organizationId ? { status: 'failed' as const, error: i.error } : {}) } : i)
     updateInvitations(); void drain()
   }
-  return { busy, failed, loading, workspaceBusy, syncStatus, sendingCode, organizationId: bootstrap?.organization?.id, canSaveProfile: !!bootstrap?.organization && !workspaceBusy && !bootstrap.passwordRequired, canCreateWorkspace: !!bootstrap && !loading && !bootstrap.passwordRequired && !bootstrap.accessLost,
+  return { busy, failed, loading, restoring: !props.preview && !!props.session && !bootstrap && !failed, workspaceBusy, syncStatus, sendingCode, organizationId: bootstrap?.organization?.id, canSaveProfile: !!bootstrap?.organization && !workspaceBusy && !bootstrap.passwordRequired, canCreateWorkspace: !!bootstrap && !loading && !bootstrap.passwordRequired && !bootstrap.accessLost,
     canEditWorkspace: bootstrap?.canEditWorkspace !== false, canInvite: bootstrap?.canInvite !== false,
     invitation, invitationErrors, inviteLink, start, verify, login, google, setPassword, acceptInvite, dismissInvite, save, invite, copyInvite, changeEmail, retryInvitation,
     retry: () => { if (record.current.pending) void drain(); else void reload.current() } }

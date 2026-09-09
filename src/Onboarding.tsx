@@ -196,10 +196,10 @@ export default function Onboarding({ preview = false, session = null, onReady, o
     </div>
     <div className="ob-stage">
       {brand}
-      {live.loading && <p role="status">A recuperar configuração…</p>}
+      {(live.loading || live.restoring) && <p role="status">A recuperar configuração…</p>}
       {!preview && ['profile', 'updates'].includes(draft.step) && <p role="status">{live.workspaceBusy ? 'Criação do ambiente em curso. O perfil já pode ser preenchido.' : live.syncStatus === 'saving' ? 'A guardar alterações…' : live.syncStatus === 'saved' ? 'Alterações guardadas.' : live.syncStatus === 'failed' ? 'Alterações por guardar. Nova tentativa disponível.' : ''}</p>}
       <AnimatePresence mode="wait" initial={false}>
-      <StepPanel key={draft.step} step={draft.step}>
+      {!live.restoring && <StepPanel key={draft.step} step={draft.step}>
         <header><h1 id="ob-title" tabIndex={-1}>{titles[draft.step]}</h1>{descriptions[draft.step] && <p>{descriptions[draft.step]}</p>}</header>
         {draft.step === 'start' ? <div className="ob-start-actions">
           <button className="ob-button ob-provider" disabled={live.busy} onClick={() => { patch({ provider: 'google' }); if (!preview) { void live.google(); return }; patch({ email: 'mateus@gmail.com', profile: 'Mateus', returning: false }); go('workspace') }}><Google/>Continuar com Google</button>
@@ -223,7 +223,7 @@ export default function Onboarding({ preview = false, session = null, onReady, o
         </form>}
         {!preview && notice && draft.step === 'start' && <p className="ob-notice" role="status">{notice}</p>}
         {!preview && live.failed && <div className="ob-actions"><button className="ob-subtle" onClick={live.retry}>Tentar novamente</button><button className="ob-subtle" onClick={() => void live.changeEmail()}>Utilizar um email diferente</button></div>}
-      </StepPanel>
+      </StepPanel>}
       </AnimatePresence>
     </div>
     {error && <div className="ob-toast" role="alert" key={error.n}><span>{error.text}</span></div>}

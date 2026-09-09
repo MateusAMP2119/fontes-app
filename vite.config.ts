@@ -4,8 +4,8 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   plugins: [react(), VitePWA({
-    // Let the next version activate after all app windows close.
-    registerType: 'prompt',
+    // Activate updates with tabs open; the next reload uses the new app.
+    registerType: 'autoUpdate',
     injectRegister: 'script',
     includeAssets: ['mark.png', 'mark-favicon-b31fccab.png', 'apple-touch-icon.png'],
     manifest: {
@@ -26,6 +26,8 @@ export default defineConfig({
       ],
     },
     workbox: {
+      skipWaiting: true,
+      clientsClaim: true,
       globPatterns: ['**/*.{js,css,html,woff2,png,jpg,svg}'],
       navigateFallback: 'index.html',
       navigateFallbackDenylist: [/^\/api(?:\/|$)/, /^\/\.well-known\//],
