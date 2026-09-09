@@ -25,9 +25,9 @@ function restore(): Draft {
 }
 function restorePending(session: AuthSession | null): Draft {
   const initial = { ...fresh, step: location.pathname === '/login' ? 'email' : 'start', returning: location.pathname === '/login' } as Draft
-  if (location.pathname === '/login') return initial
   try {
     const value = saved(JSON.parse(sessionStorage.getItem('fontes:onboarding:v1:pending') || 'null')?.draft)
+    if (location.pathname === '/login') return { ...initial, provider: value?.provider || 'email' }
     if (value) return { ...value, step: !session && !['start', 'email', 'code'].includes(value.step) ? 'code' : value.step }
   } catch { /* No saved draft. */ }
   return initial

@@ -40,7 +40,7 @@ async function fixture(t, options={}) {
  f.input=name=>page.getByRole('textbox',{name,exact:true})
  return f
 }
-test('new email account requires password; completion waits for server across reload',async t=>{
+test('new email account requires password; confirmed setup opens while final preferences retry across reload',async t=>{
  const f=await fixture(t,{authenticated:false,state:{...blank(),passwordRequired:true}}),p=f.page
  await p.goto(origin)
  await f.button('Continuar com email').click();await f.input('Endereço de email').fill(user.email);await f.button('Continuar com email').click()
@@ -49,10 +49,11 @@ test('new email account requires password; completion waits for server across re
  await p.locator('input[autocomplete="new-password"]').fill('test-secret-password');await f.button('Guardar palavra-passe').click()
  await f.input('Nome').fill('Equipa');await f.button('Criar ambiente').click()
  await f.input('Nome do perfil').fill('Pessoa final');await f.button('Continuar').click();await f.button('Saltar').click()
- f.offline=true;await f.button('Começar').click();await p.getByRole('alert').filter({hasText:'Indisponível'}).waitFor()
- assert.equal(await p.locator('.make-shell').count(),0)
- await p.reload();await p.locator('.ob-updates').waitFor();assert.equal(await p.locator('.make-shell').count(),0)
- f.offline=false;await p.evaluate(()=>dispatchEvent(new Event('online')));await p.locator('.make-shell').waitFor()
+ await assertEventually(()=>f.state.profile.name==='Pessoa final')
+ f.offline=true;await f.button('Começar').click();await p.locator('.make-shell').waitFor();await p.getByRole('status').filter({hasText:'Indisponível'}).waitFor()
+ assert.equal(f.state.completed,false,'server completion is never fabricated')
+ await p.reload();await p.locator('.make-shell').waitFor()
+ f.offline=false;await p.evaluate(()=>dispatchEvent(new Event('online')));await assertEventually(()=>f.state.completed)
  assert.equal(f.state.completed,true);assert.equal(f.state.profile.name,'Pessoa final')
  const storage=await p.evaluate(()=>JSON.stringify(localStorage)+JSON.stringify(sessionStorage))
  assert.ok(!storage.includes('test-secret-password'));assert.ok(!storage.includes('123456'))
@@ -377,17 +378,17 @@ async function assertEventually(check) {
  assert.ok(check(),'expected state was not confirmed within 3 seconds')
 }
 
-test('preference changes during final confirmation are saved before the app opens',async t=>{
+test('preference changes while required profile confirmation is pending are retained',async t=>{
  const f=await fixture(t,{state:workspace()}),p=f.page
  let release
  await p.route('**/api/onboarding',async route=>{
-  if(route.request().method()==='POST'&&route.request().postDataJSON().completed&&!release)await new Promise(r=>{release=r})
+  if(route.request().method()==='POST'&&!release)await new Promise(r=>{release=r})
   return route.fallback()
  })
- await p.goto(origin);await f.button('Continuar').click();await f.button('Saltar').click();await f.button('Começar').click()
+ await p.goto(origin);await f.input('Nome do perfil').fill('Profile still saving');await f.button('Continuar').click();await f.button('Saltar').click();await f.button('Começar').click()
  await assertEventually(()=>!!release)
  await p.getByRole('switch',{name:/Novidades da Fontes/}).check()
- release();await p.locator('.make-shell').waitFor()
+ release();await p.locator('.make-shell').waitFor();await assertEventually(()=>f.state.completed&&f.state.changelog)
  assert.equal(f.state.changelog,true,'the confirmed result must include edits made during the request')
 })
 
@@ -522,4 +523,58 @@ test('removing a profile image cancels an unfinished replacement',async t=>{
  await delay(100);assert.equal(await f.button('Remover imagem').count(),0,'the late replacement must not restore a removed image')
  await f.button('Continuar').click();await f.button('Saltar').click();await f.button('Começar').click();await p.locator('.make-shell').waitFor()
  assert.equal(f.state.profile.image,'')
+})
+
+test('Começar opens confirmed setup before an unresolved final response and retains preferences',async t=>{
+ const f=await fixture(t,{state:workspace()}),p=f.page
+ let release
+ await p.route('**/api/onboarding',async route=>{
+  if(route.request().method()==='POST'&&route.request().postDataJSON().completed)await new Promise(r=>{release=r})
+  return route.fallback()
+ })
+ await p.goto(origin);await f.button('Continuar').click();await f.button('Saltar').click()
+ await p.getByRole('switch',{name:/Novidades da Fontes/}).check()
+ const start=Date.now();await f.button('Começar').click();await p.locator('.make-shell').waitFor({timeout:1000})
+ assert.ok(Date.now()-start<1000);await assertEventually(()=>!!release)
+ assert.equal(f.state.completed,false)
+ const pending=await p.evaluate(()=>JSON.parse(sessionStorage.getItem('fontes:onboarding:v1:tab:flow-user')).pending)
+ assert.equal(pending.completed,true);assert.equal(pending.changelog,true)
+ release();await assertEventually(()=>f.state.completed&&f.state.changelog)
+ await p.reload();await p.locator('.make-shell').waitFor()
+})
+
+for (const entry of ['/', '/login']) test(`Google callback at ${entry} keeps four-step progress across reload and needs no password setup`,async t=>{
+ const f=await fixture(t,{authenticated:false,state:{...blank(),hasPassword:false}}),p=f.page
+ await p.route('**/sign-in/social',route=>{f.authenticated=true;return route.fulfill({json:{redirect:true,url:origin+entry+'?oauth-test=1'}})})
+ await p.goto(origin+entry);await f.button('Continuar com Google').click();await p.locator('.ob-workspace').waitFor()
+ await p.getByLabel('Passo 1 de 4').waitFor()
+ await p.reload();await p.getByLabel('Passo 1 de 4').waitFor()
+ await f.input('Nome').fill('Google workspace');await f.button('Criar ambiente').click()
+ await p.getByLabel('Passo 2 de 4').waitFor();await f.button('Continuar').click()
+ await p.getByLabel('Passo 3 de 4').waitFor();await f.button('Continuar').click()
+ await p.getByLabel('Passo 4 de 4').waitFor();await f.button('Começar').click();await p.locator('.make-shell').waitFor()
+ await assertEventually(()=>f.state.completed)
+ assert.ok(!f.calls.some(c=>c.path.includes('email-otp')||c.path.endsWith('/onboarding/password')))
+})
+
+for (const kind of ['conflict','expired','revoked']) test(`a late ${kind} on background completion blocks entry and preserves the draft`,async t=>{
+ const f=await fixture(t,{state:workspace()}),p=f.page
+ let release
+ await p.route('**/api/onboarding',async route=>{
+  if(route.request().method()==='POST'&&route.request().postDataJSON().completed){
+   await new Promise(r=>{release=r})
+   if(kind==='conflict'){f.state={...f.state,revision:8,profile:{name:'Other tab'}};return route.fulfill({status:409,json:{conflict:true,message:'Alterada noutra janela.'}})}
+   if(kind==='revoked'){f.state={...f.state,accessLost:true,organization:null,project:null};return route.fulfill({status:403,json:{message:'Acesso revogado.'}})}
+   return route.fulfill({status:401,json:{message:'Sessão expirada.'}})
+  }
+  return route.fallback()
+ })
+ await p.goto(origin);await f.button('Continuar').click();await f.button('Saltar').click()
+ await p.getByRole('switch',{name:/Novidades da Fontes/}).check();await f.button('Começar').click()
+ await p.locator('.make-shell').waitFor();await assertEventually(()=>!!release);release()
+ if(kind==='conflict')await p.getByRole('form',{name:'Correção da configuração'}).waitFor()
+ else await p.getByRole('alert').waitFor()
+ assert.equal(await p.locator('.make-shell').count(),0)
+ assert.equal(await p.getByRole('switch',{name:/Novidades da Fontes/}).isEnabled(),true)
+ assert.equal(await p.getByRole('switch',{name:/Novidades da Fontes/}).evaluate(el=>el.checked),true)
 })

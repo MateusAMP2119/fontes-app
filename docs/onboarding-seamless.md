@@ -1,6 +1,6 @@
 # Onboarding flow and verification, 9 September 2026
 
-The published onboarding keeps every forward onboarding form usable while earlier requests finish. Earlier failures are corrected on the current screen. Server-confirmed credentials, workspace, project and completion remain required before the app opens.
+The published onboarding keeps every forward onboarding form usable while earlier requests finish. Earlier failures are corrected on the current screen. Server-confirmed credentials, workspace, project and matching profile remain required before the app opens. After an explicit final click, optional preferences and the completion marker can finish through the persisted background queue.
 
 ## Screen purposes
 
@@ -34,7 +34,7 @@ The published onboarding keeps every forward onboarding form usable while earlie
 
 ## Verification
 
-Production serves code commit `5708ca320797b86282d55c3649bb125fe84cfec2`, asset `index-Q6FMOOSS.js`, SHA-256 `ce96aca745a72d337a8b59895a919648ff662ed44bb3a477579dd6f706218762`. The served bytes match the tested local production build.
+The final-step follow-up build contains asset `index-BBWCE5P0.js`, SHA-256 `52f5895390bbcdca9b1ae1561fe3d6d3b035e0ca9e7bcd28c353ed0f9d3269c7`. The preceding live release was code commit `5708ca320797b86282d55c3649bb125fe84cfec2`; its live evidence remains recorded below.
 
 | Requirement | Evidence |
 | --- | --- |
@@ -50,8 +50,8 @@ Production serves code commit `5708ca320797b86282d55c3649bb125fe84cfec2`, asset 
 
 Final verification results:
 
-- Production-build Chromium: 41 tests passed, zero failures.
-- Production-build WebKit: 36 tests passed, zero failures.
+- Production-build Chromium: 46 tests passed, zero failures. An additional targeted run covers Google callbacks at both `/` and `/login`.
+- Production-build WebKit: 41 tests passed, zero failures. An additional targeted run covers Google callbacks at both `/` and `/login`.
 - API onboarding controller with real SQL in SQLite: 12 tests passed, zero failures. Auth and email transport are substituted in these isolated controller tests.
 - Preview, mobile, progress and layout checks passed.
 - Service-worker checks passed: installation, offline navigation, mounted form preservation, reconnection and static-only caching.
@@ -77,4 +77,14 @@ The authorized test alias initially received no code. An exact Cloudflare Email 
 
 Live evidence is saved in the workspace's `docs/onboarding-fix-verification-2026-09-09/deployed/` and `deployed-returning/` folders: screenshots, sanitized request timings, server-confirmed configuration summaries and final asset paths. Generated credentials are stored separately in a private file with mode 0600, outside the repository.
 
-Google authorization and physical-phone behavior have not been exercised live in this pass. Invitation email delivery to another person was not exercised. Passing this coverage does not prove that all possible defects are absent. Build and lint warnings described above remain.
+Physical-phone behavior has not been exercised live in this pass. Invitation email delivery to another person was not exercised. Passing this coverage does not prove that all possible defects are absent. Build and lint warnings described above remain.
+
+## Final-button pause and Google follow-up
+
+The user clarified that the last button eventually opens the app after a short pause. This was a blocking final save, not an indefinite hang. Once the workspace, project, credentials and exact profile are already confirmed, the final click now opens that workspace while the optional preferences and completion marker finish in the persisted queue. Authentication, workspace creation, unsaved profile changes, image processing and unresolved conflicts still prevent entry. A late expired session, revoked access or conflict blocks the app and preserves the draft for correction. Offline completion retries survive reload without inventing a server completion result.
+
+The regression deliberately holds the final response indefinitely and verifies that the confirmed app opens before it is released. It then verifies the queued preferences, server acknowledgement and reload. Further tests cover late conflicts, expired authentication and revoked access after entry. Existing incomplete-password, stalled-workspace and image-processing tests continue to pass.
+
+A real Google signup was completed in the in-app browser using `mateuscosta464@gmail.com`: Google authentication, workspace `Fontes Google QA`, existing Google name/image, invitation skip, default-off email preferences, final app entry, reload, sign-out and returning Google login. The browser was signed out afterward. No password was created for this Google account. This live run used the preceding release and exposed a real progress defect: the four Google steps were labelled 4/7 through 7/7. The follow-up preserves the Google entry path across the authentication redirect and reload, including callbacks to `/login`; its regression verifies 1/4 through 4/4 without email-code or password setup.
+
+The changed final-entry behavior and corrected Google counters are covered by production-build browser tests. The live Google run described here must not be mistaken for a new-account run of the follow-up build.

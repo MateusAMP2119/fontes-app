@@ -81,7 +81,14 @@ export function useOnboardingSync(props: Props) {
     const s = state.current
     if (current.current.imagePending || record.current.needsConfirmation || requiresVerification.current) return
     if (completionRequested.current && current.current.draft.step !== 'updates') return
-    if (s?.completed && s.project && s.organization && !s.passwordRequired && !s.accessLost && !record.current.pending && !new URL(location.href).searchParams.has('invite')) current.current.onReady?.(s)
+    if (!s?.project || !s.organization || s.passwordRequired || s.accessLost || new URL(location.href).searchParams.has('invite')) return
+    const d = current.current.draft
+    // Entry can use an already confirmed workspace/profile. Only the optional
+    // preferences and completion marker may still be in the persisted outbox.
+    const confirmedSetup = completionRequested.current && d.step === 'updates' && record.current.pending?.completed &&
+      !record.current.pending.workspace && s.organization.name === d.name.trim() && s.organization.slug === d.slug &&
+      s.profile.name === d.profile.trim() && (s.profile.image || '') === d.image
+    if ((s.completed && !record.current.pending) || confirmedSetup) current.current.onReady?.(s)
   }
   // Restoration updates the draft after the server response. Recheck readiness
   // once that step is rendered, so confirmed completion also survives a reload.
@@ -144,14 +151,20 @@ export function useOnboardingSync(props: Props) {
         if (error instanceof SyncError && error.conflict) {
           record.current.needsConfirmation = true
           record.current.pending = undefined
+          current.current.onBlocked?.()
           persist()
           await reload.current()
           setIssue('profile')
           current.current.setNotice('Alterações noutra janela. O rascunho foi preservado e pode ser confirmado aqui.')
         } else if (error instanceof SyncError && error.status === 401) {
           renewAuthentication()
+        } else if (error instanceof SyncError && error.status === 403) {
+          if (state.current) receive({ ...state.current, accessLost: true })
+          current.current.onBlocked?.()
+          await reload.current()
         } else if (error instanceof SyncError && steps.includes(error.step as Step)) {
           setIssue(error.step as Step)
+          current.current.onBlocked?.()
         }
       }
     } finally {
@@ -215,7 +228,7 @@ export function useOnboardingSync(props: Props) {
     setBootstrap(null)
     setLoading(true)
     try { sessionStorage.removeItem(prefix + 'pending') } catch { /* optional storage */ }
-    const initial = current.current.draft.email.toLowerCase() === session.user.email.toLowerCase() ? current.current.draft : { ...fresh }
+    const initial = current.current.draft.email.toLowerCase() === session.user.email.toLowerCase() ? current.current.draft : { ...fresh, provider: current.current.draft.provider }
     if (initial !== current.current.draft) { pendingPassword.current = null; completionRequested.current = false; wantsInviteLink.current = false; requiresVerification.current = false; setSavingPassword(false) }
     const pendingSetup = initial === current.current.draft ? record.current.pending : undefined
     const pendingInvitations = initial === current.current.draft ? record.current.invitations : []
@@ -332,6 +345,7 @@ export function useOnboardingSync(props: Props) {
     if (workspace) { slugRetries.current = 0; setWorkspaceBusy(true); if (d.step === 'workspace') current.current.setDraft(d => ({ ...d, step: 'profile' })) }
     persist()
     void drain()
+    openIfReady()
   }
   // Image decoding can finish after all forms have been submitted. Save that result
   // before entry, while allowing forward navigation throughout decoding.
@@ -399,6 +413,9 @@ export function useOnboardingSync(props: Props) {
     return authenticate(() => authClient.signIn.email({ email: current.current.draft.email.trim().toLowerCase(), password }), 'Email ou palavra-passe inválidos. A recuperação de acesso está disponível.')
   }
   async function google() {
+    record.current.draft = { ...current.current.draft, provider: 'google' }
+    current.current.setDraft(record.current.draft)
+    persist(true)
     const callback = new URL(location.href); callback.searchParams.delete('error'); callback.searchParams.delete('error_description')
     await authenticate(() => authClient.signIn.social({ provider: 'google', callbackURL: callback.href, errorCallbackURL: callback.href }), 'Não foi possível iniciar sessão com Google.')
   }
@@ -457,6 +474,7 @@ export function useOnboardingSync(props: Props) {
   }
   function renewAuthentication() {
     requiresVerification.current = true
+    current.current.onBlocked?.()
     setIssue('code')
     current.current.setError('A sessão expirou. É necessário um novo código de email para confirmar a configuração. O rascunho foi preservado.')
   }
