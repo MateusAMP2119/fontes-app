@@ -1,37 +1,38 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { chromium } from 'playwright'
+import { setTimeout as delay } from 'node:timers/promises'
+import { chromium, webkit } from 'playwright'
 const origin = process.env.TEST_ORIGIN || 'http://127.0.0.1:5183'
 const user = { id:'flow-user',email:'person@example.com',name:'Pessoa',emailVerified:true,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString() }
 const blank = () => ({organization:null,project:null,profile:{name:'Pessoa'},revision:0,completed:false,changelog:false,daily:false,passwordRequired:false,canInvite:true,canEditWorkspace:true})
 const workspace = () => ({...blank(),organization:{id:'org',name:'Equipa',slug:'equipa'},project:{id:'project',organizationId:'org',name:'Projeto',createdAt:user.createdAt}})
 async function fixture(t, options={}) {
- const user=options.user||{ id:'flow-user',email:'person@example.com',name:'Pessoa',emailVerified:true,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString() };const browser=await chromium.launch();t.after(()=>browser.close());const page=await browser.newPage();page.setDefaultTimeout(7000)
- const errors=[];page.on('pageerror',e=>errors.push(e.message));t.after(()=>assert.deepEqual(errors,[]))
+ const user=options.user||{ id:'flow-user',email:'person@example.com',name:'Pessoa',emailVerified:true,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString() };const browser=await (process.env.TEST_BROWSER === 'webkit' ? webkit : chromium).launch();t.after(()=>browser.close());const page=await browser.newPage();page.setDefaultTimeout(7000)
+ const errors=[];page.on('pageerror',e=>{errors.push(e.message);if(process.env.DEBUG_TEST)console.log(e.stack)});t.after(()=>assert.deepEqual(errors,[]))
  const f={page,state:options.state||blank(),authenticated:options.authenticated??true,writes:[],calls:[],offline:false,joins:0,failInvite:false}
  await page.route('**/api/**',async route=>{
   const req=route.request(),path=new URL(req.url()).pathname,b=req.method()==='POST'?req.postDataJSON():undefined
   f.calls.push({path,body:b})
-  if(path.endsWith('/get-session'))return route.fulfill({json:f.authenticated?{user,session:{id:'session',userId:user.id,createdAt:user.createdAt,expiresAt:new Date(Date.now()+3600000).toISOString()}}:null})
-  if(path.endsWith('/send-verification-otp'))return route.fulfill({json:{success:true}})
-  if(path.endsWith('/sign-in/email-otp')||path.endsWith('/sign-in/email')){f.authenticated=true;return route.fulfill({json:{user,token:'test'}})}
-  if(path.endsWith('/sign-out')){f.authenticated=false;return route.fulfill({json:{success:true}})}
-  if(path==='/api/onboarding/password'){assert.equal(f.authenticated,true);assert.ok(b.newPassword.length>=8);f.state.passwordRequired=false;return route.fulfill({json:f.state})}
-  if(path==='/api/onboarding/invitation')return route.fulfill({json:{name:'Equipa convidada',role:'member'}})
-  if(path==='/api/onboarding/join'){f.joins++;f.state={...workspace(),project:null,canInvite:false,canEditWorkspace:false};return route.fulfill({json:f.state})}
+  if(path.endsWith('/get-session'))return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:f.authenticated?{user,session:{id:'session',userId:user.id,createdAt:user.createdAt,expiresAt:new Date(Date.now()+3600000).toISOString()}}:null})
+  if(path.endsWith('/send-verification-otp'))return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:{success:true}})
+  if(path.endsWith('/sign-in/email-otp')||path.endsWith('/sign-in/email')){f.authenticated=true;return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:{user,token:'test'}})}
+  if(path.endsWith('/sign-out')){f.authenticated=false;return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:{success:true}})}
+  if(path==='/api/onboarding/password'){assert.equal(f.authenticated,true);assert.ok(b.newPassword.length>=8);f.state.passwordRequired=false;return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:f.state})}
+  if(path==='/api/onboarding/invitation')return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:{name:'Equipa convidada',role:'member'}})
+  if(path==='/api/onboarding/join'){f.joins++;f.state={...workspace(),project:null,canInvite:false,canEditWorkspace:false};return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:f.state})}
   if(path==='/api/onboarding/invite'){
-   if(f.failInvite&&b.email==='bad@example.com')return route.fulfill({status:403,json:{message:'Convite recusado.'}})
-   return route.fulfill({json:{ready:true}})
+   if(f.failInvite&&b.email==='bad@example.com')return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},status:403,json:{message:'Convite recusado.'}})
+   return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:{ready:true}})
   }
   if(path==='/api/onboarding'){
-   if(!b)return route.fulfill({json:f.state})
+   if(!b)return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:f.state})
    f.writes.push(b)
-   if(f.offline&&b.completed)return route.fulfill({status:503,json:{message:'Indisponível.'}})
+   if(f.offline&&b.completed)return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},status:503,json:{message:'Indisponível.'}})
    f.state={...f.state,organization:f.state.organization||workspace().organization,project:workspace().project,profile:{name:b.profileName,image:b.profileImage},revision:b.revision,operationId:b.operationId,completed:b.completed,changelog:b.changelog,daily:b.daily}
-   return route.fulfill({json:f.state})
+   return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:f.state})
   }
-  if(path.endsWith('/reset-password')||path.endsWith('/request-password-reset')||path.endsWith('/change-password'))return route.fulfill({json:{status:true}})
-  return route.fulfill({json:{}})
+  if(path.endsWith('/reset-password')||path.endsWith('/request-password-reset')||path.endsWith('/change-password'))return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:{status:true}})
+  return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:{}})
  })
  f.button=name=>page.getByRole('button',{name,exact:true})
  f.input=name=>page.getByRole('textbox',{name,exact:true})
@@ -97,7 +98,7 @@ test('existing workspace resumes profile and account switch clears avatar',async
 test('bootstrap throttling retries and stale local completion cannot open a revoked workspace',async t=>{
  const f=await fixture(t,{state:{...workspace(),accessLost:true,organization:null,project:null,completed:true}}),p=f.page
  let attempts=0
- await p.route('**/api/onboarding',route=>{if(++attempts===1)return route.fulfill({status:429,headers:{'retry-after':'1'},json:{message:'Nova tentativa em breve.'}});return route.fallback()})
+ await p.route('**/api/onboarding',route=>{if(++attempts===1)return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true','retry-after':'1'},status:429,json:{message:'Nova tentativa em breve.'}});return route.fallback()})
  await p.addInitScript(({user,state})=>localStorage.setItem('fontes:onboarding:v1:'+user.id,JSON.stringify({draft:{step:'updates',email:user.email},revision:0,invitations:[],finished:true,bootstrap:state})),{user,state:{...workspace(),completed:true}})
  await p.goto(origin);await p.getByRole('alert').filter({hasText:'O acesso ao ambiente deixou de estar disponível.'}).waitFor()
  assert.ok(attempts>=2);assert.equal(await p.locator('.make-shell').count(),0)
@@ -107,7 +108,7 @@ test('conflicting revisions recover server values rather than replay stale chang
  await p.route('**/api/onboarding',async route=>{
   if(route.request().method()==='POST'){
    f.state={...workspace(),revision:4,profile:{name:'Other tab'}}
-   return route.fulfill({status:409,json:{message:'Alterada noutra janela.',conflict:true}})
+   return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},status:409,json:{message:'Alterada noutra janela.',conflict:true}})
   }return route.fallback()
  })
  await p.goto(origin);await f.input('Nome do perfil').fill('Local stale');await f.button('Criar perfil').click()
@@ -118,7 +119,7 @@ test('conflicting revisions recover server values rather than replay stale chang
 test('copy invite waits for server confirmation and provides manual copy fallback',async t=>{
  const f=await fixture(t,{state:workspace()}),p=f.page
  let release
- await p.route('**/api/onboarding/invite',async route=>{await new Promise(r=>{release=r});return route.fulfill({json:{ready:true}})})
+ await p.route('**/api/onboarding/invite',async route=>{await new Promise(r=>{release=r});return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:{ready:true}})})
  await p.goto(origin);await f.button('Criar perfil').click();await f.button('Copiar link').click()
  assert.equal(await p.getByRole('textbox',{name:'Link de convite'}).count(),0)
  while(!release)await new Promise(r=>setTimeout(r,10))
@@ -163,8 +164,8 @@ test('workspace URL preflight debounces, caches exact results and ignores stale 
  let releaseOld
  await p.route('**/api/onboarding/availability',async route=>{
   const body=route.request().postDataJSON();checks.push(body.slug)
-  if(body.slug==='old-name'){await new Promise(r=>{releaseOld=r});try{await route.fulfill({json:{available:false}})}catch{};return}
-  await route.fulfill({json:{available:true}})
+  if(body.slug==='old-name'){await new Promise(r=>{releaseOld=r});try{await route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:{available:false}})}catch{};return}
+  await route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:{available:true}})
  })
  await p.goto(origin);await f.input('Nome').fill('Old name')
  await p.waitForFunction(()=>document.querySelector('.ob-workspace'))
@@ -187,14 +188,14 @@ test('profile and preferences save after a typing pause without completing onboa
  await p.waitForFunction(()=>JSON.parse(localStorage.getItem('fontes:onboarding:v1:flow-user')).pending?.changelog===true||document.querySelector('.ob-stage').textContent.includes('Alterações guardadas.'))
  await p.getByText('Alterações guardadas.',{exact:true}).waitFor()
  // Confirm the background write, not merely the optimistic switch value.
- await p.waitForFunction(()=>!JSON.parse(localStorage.getItem('fontes:onboarding:v1:flow-user')).pending)
+ for(let attempt=0;!f.state.changelog&&attempt<100;attempt++)await delay(50)
  assert.equal(f.state.changelog,true);assert.equal(f.state.completed,false)
 })
 
  test('password failure returns to password without losing workspace draft',async t=>{
  const f=await fixture(t,{state:{...blank(),passwordRequired:true}}),p=f.page
  let release
- await p.route('**/api/onboarding/password',async route=>{await new Promise(r=>{release=r});await route.fulfill({status:400,json:{message:'Palavra-passe recusada.'}})})
+ await p.route('**/api/onboarding/password',async route=>{await new Promise(r=>{release=r});await route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},status:400,json:{message:'Palavra-passe recusada.'}})})
  await p.goto(origin);await p.locator('input[autocomplete="new-password"]').fill('test-only-password');await f.button('Guardar palavra-passe').click()
  await f.input('Nome').fill('Preservar nome');assert.equal(await f.button('Criar ambiente').isDisabled(),true)
  release();await p.locator('.ob-password').waitFor();await p.getByRole('alert').filter({hasText:'Palavra-passe recusada'}).waitFor()
@@ -205,4 +206,38 @@ test('profile and preferences save after a typing pause without completing onboa
  await p.goto(origin);await f.input('Nome').fill('Equipa');await f.button('Criar ambiente').click();await p.locator('.ob-profile').waitFor()
  await p.waitForFunction(()=>!document.querySelector('.ob-profile .ob-primary').disabled)
  assert.ok(f.writes[0].profileName.trim())
+ })
+
+test('reload during an unconfirmed password save returns to password and never persists credentials',async t=>{
+ const f=await fixture(t,{state:{...blank(),passwordRequired:true}}),p=f.page
+ let release
+ await p.route('**/api/onboarding/password',async route=>{await new Promise(r=>{release=r});await route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},status:503,json:{message:'Indisponível.'}}).catch(()=>{})})
+ await p.goto(origin);await p.locator('input[autocomplete="new-password"]').fill('transient-test-secret');await f.button('Guardar palavra-passe').click()
+ await f.input('Nome').fill('Draft before reload');await p.reload();await p.locator('.ob-password').waitFor()
+ const stored=await p.evaluate(()=>JSON.stringify(localStorage)+JSON.stringify(sessionStorage));assert.ok(stored.includes('Draft before reload'));assert.ok(!stored.includes('transient-test-secret'));assert.equal(f.writes.length,0)
+ release()
+})
+test('password success with failed bootstrap stays blocked until retry confirms it',async t=>{
+ const f=await fixture(t,{state:{...blank(),passwordRequired:true}}),p=f.page
+ let fail=false
+ await p.route('**/api/onboarding',async route=>{if(fail&&route.request().method()==='GET')return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},status:503,json:{message:'Confirmação indisponível.'}});return route.fallback()})
+ await p.goto(origin);await p.locator('input[autocomplete="new-password"]').fill('transient-test-secret');fail=true;await f.button('Guardar palavra-passe').click()
+ await f.input('Nome').fill('Keep during retry');await p.getByRole('alert').filter({hasText:'Confirmação indisponível'}).waitFor();assert.equal(await f.button('Criar ambiente').isDisabled(),true);assert.equal(f.writes.length,0)
+ fail=false;await f.button('Tentar novamente').click();await p.waitForFunction(()=>!document.querySelector('.ob-workspace .ob-primary').disabled)
+ assert.equal(await f.input('Nome').inputValue(),'Keep during retry');assert.equal(f.calls.filter(c=>c.path==='/api/onboarding/password').length,1)
+})
+test('invalid OTP returns from password draft to code without workspace writes',async t=>{
+ const f=await fixture(t,{authenticated:false,state:{...blank(),passwordRequired:true}}),p=f.page
+ let release
+ await p.route('**/sign-in/email-otp',async route=>{await new Promise(r=>{release=r});return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},status:400,json:{message:'Invalid code'}})})
+ await p.goto(origin);await f.button('Continuar com email').click();await f.input('Endereço de email').fill(user.email);await f.button('Continuar com email').click();await f.input('Código de confirmação').fill('000000');await f.button('Continuar com código').click()
+ await p.locator('.ob-password').waitFor();assert.equal(await f.button('Guardar palavra-passe').isDisabled(),true);release()
+ await p.locator('section.ob-code').waitFor();await p.getByRole('alert').waitFor();assert.equal(f.writes.length,0)
+})
+
+ test('sign-out after completion clears the previous account screen',async t=>{
+ const f=await fixture(t,{state:{...workspace(),completed:true}}),p=f.page
+ await p.goto(origin);await p.locator('.make-shell').waitFor();await f.button('Abrir menu da conta').click();await p.getByRole('menuitem',{name:'Terminar sessão'}).click()
+ await p.getByRole('heading',{name:'Criar conta',exact:true}).waitFor();assert.equal(await p.locator('.make-shell').count(),0);assert.equal(await p.locator('.ob-updates').count(),0)
+ await f.button('Continuar com email').click();assert.equal(await f.input('Endereço de email').inputValue(),'')
  })

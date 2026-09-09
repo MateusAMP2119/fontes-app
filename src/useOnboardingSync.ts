@@ -15,6 +15,8 @@ export function useOnboardingSync(props: Props) {
   current.current = props
   const record = useRef<Record>({ draft: props.draft, revision: 0, invitations: [] })
   const owner = useRef<string | null>(null)
+  const pageHidden = useRef(false)
+  const previousUser = useRef<string | undefined>(undefined)
   const generation = useRef(0)
   const state = useRef<Bootstrap | null>(null)
   const running = useRef(false)
@@ -34,6 +36,13 @@ export function useOnboardingSync(props: Props) {
   const [invitationErrors, setInvitationErrors] = useState<Invitation[]>([])
   const [inviteLink, setInviteLink] = useState('')
   const slugRetries = useRef(0)
+
+  useEffect(() => {
+    const leaving = () => { pageHidden.current = true; clearTimeout(timer.current) }
+    const returning = (event: PageTransitionEvent) => { pageHidden.current = false; if (event.persisted && owner.current) void reload.current() }
+    addEventListener('beforeunload', leaving); addEventListener('pagehide', leaving); addEventListener('pageshow', returning)
+    return () => { removeEventListener('beforeunload', leaving); removeEventListener('pagehide', leaving); removeEventListener('pageshow', returning) }
+  }, [])
 
   function persist() {
     try {
@@ -138,7 +147,19 @@ export function useOnboardingSync(props: Props) {
   }, [props.draft, props.preview])
 
   useEffect(() => {
-    if (props.preview || !props.session) return
+    if (props.preview) return
+    if (!props.session) {
+      if (previousUser.current) {
+        previousUser.current = undefined
+        record.current = { draft: { ...fresh }, revision: 0, invitations: [] }
+        setBootstrap(null); setLoading(false); setFailed(false); setWorkspaceBusy(false); setSyncStatus('idle')
+        setInvitation(null); setInvitationErrors([]); setInviteLink('')
+        current.current.setDraft({ ...fresh }); current.current.setNotice(''); current.current.setError('')
+        try { sessionStorage.removeItem(prefix + 'pending') } catch { /* optional storage */ }
+      }
+      return
+    }
+    previousUser.current = props.session.user.id
     const session = props.session
     const epoch = ++generation.current
     owner.current = session.user.id
@@ -286,11 +307,13 @@ export function useOnboardingSync(props: Props) {
   }
   async function setPassword(newPassword: string) {
     if (authRunning.current) return
+    const epoch = generation.current
     authRunning.current = true; setBusy(true); setSavingPassword(true)
     current.current.setError('')
     if (!new URL(location.href).searchParams.has('invite')) current.current.setDraft(d => ({ ...d, step: 'workspace' }))
-    try { await onboardingRequest('/password', { newPassword }); await reload.current() }
+    try { await onboardingRequest('/password', { newPassword }); if (epoch === generation.current && !pageHidden.current) await reload.current() }
     catch (e) {
+      if (epoch !== generation.current || pageHidden.current) return
       current.current.setError(e instanceof SyncError ? e.message : 'Não foi possível guardar a palavra-passe. Nova tentativa disponível.')
       authRunning.current = false
       if (e instanceof SyncError && e.status === 401) await changeEmail()
@@ -319,7 +342,7 @@ export function useOnboardingSync(props: Props) {
       try { const result = await authClient.signOut(); if (result.error) throw new Error() }
       catch { current.current.setError('Não foi possível terminar a sessão.'); return }
     }
-    generation.current++; owner.current = null; state.current = null
+    generation.current++; owner.current = null; state.current = null; previousUser.current = undefined
     clearTimeout(timer.current)
     record.current = { draft: { ...fresh, step: 'email' }, revision: 0, invitations: [] }
     setBootstrap(null); setWorkspaceBusy(false); setSyncStatus('idle'); setFailed(false); setLoading(false); setInvitation(null); setInvitationErrors([]); setInviteLink('')
