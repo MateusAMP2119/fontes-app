@@ -1,6 +1,6 @@
 # Onboarding flow and verification, 9 September 2026
 
-The candidate keeps every forward onboarding form usable while earlier requests finish. Earlier failures are corrected on the current screen. Server-confirmed credentials, workspace, project and completion remain required before the app opens.
+The published onboarding keeps every forward onboarding form usable while earlier requests finish. Earlier failures are corrected on the current screen. Server-confirmed credentials, workspace, project and completion remain required before the app opens.
 
 ## Screen purposes
 
@@ -28,12 +28,13 @@ The candidate keeps every forward onboarding form usable while earlier requests 
 - Optional invitation delivery runs independently of required configuration saves. Early invitation/link requests wait for the confirmed workspace and then continue automatically.
 - The password endpoint's confirmed configuration is used directly, removing an extra fetch. Continuing from an already saved profile avoids a duplicate save.
 - The final save includes preference changes made while confirmation was in flight. Credentials and codes are never persisted in browser storage.
+- Completed onboarding is rechecked after the restored screen renders, preventing a completed account from getting stuck on preferences after reload. The full-flow regression now includes completion, reload, sign-out and password login without an extra configuration save.
 - Image processing continues across forward navigation and is included before confirmed entry. Removing an image also cancels an unfinished replacement.
 - Added visible password/recovery labels, stable action text, inline validation and clearer screen names. Failed password login retains its in-memory input for retry.
 
 ## Verification
 
-The current production candidate contains `index-CN__E409.js`, SHA-256 `41fd3ae20d0afd1fc1f0af49def4101fdc508520f69b3ae89970d97e64948a5f`.
+Production serves code commit `5708ca320797b86282d55c3649bb125fe84cfec2`, asset `index-Q6FMOOSS.js`, SHA-256 `ce96aca745a72d337a8b59895a919648ff662ed44bb3a477579dd6f706218762`. The served bytes match the tested local production build.
 
 | Requirement | Evidence |
 | --- | --- |
@@ -62,10 +63,18 @@ WebKit service-worker fetches bypass Playwright's route interception. API simula
 
 A controlled local Chromium run added 750 ms to every API response. Forward transitions from code through preferences took 34 to 52 ms. Final entry took 3,836 ms because it waited for all outstanding required responses. This is a controlled browser measurement, not a production latency benchmark. No fabricated success or zero-network-time claim is made.
 
-## Live boundary and remaining release work
+## Live production verification
 
-The earlier deployed build completed fresh production signup, password creation, workspace/profile creation, invitation-link creation, final completion, reload and password sign-in using the authorized test account. That evidence is separate from the candidate verification.
+Publication was explicitly authorized. A fresh account, `mateus+onboarding@fonteslabs.com`, completed the actual deployed email flow with a generated password: email delivery and verification, password creation, workspace creation, profile name and image upload, invitation-link creation, optional email preferences and confirmed app entry. No API responses were mocked. Email invitations to other people were skipped.
 
-The candidate's static production assets were also served in an isolated browser at the production app origin, with all authentication/configuration calls going to the real production API. Returning password login, reload and sign-out passed; all relevant API responses were HTTP 200, no browser errors were recorded, and login took 1,350 ms. The test browser was signed out afterward. No new signup or account reset was performed in this candidate live test.
+The first release (`9f3662c`) saved completion, password, workspace and profile image correctly, but its live reload check exposed a restoration bug: preferences remained visible despite server-confirmed completion. The regression reproduced locally before the correction in `5708ca3`, and the complete Chromium and WebKit suites passed afterward. On the corrected live release, the same account passed reload, sign-out and password login. A separate fresh browser session also passed password login, reload with the saved profile image, and sign-out; each captured screen loaded `index-Q6FMOOSS.js`. Required API calls returned HTTP 200 and no browser exceptions were observed. Both test browsers were signed out and closed.
 
-Publication was authorized after local verification. The release and fresh-account live signup results will be recorded after deployment. Google authorization and physical-phone behavior have not been exercised live in this pass. Passing this coverage does not prove that all possible defects are absent.
+The existing test tab retained its cached previous build during the first deployment reload. A subsequent reload used the update. Fresh-browser verification independently confirmed the corrected served asset. This does not imply that an already open tab instantly replaces its executing JavaScript when a release is published.
+
+Live signup forward transitions measured 19 to 45 ms, final confirmed entry 1,332 ms, and returning password login 1,326 ms in this single run. These timings include browser automation overhead and are not a latency guarantee. Required authentication and persistence still take network time; forms remain usable while earlier requests finish.
+
+The authorized test alias initially received no code. An exact Cloudflare Email Routing rule was added for `mateus+onboarding@fonteslabs.com`, forwarding to the existing verified inbox. Email delivery then succeeded. The original email rule and domain-wide subaddress settings were unchanged; the alias rule remains available for account recovery. Its rule ID is `5dd6b979ec264cd386431191c176af72`.
+
+Live evidence is saved in the workspace's `docs/onboarding-fix-verification-2026-09-09/deployed/` and `deployed-returning/` folders: screenshots, sanitized request timings, server-confirmed configuration summaries and final asset paths. Generated credentials are stored separately in a private file with mode 0600, outside the repository.
+
+Google authorization and physical-phone behavior have not been exercised live in this pass. Invitation email delivery to another person was not exercised. Passing this coverage does not prove that all possible defects are absent. Build and lint warnings described above remain.
