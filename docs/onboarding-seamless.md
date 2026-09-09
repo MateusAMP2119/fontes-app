@@ -28,11 +28,12 @@ The candidate keeps every forward onboarding form usable while earlier requests 
 - Optional invitation delivery runs independently of required configuration saves. Early invitation/link requests wait for the confirmed workspace and then continue automatically.
 - The password endpoint's confirmed configuration is used directly, removing an extra fetch. Continuing from an already saved profile avoids a duplicate save.
 - The final save includes preference changes made while confirmation was in flight. Credentials and codes are never persisted in browser storage.
+- Image processing continues across forward navigation and is included before confirmed entry. Removing an image also cancels an unfinished replacement.
 - Added visible password/recovery labels, stable action text, inline validation and clearer screen names. Failed password login retains its in-memory input for retry.
 
 ## Verification
 
-The current production candidate contains `index-Cyfi5Q4F.js`, SHA-256 `1ff338044be2b345115a281ba35e8781e19d521842657a8317ae455a1272ec25`.
+The current production candidate contains `index-CN__E409.js`, SHA-256 `41fd3ae20d0afd1fc1f0af49def4101fdc508520f69b3ae89970d97e64948a5f`.
 
 | Requirement | Evidence |
 | --- | --- |
@@ -44,12 +45,12 @@ The current production candidate contains `index-Cyfi5Q4F.js`, SHA-256 `1ff33804
 | Credential safety and correct account gates | Browser-storage checks, account switching, revoked access, explicit login and controller authorization tests |
 | Recovery and optional images | Password recovery/change, visible labels in both themes, image resizing, reload, removal and corrupt-image retry tests |
 | Layout and mobile behavior | All nine preview screens in Chromium and WebKit; viewport resizing, scroll reachability, focus, progress counts, input sizing and no overflow |
-| Build/runtime | Build and lint succeed; existing lint warnings and bundle-size warning remain |
+| Build/runtime | Build and lint succeed; hook/fast-refresh lint warnings and the bundle-size warning remain |
 
 Final verification results:
 
-- Production-build Chromium: 39 tests passed, zero failures.
-- Production-build WebKit: 34 tests passed, zero failures.
+- Production-build Chromium: 41 tests passed, zero failures.
+- Production-build WebKit: 36 tests passed, zero failures.
 - API onboarding controller with real SQL in SQLite: 12 tests passed, zero failures. Auth and email transport are substituted in these isolated controller tests.
 - Preview, mobile, progress and layout checks passed.
 - Service-worker checks passed: installation, offline navigation, mounted form preservation, reconnection and static-only caching.
@@ -67,4 +68,4 @@ The earlier deployed build completed fresh production signup, password creation,
 
 The candidate's static production assets were also served in an isolated browser at the production app origin, with all authentication/configuration calls going to the real production API. Returning password login, reload and sign-out passed; all relevant API responses were HTTP 200, no browser errors were recorded, and login took 1,350 ms. The test browser was signed out afterward. No new signup or account reset was performed in this candidate live test.
 
-The candidate has not been published. Release and a fresh-account live signup on the updated build remain outstanding. Google authorization and physical-phone behavior have not been exercised live in this pass. Passing this coverage does not prove that all possible defects are absent.
+Publication was authorized after local verification. The release and fresh-account live signup results will be recorded after deployment. Google authorization and physical-phone behavior have not been exercised live in this pass. Passing this coverage does not prove that all possible defects are absent.

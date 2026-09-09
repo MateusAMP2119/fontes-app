@@ -6,7 +6,7 @@ import { fresh, saved, steps, type Draft, type Step } from './onboardingDraft'
 type Setup = { organizationId?: string; operationId: string; revision: number; name: string; slug: string; profileName: string; profileImage?: string; completed: boolean; automaticSlug?: boolean; workspace?: boolean; changelog: boolean; daily: boolean }
 type Invitation = { organizationId?: string; awaitingWorkspace?: boolean; token: string; email: string; status?: 'sent' | 'failed'; error?: string }
 type Record = { needsConfirmation?: boolean; completionRequested?: boolean; draft: Draft; revision: number; pending?: Setup; invitations: Invitation[]; link?: string }
-type Props = { preview: boolean; session: AuthSession | null; draft: Draft; setDraft: Dispatch<SetStateAction<Draft>>; setNotice: (message: string) => void; setError: (message: string) => void; onReady?: (state: Bootstrap) => void; onBlocked?: () => void }
+type Props = { imagePending?: boolean; preview: boolean; session: AuthSession | null; draft: Draft; setDraft: Dispatch<SetStateAction<Draft>>; setNotice: (message: string) => void; setError: (message: string) => void; onReady?: (state: Bootstrap) => void; onBlocked?: () => void }
 const prefix = 'fontes:onboarding:v1:'
 const transient = (e: unknown) => !(e instanceof SyncError) || e.status >= 500 || e.status === 429
 
@@ -79,7 +79,7 @@ export function useOnboardingSync(props: Props) {
   }
   function openIfReady() {
     const s = state.current
-    if (record.current.needsConfirmation || requiresVerification.current) return
+    if (current.current.imagePending || record.current.needsConfirmation || requiresVerification.current) return
     if (completionRequested.current && current.current.draft.step !== 'updates') return
     if (s?.completed && s.project && s.organization && !s.passwordRequired && !s.accessLost && !record.current.pending && !new URL(location.href).searchParams.has('invite')) current.current.onReady?.(s)
   }
@@ -330,6 +330,12 @@ export function useOnboardingSync(props: Props) {
     persist()
     void drain()
   }
+  // Image decoding can finish after all forms have been submitted. Save that result
+  // before entry, while allowing forward navigation throughout decoding.
+  useEffect(() => {
+    if (!props.imagePending && completionRequested.current && current.current.draft.step === 'updates') save(true)
+  }, [props.imagePending])
+
   // Coalesce valid edits after typing pauses. Credentials never enter this effect.
   useEffect(() => {
     if (props.preview || !['profile', 'updates'].includes(props.draft.step) || !bootstrap?.organization || workspaceBusy || bootstrap.passwordRequired) return

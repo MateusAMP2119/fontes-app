@@ -490,3 +490,30 @@ test('profile images are resized, saved across reload, removable, and invalid im
  await p.reload();await f.button('Remover imagem').waitFor();await f.button('Remover imagem').click()
  await assertEventually(()=>f.state.profile.image==='');assert.equal(await f.button('Remover imagem').count(),0)
 })
+
+test('image processing survives forward navigation and finishes before confirmed entry',async t=>{
+ const f=await fixture(t,{state:workspace()}),p=f.page
+ await p.addInitScript(()=>{
+  const decode=window.createImageBitmap.bind(window)
+  window.createImageBitmap=(...args)=>new Promise(resolve=>{window.releaseImage=()=>resolve(decode(...args))})
+ })
+ await p.goto(origin);await p.locator('input[type=file]').setInputFiles('public/mark.png')
+ await f.button('Continuar').click();await f.button('Saltar').click();await f.button('Começar').click()
+ await delay(250)
+ assert.equal(await p.locator('.make-shell').count(),0,'entry must include the selected image, even after fast navigation')
+ await p.evaluate(()=>window.releaseImage());await p.locator('.make-shell').waitFor()
+ assert.match(f.state.profile.image,/^data:image\/(webp|png);base64,/)
+})
+
+test('removing a profile image cancels an unfinished replacement',async t=>{
+ const f=await fixture(t,{state:{...workspace(),profile:{name:'Pessoa',image:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg=='}}}),p=f.page
+ await p.addInitScript(()=>{
+  const decode=window.createImageBitmap.bind(window)
+  window.createImageBitmap=(...args)=>new Promise(resolve=>{window.releaseImage=()=>resolve(decode(...args))})
+ })
+ await p.goto(origin);await p.locator('input[type=file]').setInputFiles('public/mark.png')
+ await f.button('Remover imagem').click();await p.evaluate(()=>window.releaseImage())
+ await delay(100);assert.equal(await f.button('Remover imagem').count(),0,'the late replacement must not restore a removed image')
+ await f.button('Continuar').click();await f.button('Saltar').click();await f.button('Começar').click();await p.locator('.make-shell').waitFor()
+ assert.equal(f.state.profile.image,'')
+})
