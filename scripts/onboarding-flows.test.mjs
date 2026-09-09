@@ -6,11 +6,13 @@ const origin = process.env.TEST_ORIGIN || 'http://127.0.0.1:5183'
 const user = { id:'flow-user',email:'person@example.com',name:'Pessoa',emailVerified:true,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString() }
 const blank = () => ({organization:null,project:null,profile:{name:'Pessoa'},revision:0,completed:false,changelog:false,daily:false,passwordRequired:false,canInvite:true,canEditWorkspace:true})
 const workspace = () => ({...blank(),organization:{id:'org',name:'Equipa',slug:'equipa'},project:{id:'project',organizationId:'org',name:'Projeto',createdAt:user.createdAt}})
+// API-failure simulations need route interception. WebKit service-worker fetches bypass
+// Playwright routing; service-worker behavior is verified separately in pwa.test.mjs.
 async function fixture(t, options={}) {
- const user=options.user||{ id:'flow-user',email:'person@example.com',name:'Pessoa',emailVerified:true,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString() };const browser=await (process.env.TEST_BROWSER === 'webkit' ? webkit : chromium).launch();t.after(()=>browser.close());const page=await browser.newPage();page.setDefaultTimeout(7000)
+ const user=options.user||{ id:'flow-user',email:'person@example.com',name:'Pessoa',emailVerified:true,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString() };const browser=await (process.env.TEST_BROWSER === 'webkit' ? webkit : chromium).launch();t.after(()=>browser.close());const context=await browser.newContext({serviceWorkers:'block'});const page=await context.newPage();page.setDefaultTimeout(7000)
  const errors=[];page.on('pageerror',e=>{errors.push(e.message);if(process.env.DEBUG_TEST)console.log(e.stack)});t.after(()=>assert.deepEqual(errors,[]))
  const f={page,state:options.state||blank(),authenticated:options.authenticated??true,writes:[],calls:[],offline:false,joins:0,failInvite:false}
- await page.route('**/api/**',async route=>{
+ await page.context().route('**/api/**',async route=>{
   const req=route.request(),path=new URL(req.url()).pathname,b=req.method()==='POST'?req.postDataJSON():undefined
   f.calls.push({path,body:b})
   if(path.endsWith('/get-session'))return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:f.authenticated?{user,session:{id:'session',userId:user.id,createdAt:user.createdAt,expiresAt:new Date(Date.now()+3600000).toISOString()}}:null})
@@ -46,7 +48,7 @@ test('new email account requires password; completion waits for server across re
  await p.getByRole('heading',{name:'Definir palavra-passe',exact:true}).waitFor()
  await p.locator('input[autocomplete="new-password"]').fill('test-secret-password');await f.button('Guardar palavra-passe').click()
  await f.input('Nome').fill('Equipa');await f.button('Criar ambiente').click()
- await f.input('Nome do perfil').fill('Pessoa final');await f.button('Criar perfil').click();await f.button('Saltar').click()
+ await f.input('Nome do perfil').fill('Pessoa final');await f.button('Continuar').click();await f.button('Saltar').click()
  f.offline=true;await f.button('Começar').click();await p.getByRole('alert').filter({hasText:'Indisponível'}).waitFor()
  assert.equal(await p.locator('.make-shell').count(),0)
  await p.reload();await p.locator('.ob-updates').waitFor();assert.equal(await p.locator('.make-shell').count(),0)
@@ -60,12 +62,12 @@ test('invitation has explicit acceptance, skips owner setup and owner-only back/
  await p.getByText('Convite para Equipa convidada.',{exact:false}).waitFor();assert.equal(f.joins,0)
  await f.button('Aceitar convite').click();await p.locator('.ob-profile').waitFor()
  assert.equal(await f.button('Voltar').count(),0);assert.equal(await p.locator('.ob-workspace').count(),0)
- await f.button('Criar perfil').click();await p.locator('.ob-updates').waitFor();await f.button('Começar').click();await p.locator('.make-shell').waitFor()
+ await f.button('Continuar').click();await p.locator('.ob-updates').waitFor();await f.button('Começar').click();await p.locator('.make-shell').waitFor()
  assert.equal(f.joins,1);assert.ok(!p.url().includes('invite='))
 })
 test('one failed invitation does not block another recipient or completion',async t=>{
  const f=await fixture(t,{state:workspace()}),p=f.page;f.failInvite=true;await p.goto(origin)
- await f.button('Criar perfil').click();await p.getByRole('textbox',{name:'Emails dos membros'}).fill('bad@example.com\ngood@example.com')
+ await f.button('Continuar').click();await p.getByRole('textbox',{name:'Emails dos membros'}).fill('bad@example.com\ngood@example.com')
  await f.button('Enviar convite por email').click();await f.button('Começar').click();await p.locator('.make-shell').waitFor()
  await p.getByText('bad@example.com: Convite recusado.').waitFor()
  assert.ok(f.calls.some(c=>c.path==='/api/onboarding/invite'&&c.body.email==='good@example.com'))
@@ -103,7 +105,7 @@ test('bootstrap throttling retries and stale local completion cannot open a revo
  await p.goto(origin);await p.getByRole('alert').filter({hasText:'O acesso ao ambiente deixou de estar disponível.'}).waitFor()
  assert.ok(attempts>=2);assert.equal(await p.locator('.make-shell').count(),0)
 })
-test('conflicting revisions recover server values rather than replay stale changes',async t=>{
+test('conflicting revisions preserve the local draft without silently replaying it',async t=>{
  const f=await fixture(t,{state:workspace()}),p=f.page
  await p.route('**/api/onboarding',async route=>{
   if(route.request().method()==='POST'){
@@ -111,16 +113,18 @@ test('conflicting revisions recover server values rather than replay stale chang
    return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},status:409,json:{message:'Alterada noutra janela.',conflict:true}})
   }return route.fallback()
  })
- await p.goto(origin);await f.input('Nome do perfil').fill('Local stale');await f.button('Criar perfil').click()
- await p.getByText('Configuração recuperada do servidor após alterações noutra janela.').waitFor()
+ await p.goto(origin);await f.input('Nome do perfil').fill('Local stale');await f.button('Continuar').click()
+ await p.getByText('Alterações noutra janela. O rascunho foi preservado e pode ser confirmado aqui.').waitFor()
  const saved=await p.evaluate(()=>JSON.parse(localStorage.getItem('fontes:onboarding:v1:flow-user')))
- assert.equal(saved.pending,undefined);assert.equal(saved.draft.profile,'Other tab')
+ assert.equal(saved.pending,undefined);assert.equal(saved.draft.profile,'Local stale')
+ await p.getByRole('form',{name:'Correção da configuração'}).waitFor()
+ assert.equal(f.state.profile.name,'Other tab')
 })
 test('copy invite waits for server confirmation and provides manual copy fallback',async t=>{
  const f=await fixture(t,{state:workspace()}),p=f.page
  let release
  await p.route('**/api/onboarding/invite',async route=>{await new Promise(r=>{release=r});return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:{ready:true}})})
- await p.goto(origin);await f.button('Criar perfil').click();await f.button('Copiar link').click()
+ await p.goto(origin);await f.button('Continuar').click();await f.button('Copiar link').click()
  assert.equal(await p.getByRole('textbox',{name:'Link de convite'}).count(),0)
  while(!release)await new Promise(r=>setTimeout(r,10))
  release();await p.getByRole('textbox',{name:'Link de convite'}).waitFor()
@@ -154,8 +158,8 @@ test('email and workspace forms appear before stalled requests finish',async t=>
  releasePassword();await p.waitForFunction(()=>!document.querySelector('.ob-workspace .ob-primary').disabled);assert.equal(await f.input('Nome').inputValue(),'Draft during password save')
  await p.route('**/api/onboarding',async route=>{if(route.request().method()==='POST'){await new Promise(r=>{releaseWorkspace=r})}await route.fallback()})
  await f.button('Criar ambiente').click();await p.locator('.ob-profile').waitFor();await f.input('Nome do perfil').fill('Draft during creation')
- assert.equal(await f.button('Criar perfil').isDisabled(),true);assert.equal(await p.locator('.make-shell').count(),0)
- releaseWorkspace();await f.button('Criar perfil').waitFor();await p.waitForFunction(()=>!document.querySelector('.ob-profile .ob-primary').disabled)
+ assert.equal(await f.button('Continuar').isDisabled(),false);assert.equal(await p.locator('.make-shell').count(),0)
+ releaseWorkspace();await f.button('Continuar').waitFor();await p.waitForFunction(()=>!document.querySelector('.ob-profile .ob-primary').disabled)
  assert.equal(await f.input('Nome do perfil').inputValue(),'Draft during creation')
 })
 
@@ -170,10 +174,10 @@ test('workspace URL preflight debounces, caches exact results and ignores stale 
  await p.goto(origin);await f.input('Nome').fill('Old name')
  await p.waitForFunction(()=>document.querySelector('.ob-workspace'))
  for(let i=0;!releaseOld&&i<200;i++)await new Promise(r=>setTimeout(r,10));assert.ok(releaseOld)
- await f.input('Nome').fill('New name');await p.getByText('URL disponível. Confirmação final na criação.').waitFor()
+ await f.input('Nome').fill('New name');await assertEventually(()=>checks.includes('new-name'))
  releaseOld();assert.equal(await p.getByText('Este URL já está em uso.',{exact:true}).count(),0)
  await f.input('Nome').fill('Temporary');await f.input('Nome').fill('New name')
- await p.getByText('URL disponível. Confirmação final na criação.').waitFor()
+ await delay(450)
  assert.equal(checks.filter(v=>v==='new-name').length,1)
  assert.equal(checks.includes('temporary'),false);assert.equal(f.writes.length,0)
 })
@@ -181,58 +185,74 @@ test('workspace URL preflight debounces, caches exact results and ignores stale 
 test('profile and preferences save after a typing pause without completing onboarding',async t=>{
  const f=await fixture(t,{state:workspace()}),p=f.page
  await p.goto(origin);await f.input('Nome do perfil').fill('First');await f.input('Nome do perfil').fill('Final profile')
- await p.getByText('Alterações guardadas.',{exact:true}).waitFor()
+ await assertEventually(()=>f.state.profile.name==='Final profile')
  assert.equal(f.state.profile.name,'Final profile');assert.equal(f.writes.filter(w=>w.profileName==='First').length,0)
  assert.equal(f.state.completed,false);assert.equal(await p.locator('.make-shell').count(),0)
- await f.button('Criar perfil').click();await f.button('Saltar').click();await p.getByRole('switch',{name:/Changelog/}).check()
- await p.waitForFunction(()=>JSON.parse(localStorage.getItem('fontes:onboarding:v1:flow-user')).pending?.changelog===true||document.querySelector('.ob-stage').textContent.includes('Alterações guardadas.'))
- await p.getByText('Alterações guardadas.',{exact:true}).waitFor()
+ const savedWrites=f.writes.length
+ await f.button('Continuar').click();await f.button('Saltar').click()
+ assert.equal(f.writes.length,savedWrites,'submitting an already saved profile does not save it again')
+ await p.getByRole('switch',{name:/Novidades da Fontes/}).check()
+ await assertEventually(()=>f.state.changelog===true)
  // Confirm the background write, not merely the optimistic switch value.
  for(let attempt=0;!f.state.changelog&&attempt<100;attempt++)await delay(50)
  assert.equal(f.state.changelog,true);assert.equal(f.state.completed,false)
 })
 
- test('password failure returns to password without losing workspace draft',async t=>{
+ test('password failure is corrected in place without losing the workspace draft',async t=>{
  const f=await fixture(t,{state:{...blank(),passwordRequired:true}}),p=f.page
  let release
  await p.route('**/api/onboarding/password',async route=>{await new Promise(r=>{release=r});await route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},status:400,json:{message:'Palavra-passe recusada.'}})})
  await p.goto(origin);await p.locator('input[autocomplete="new-password"]').fill('test-only-password');await f.button('Guardar palavra-passe').click()
  await f.input('Nome').fill('Preservar nome');assert.equal(await f.button('Criar ambiente').isDisabled(),false)
- release();await p.locator('.ob-password').waitFor();await p.getByRole('alert').filter({hasText:'Palavra-passe recusada'}).waitFor()
- const stored=await p.evaluate(()=>JSON.stringify(localStorage));assert.ok(stored.includes('Preservar nome'));assert.ok(!stored.includes('test-only-password'));assert.equal(f.writes.length,0)
+ release();await p.getByRole('form',{name:'Correção da configuração'}).waitFor();await p.getByRole('alert').filter({hasText:'Palavra-passe recusada'}).waitFor()
+ assert.equal(await f.input('Nome').inputValue(),'Preservar nome')
+ await p.unroute('**/api/onboarding/password')
+ await p.locator('input[autocomplete="new-password"]').fill('corrected-test-password');await f.button('Confirmar correção').click()
+ await assertEventually(()=>f.state.passwordRequired===false)
+ const stored=await p.evaluate(()=>JSON.stringify(sessionStorage));assert.ok(stored.includes('Preservar nome'));assert.ok(!stored.includes('test-only-password'));assert.equal(f.writes.length,0)
  })
  test('empty server profile gets a usable default before workspace creation',async t=>{
  const f=await fixture(t,{user:{...user,name:''},state:{...blank(),profile:{name:''}}}),p=f.page
  await p.goto(origin);await f.input('Nome').fill('Equipa');await f.button('Criar ambiente').click();await p.locator('.ob-profile').waitFor()
  await p.waitForFunction(()=>!document.querySelector('.ob-profile .ob-primary').disabled)
+ await assertEventually(()=>f.writes.length>0)
  assert.ok(f.writes[0].profileName.trim())
  })
 
-test('reload during an unconfirmed password save returns to password and never persists credentials',async t=>{
+test('reload during an unconfirmed password save keeps the draft and requests the password in place',async t=>{
  const f=await fixture(t,{state:{...blank(),passwordRequired:true}}),p=f.page
  let release
  await p.route('**/api/onboarding/password',async route=>{await new Promise(r=>{release=r});await route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},status:503,json:{message:'Indisponível.'}}).catch(()=>{})})
  await p.goto(origin);await p.locator('input[autocomplete="new-password"]').fill('transient-test-secret');await f.button('Guardar palavra-passe').click()
- await f.input('Nome').fill('Draft before reload');await p.reload();await p.locator('.ob-password').waitFor()
+ await f.input('Nome').fill('Draft before reload');await p.reload();await p.getByRole('form',{name:'Correção da configuração'}).waitFor()
+ assert.equal(await f.input('Nome').inputValue(),'Draft before reload')
  const stored=await p.evaluate(()=>JSON.stringify(localStorage)+JSON.stringify(sessionStorage));assert.ok(stored.includes('Draft before reload'));assert.ok(!stored.includes('transient-test-secret'));assert.equal(f.writes.length,0)
  release()
 })
-test('password success with failed bootstrap stays blocked until retry confirms it',async t=>{
+test('confirmed password response unlocks setup without another configuration fetch',async t=>{
  const f=await fixture(t,{state:{...blank(),passwordRequired:true}}),p=f.page
- let fail=false
- await p.route('**/api/onboarding',async route=>{if(fail&&route.request().method()==='GET')return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},status:503,json:{message:'Confirmação indisponível.'}});return route.fallback()})
- await p.goto(origin);await p.locator('input[autocomplete="new-password"]').fill('transient-test-secret');fail=true;await f.button('Guardar palavra-passe').click()
- await f.input('Nome').fill('Keep during retry');await p.getByRole('alert').filter({hasText:'Confirmação indisponível'}).waitFor();assert.equal(await f.button('Criar ambiente').isDisabled(),true);assert.equal(f.writes.length,0)
- fail=false;await f.button('Tentar novamente').click();await p.waitForFunction(()=>!document.querySelector('.ob-workspace .ob-primary').disabled)
- assert.equal(await f.input('Nome').inputValue(),'Keep during retry');assert.equal(f.calls.filter(c=>c.path==='/api/onboarding/password').length,1)
+ await p.goto(origin);await p.locator('input[autocomplete="new-password"]').fill('transient-test-secret')
+ const reads=f.calls.filter(c=>c.path==='/api/onboarding'&&!c.body).length
+ await p.route('**/api/onboarding',route=>route.request().method()==='GET'?route.abort():route.fallback())
+ await f.button('Guardar palavra-passe').click();await f.input('Nome').fill('Confirmed directly')
+ await f.button('Criar ambiente').click();await f.button('Continuar').click();await f.button('Saltar').click();await f.button('Começar').click();await p.locator('.make-shell').waitFor()
+ assert.equal(f.calls.filter(c=>c.path==='/api/onboarding'&&!c.body).length,reads)
+ assert.equal(f.calls.filter(c=>c.path==='/api/onboarding/password').length,1)
 })
-test('invalid OTP returns from password draft to code without workspace writes',async t=>{
+test('invalid OTP can be corrected from the current draft without unverified workspace writes',async t=>{
  const f=await fixture(t,{authenticated:false,state:{...blank(),passwordRequired:true}}),p=f.page
  let release
  await p.route('**/sign-in/email-otp',async route=>{await new Promise(r=>{release=r});return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},status:400,json:{message:'Invalid code'}})})
  await p.goto(origin);await f.button('Continuar com email').click();await f.input('Endereço de email').fill(user.email);await f.button('Continuar com email').click();await f.input('Código de confirmação').fill('000000');await f.button('Continuar com código').click()
  await p.locator('.ob-password').waitFor();assert.equal(await f.button('Guardar palavra-passe').isDisabled(),false);release()
- await p.locator('section.ob-code').waitFor();await p.getByRole('alert').waitFor();assert.equal(f.writes.length,0)
+ await p.getByRole('form',{name:'Correção da configuração'}).waitFor();await p.getByRole('alert').waitFor();assert.equal(f.writes.length,0)
+ assert.equal(await p.locator('section.ob-password').count(),1)
+ await p.unroute('**/sign-in/email-otp')
+ await f.input('Código de confirmação').fill('123456');await f.button('Confirmar correção').click()
+ await assertEventually(()=>f.authenticated)
+ await p.locator('input[autocomplete="new-password"]').fill('corrected-code-password');await f.button('Guardar palavra-passe').click()
+ await f.input('Nome').fill('Corrected code workspace');await f.button('Criar ambiente').click()
+ await f.button('Continuar').click();await f.button('Saltar').click();await f.button('Começar').click();await p.locator('.make-shell').waitFor()
 })
 
  test('sign-out after completion clears the previous account screen',async t=>{
@@ -245,7 +265,7 @@ test('invalid OTP returns from password draft to code without workspace writes',
 test('explicit login ignores a stale completed signup draft',async t=>{
  const f=await fixture(t,{authenticated:false}),p=f.page
  await p.addInitScript(()=>sessionStorage.setItem('fontes:onboarding:v1:pending',JSON.stringify({draft:{step:'updates',email:'stale@example.com',returning:false,provider:'email'}})))
- await p.goto(origin+'/login');await p.getByRole('heading',{name:'Perfil existente',exact:true}).waitFor();await p.locator('input[autocomplete="current-password"]').waitFor();assert.equal(await p.locator('section.ob-code').count(),0)
+ await p.goto(origin+'/login');await p.getByRole('heading',{name:'Iniciar sessão',exact:true}).waitFor();await p.locator('input[autocomplete="current-password"]').waitFor();assert.equal(await p.locator('section.ob-code').count(),0)
 })
 
 
@@ -290,6 +310,7 @@ test('password and workspace submit instantly before verification, then sync in 
  releasePassword()
  await p.waitForFunction(()=>!document.querySelector('.ob-profile .ob-primary').disabled)
  assert.equal(await f.input('Nome do perfil').inputValue(),'Uninterrupted profile')
+ await assertEventually(()=>f.writes.length>0)
  assert.equal(f.writes[0].name,'Instant workspace')
  assert.equal(f.calls.filter(c=>c.path==='/api/onboarding/password').length,1)
  const stored=await p.evaluate(()=>JSON.stringify(localStorage)+JSON.stringify(sessionStorage))
@@ -297,16 +318,175 @@ test('password and workspace submit instantly before verification, then sync in 
 })
 
 
-test('queued workspace resumes after password succeeds but configuration fetch fails',async t=>{
+test('the entire draft reaches the final screen while verification is stalled, then saves in order',async t=>{
+ const f=await fixture(t,{authenticated:false,state:{...blank(),passwordRequired:true,canInvite:false,canEditWorkspace:false}}),p=f.page
+ let releaseVerify
+ await p.route('**/sign-in/email-otp',async route=>{await new Promise(r=>{releaseVerify=r});await route.fallback()})
+ await p.goto(origin);await f.button('Continuar com email').click();await f.input('Endereço de email').fill(user.email);await f.button('Continuar com email').click()
+ await f.input('Código de confirmação').fill('123456');await f.button('Continuar com código').click()
+ await p.locator('input[autocomplete="new-password"]').fill('queued-secret-password');await f.button('Guardar palavra-passe').click()
+ await f.input('Nome').fill('Uninterrupted workspace');await f.button('Criar ambiente').click();await f.input('Nome do perfil').fill('Uninterrupted profile');await f.button('Continuar').click()
+ await f.input('Emails dos membros').fill('member@example.com');await f.button('Enviar convite por email').click()
+ await p.getByRole('switch',{name:/Novidades da Fontes/}).check();await f.button('Começar').click()
+ assert.equal(f.authenticated,false);assert.equal(f.writes.length,0);await p.locator('.ob-updates').waitFor()
+ releaseVerify();await p.locator('.make-shell').waitFor()
+ assert.equal(f.state.profile.name,'Uninterrupted profile');assert.equal(f.state.changelog,true);assert.equal(f.state.completed,true)
+ await assertEventually(()=>f.calls.some(c=>c.path==='/api/onboarding/invite'&&c.body.email==='member@example.com'))
+ assert.equal(f.calls.find(c=>c.path==='/api/onboarding/invite').body.organizationId,'org')
+})
+
+test('two tabs preserve unfinished profile edits without echoing configuration requests', async t => {
+ const f=await fixture(t,{state:workspace()}),p=f.page
+ await p.goto(origin);await p.locator('.ob-profile').waitFor()
+ const second=await p.context().newPage()
+ await second.goto(origin);await second.locator('.ob-profile').waitFor()
+ let release
+ await p.route('**/api/onboarding',async route=>{
+  if(route.request().method()==='POST')await new Promise(r=>{release=r})
+  return route.fallback()
+ })
+ await f.input('Nome do perfil').fill('Draft in first tab')
+ await second.getByRole('textbox',{name:'Nome do perfil'}).fill('Saved in second tab')
+ await delay(1200)
+ assert.equal(await f.input('Nome do perfil').inputValue(),'Draft in first tab')
+ assert.ok(f.calls.filter(c=>c.path==='/api/onboarding'&&!c.body).length<=6,'one fetch per mount, not a storage feedback loop')
+ if(release)release()
+ await second.close()
+})
+
+test('a stalled optional invitation cannot delay the final configuration save',async t=>{
+ const f=await fixture(t,{state:workspace()}),p=f.page
+ let release
+ await p.route('**/api/onboarding/invite',async route=>{await new Promise(r=>{release=r});await route.fallback().catch(()=>{})})
+ await p.goto(origin);await f.button('Continuar').click()
+ await f.input('Emails dos membros').fill('member@example.com');await f.button('Enviar convite por email').click()
+ await f.button('Começar').click();await p.locator('.make-shell').waitFor({timeout:2000})
+ assert.equal(f.state.completed,true)
+ assert.ok(release,'invitation is still in flight when setup has completed')
+ release()
+})
+
+async function assertEventually(check) {
+ for(let i=0;i<150;i++){if(check())return;await delay(20)}
+ assert.ok(check(),'expected state was not confirmed within 3 seconds')
+}
+
+test('preference changes during final confirmation are saved before the app opens',async t=>{
+ const f=await fixture(t,{state:workspace()}),p=f.page
+ let release
+ await p.route('**/api/onboarding',async route=>{
+  if(route.request().method()==='POST'&&route.request().postDataJSON().completed&&!release)await new Promise(r=>{release=r})
+  return route.fallback()
+ })
+ await p.goto(origin);await f.button('Continuar').click();await f.button('Saltar').click();await f.button('Começar').click()
+ await assertEventually(()=>!!release)
+ await p.getByRole('switch',{name:/Novidades da Fontes/}).check()
+ release();await p.locator('.make-shell').waitFor()
+ assert.equal(f.state.changelog,true,'the confirmed result must include edits made during the request')
+})
+
+test('a late invalid code can be corrected on the final screen and finish the queued setup',async t=>{
+ const f=await fixture(t,{authenticated:false,state:{...blank(),passwordRequired:true}}),p=f.page
+ let release
+ await p.route('**/sign-in/email-otp',async route=>{await new Promise(r=>{release=r});await route.fulfill({status:400,json:{message:'Invalid code'}})})
+ await p.goto(origin);await f.button('Continuar com email').click();await f.input('Endereço de email').fill(user.email);await f.button('Continuar com email').click()
+ await f.input('Código de confirmação').fill('000000');await f.button('Continuar com código').click()
+ await p.locator('input[autocomplete="new-password"]').fill('final-correction-password');await f.button('Guardar palavra-passe').click()
+ await f.input('Nome').fill('Final correction');await f.button('Criar ambiente').click();await f.input('Nome do perfil').fill('Preserved profile');await f.button('Continuar').click();await f.button('Saltar').click();await f.button('Começar').click()
+ release();await p.getByRole('form',{name:'Correção da configuração'}).waitFor();assert.equal(await p.locator('section.ob-updates').count(),1);assert.equal(f.writes.length,0)
+ await p.unroute('**/sign-in/email-otp');await f.input('Código de confirmação').fill('123456');await f.button('Confirmar correção').click();await p.locator('.make-shell').waitFor()
+ assert.equal(f.state.profile.name,'Preserved profile');assert.equal(f.state.completed,true)
+})
+
+
+test('recovery uses the onboarding theme and keeps email and password labels visible',async t=>{
+ const f=await fixture(t,{authenticated:false}),p=f.page
+ for(const colorScheme of ['light','dark']){
+  await p.emulateMedia({colorScheme});await p.goto(origin+'/reset-password')
+  assert.equal(await p.locator('.ob-page').getAttribute('data-theme'),colorScheme)
+  const label=p.locator('.ob-visible-label > span')
+  assert.ok(await label.evaluate(el=>el.getBoundingClientRect().width>20&&getComputedStyle(el).clipPath==='none'))
+  await f.input('Email').fill('test@example.com');await f.button('Enviar link de recuperação').click()
+  await p.getByRole('status').filter({hasText:'Se existir uma conta'}).waitFor()
+  await p.goto(origin+'/reset-password?token=test')
+  const field=p.getByLabel('Palavra-passe',{exact:true});await field.fill('visible-label-password')
+  await f.button('Mostrar palavra-passe').click();assert.equal(await field.getAttribute('type'),'text')
+  assert.equal(await field.inputValue(),'visible-label-password')
+  await f.button('Ocultar palavra-passe').click();assert.equal(await field.getAttribute('type'),'password')
+ }
+})
+
+test('an expired authentication can be renewed on the current screen without losing queued setup',async t=>{
  const f=await fixture(t,{state:{...blank(),passwordRequired:true}}),p=f.page
- let releasePassword,fail=false
- await p.route('**/api/onboarding/password',async route=>{await new Promise(r=>{releasePassword=r});await route.fallback()})
- await p.route('**/api/onboarding',async route=>{if(fail&&route.request().method()==='GET')return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},status:503,json:{message:'Confirmação indisponível.'}});return route.fallback()})
- await p.goto(origin);await p.locator('input[autocomplete="new-password"]').fill('queued-secret-password');await f.button('Guardar palavra-passe').click()
- await f.input('Nome').fill('Retry workspace');await f.button('Criar ambiente').click();await f.input('Nome do perfil').fill('Retry profile')
- fail=true;releasePassword();await p.getByRole('alert').filter({hasText:'Confirmação indisponível'}).waitFor()
- assert.equal(f.writes.length,0);fail=false;await f.button('Tentar novamente').click()
- await p.waitForFunction(()=>!document.querySelector('.ob-profile .ob-primary').disabled)
- assert.equal(await f.input('Nome do perfil').inputValue(),'Retry profile');assert.equal(f.writes[0].name,'Retry workspace')
- assert.equal(f.calls.filter(c=>c.path==='/api/onboarding/password').length,1)
+ let release
+ await p.route('**/api/onboarding/password',async route=>{await new Promise(r=>{release=r});await route.fulfill({status:401,json:{message:'Nova autenticação necessária.',step:'email'}})})
+ await p.goto(origin);await p.locator('input[autocomplete="new-password"]').fill('renewed-session-password');await f.button('Guardar palavra-passe').click()
+ await f.input('Nome').fill('Preserved after expiry');await f.button('Criar ambiente').click();await f.input('Nome do perfil').fill('Retained profile');await f.button('Continuar').click();await f.button('Saltar').click();await f.button('Começar').click()
+ release();await p.getByRole('form',{name:'Correção da configuração'}).waitFor({timeout:2000})
+ assert.equal(await p.locator('section.ob-updates').count(),1);assert.equal(f.writes.length,0)
+ await p.unroute('**/api/onboarding/password');await f.button('Reenviar código').click()
+ await f.input('Código de confirmação').fill('123456');await f.button('Confirmar correção').click();await p.locator('.make-shell').waitFor()
+ assert.equal(f.state.profile.name,'Retained profile');assert.equal(f.state.completed,true)
+})
+
+
+test('a failed password login retains the field for retry and never persists it',async t=>{
+ const f=await fixture(t,{authenticated:false,state:{...workspace(),completed:true}}),p=f.page
+ await p.route('**/sign-in/email',route=>route.fulfill({status:503,json:{message:'Unavailable'}}))
+ await p.goto(origin+'/login');await f.input('Endereço de email').fill(user.email)
+ const field=p.locator('input[autocomplete="current-password"]');await field.fill('retryable-login-secret');await f.button('Iniciar sessão').click();await p.getByRole('alert').waitFor()
+ assert.equal(await field.inputValue(),'retryable-login-secret')
+ assert.ok(!(await p.evaluate(()=>JSON.stringify(localStorage)+JSON.stringify(sessionStorage))).includes('retryable-login-secret'))
+ await p.unroute('**/sign-in/email');await f.button('Iniciar sessão').click();await p.locator('.make-shell').waitFor()
+})
+
+test('email-code fallback validates the address before sending or advancing',async t=>{
+ const f=await fixture(t,{authenticated:false}),p=f.page
+ await p.goto(origin+'/login');await f.button('Continuar com código de email').click();await p.getByRole('alert').waitFor()
+ assert.equal(await p.locator('section.ob-email').count(),1);assert.equal(f.calls.filter(c=>c.path.endsWith('/send-verification-otp')).length,0)
+ assert.equal(await f.input('Endereço de email').evaluate(el=>el===document.activeElement),true)
+})
+
+test('an invite-link request made during workspace creation completes without a second click',async t=>{
+ const f=await fixture(t,{state:blank()}),p=f.page
+ let release
+ await p.route('**/api/onboarding',async route=>{if(route.request().method()==='POST'&&!release)await new Promise(r=>{release=r});return route.fallback()})
+ await p.goto(origin);await f.input('Nome').fill('Link draft');await f.button('Criar ambiente').click();await f.button('Continuar').click();await f.button('Copiar link').click()
+ assert.equal(f.calls.filter(c=>c.path==='/api/onboarding/invite').length,0)
+ await assertEventually(()=>!!release);release()
+ await f.input('Link de convite').waitFor();assert.match(await f.input('Link de convite').inputValue(),/invite=[a-f0-9]{64}$/)
+ assert.equal(f.calls.filter(c=>c.path==='/api/onboarding/invite').length,1)
+})
+
+test('a conflict on the final save keeps the draft visible and correction completes it',async t=>{
+ const f=await fixture(t,{state:workspace()}),p=f.page
+ let conflicted=false
+ await p.route('**/api/onboarding',async route=>{
+  if(route.request().method()==='POST'&&route.request().postDataJSON().completed&&!conflicted){
+   conflicted=true;f.state={...f.state,completed:true,revision:8,profile:{name:'Other tab'}}
+   return route.fulfill({status:409,json:{message:'Alterada noutra janela.',conflict:true}})
+  }
+  return route.fallback()
+ })
+ await p.goto(origin);await f.input('Nome do perfil').fill('Final local profile');await f.button('Continuar').click();await f.button('Saltar').click();await f.button('Começar').click()
+ await p.getByRole('form',{name:'Correção da configuração'}).waitFor({timeout:2000})
+ assert.equal(await p.locator('.make-shell').count(),0)
+ assert.equal(await f.input('Nome do perfil a corrigir').inputValue(),'Final local profile')
+ await p.reload();await p.getByRole('form',{name:'Correção da configuração'}).waitFor()
+ assert.equal(await f.input('Nome do perfil a corrigir').inputValue(),'Final local profile')
+ assert.equal(await p.locator('.make-shell').count(),0)
+ await f.button('Confirmar correção').click();await p.locator('.make-shell').waitFor()
+ assert.equal(f.state.completed,true);assert.equal(f.state.profile.name,'Final local profile');assert.equal(f.state.revision,9)
+})
+
+test('profile images are resized, saved across reload, removable, and invalid images can be retried',async t=>{
+ const f=await fixture(t,{state:workspace()}),p=f.page
+ await p.goto(origin);await p.locator('input[type=file]').setInputFiles({name:'broken.png',mimeType:'image/png',buffer:Buffer.from('invalid image')})
+ await p.getByRole('alert').filter({hasText:'Imagem ilegível'}).waitFor()
+ await p.locator('input[type=file]').setInputFiles('public/mark.png')
+ await f.button('Remover imagem').waitFor();await assertEventually(()=>!!f.state.profile.image)
+ assert.match(f.state.profile.image,/^data:image\/(webp|png);base64,/)
+ assert.deepEqual(await p.locator('.ob-photo img').evaluate(el=>({width:el.naturalWidth,height:el.naturalHeight})),{width:160,height:160})
+ await p.reload();await f.button('Remover imagem').waitFor();await f.button('Remover imagem').click()
+ await assertEventually(()=>f.state.profile.image==='');assert.equal(await f.button('Remover imagem').count(),0)
 })

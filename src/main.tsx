@@ -1,3 +1,4 @@
+import OnboardingLayout from './OnboardingLayout'
 import { restoreDestination } from './authDestination'
 import PasswordRecovery from './Password'
 import PwaConnection from './PwaConnection'
@@ -40,7 +41,7 @@ function Gate({ path }: { path: string }) {
   const settled = useRef(false)
   if (!isPending) settled.current = true
   useEffect(() => { if (!session) setReady(null) }, [session])
-  if (!settled.current) return <main className="ob-page"><p role="status">A confirmar sessão…</p></main>
+  if (!settled.current) return <OnboardingLayout />
   const opened = !!session && ready?.userId === session.user.id
   return <>
     <Onboarding session={session} background={opened} onBlocked={() => setReady(null)} onReady={state => { if (session) { setReady({ userId: session.user.id, state }); restoreDestination() } }} />

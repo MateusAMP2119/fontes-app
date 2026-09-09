@@ -18,7 +18,7 @@ test('workspace confirmation, automatic URL collision, confirmed completion and 
       if (path === '/api/onboarding') {
         if (route.request().method() === 'GET') return route.fulfill({ json: state })
         const body = route.request().postDataJSON(); writes.push(body)
-        if (collide) { collide = false; return route.fulfill({ status: 409, json: { message: 'Este URL já está em uso. Escolhe outro.', step: 'workspace' } }) }
+        if (collide) { collide = false; return route.fulfill({ status: 409, json: { message: 'Este URL já está em uso. É necessário outro URL.', step: 'workspace' } }) }
         if (blocked || (body.completed && completionOffline)) return route.fulfill({ status: 503, json: { message: 'offline' } })
         state = { ...state, organization: { id:'org', name:body.name, slug:body.slug }, project: { id:'project', organizationId:'org', name:'O meu projeto', createdAt:user.createdAt }, profile: { name:body.profileName }, revision:body.revision, completed:body.completed }
         return route.fulfill({ json: state })
@@ -32,12 +32,12 @@ test('workspace confirmation, automatic URL collision, confirmed completion and 
     await page.locator('.ob-profile').waitFor()
     assert.equal(await page.locator('.ob-workspace').count(), 0)
     assert.equal(await page.locator('.ob-profile').count(), 1, 'profile drafting does not wait for workspace creation')
-    assert.equal(await page.getByRole('button', { name:'Criar perfil', exact:true }).isDisabled(), true, 'submission still waits for workspace confirmation')
+    assert.equal(await page.getByRole('button', { name:'Continuar', exact:true }).isDisabled(), false, 'profile entry can continue while workspace confirmation is pending')
     blocked = false
     await page.evaluate(() => dispatchEvent(new Event('online')))
     await page.getByRole('textbox', { name:'Nome do perfil' }).fill('Nome final')
     assert.ok(writes.some(body => body.name === 'Equipa' && /^equipa-/.test(body.slug)), 'same display name gets a different generated URL')
-    await page.getByRole('button', { name:'Criar perfil', exact:true }).click()
+    await page.getByRole('button', { name:'Continuar', exact:true }).click()
     await page.getByRole('button', { name:'Saltar', exact:true }).click()
     await page.getByRole('button', { name:'Começar', exact:true }).click()
     await page.getByRole('alert').waitFor()
@@ -73,7 +73,7 @@ test('an explicitly chosen URL stays editable after a conflict', async () => {
       if (path.endsWith('/get-session')) return route.fulfill({ json: { user, session: { id:'s', userId:user.id, expiresAt:new Date(Date.now()+3600000).toISOString() } } })
       if (path === '/api/onboarding' && route.request().method() === 'POST') {
         writes.push(route.request().postDataJSON())
-        return route.fulfill({ status:409, json:{ message:'Este URL já está em uso. Escolhe outro.', step:'workspace' } })
+        return route.fulfill({ status:409, json:{ message:'Este URL já está em uso. É necessário outro URL.', step:'workspace' } })
       }
       return route.fulfill({ json:{ organization:null, project:null, profile:{ name:'Teste' }, revision:0, completed:false } })
     })
@@ -85,6 +85,7 @@ test('an explicitly chosen URL stays editable after a conflict', async () => {
     assert.equal(await page.getByRole('textbox', { name:'URL do ambiente' }).inputValue(), 'url-escolhido')
     assert.equal(await page.getByRole('textbox', { name:'URL do ambiente' }).isEnabled(), true)
     assert.equal(writes.length, 1)
-    assert.equal(await page.locator('.ob-profile').count(), 0)
+    assert.equal(await page.locator('.ob-profile').count(), 1)
+    await page.getByRole('form', { name:'Correção da configuração' }).waitFor()
   } finally { await browser.close() }
 })

@@ -1,14 +1,18 @@
-import { useState, type FormEvent } from 'react'
+import OnboardingLayout from './OnboardingLayout'
+import { useId, useState, type FormEvent } from 'react'
 import { authClient } from './auth'
 import './Onboarding.css'
 
 export function PasswordField({ value, onChange, existing = false }: { value: string; onChange: (value: string) => void; existing?: boolean }) {
   const [visible, setVisible] = useState(false)
-  return <label className="ob-field"><span>{existing ? 'Palavra-passe atual' : 'Palavra-passe'}</span>
-    <input type={visible ? 'text' : 'password'} autoComplete={existing ? 'current-password' : 'new-password'} required minLength={existing ? 1 : 8} maxLength={128} value={value} onChange={e => onChange(e.target.value)} />
-    <button className="ob-subtle" type="button" aria-pressed={visible} onClick={() => setVisible(v => !v)}>{visible ? 'Ocultar palavra-passe' : 'Mostrar palavra-passe'}</button>
-    {!existing && <small>Entre 8 e 128 caracteres.</small>}
-  </label>
+  const id = useId()
+  return <div className="ob-field ob-password-field"><label htmlFor={id}>{existing ? 'Palavra-passe atual' : 'Palavra-passe'}</label>
+    <div className="ob-password-control">
+      <input id={id} type={visible ? 'text' : 'password'} autoComplete={existing ? 'current-password' : 'new-password'} required minLength={existing ? 1 : 8} maxLength={128} value={value} onChange={e => onChange(e.target.value)} aria-describedby={!existing ? id + '-hint' : undefined}/>
+      <button className="ob-subtle" type="button" aria-label={visible ? 'Ocultar palavra-passe' : 'Mostrar palavra-passe'} aria-pressed={visible} onClick={() => setVisible(v => !v)}>{visible ? 'Ocultar' : 'Mostrar'}</button>
+    </div>
+    {!existing && <small id={id + '-hint'}>Entre 8 e 128 caracteres.</small>}
+  </div>
 }
 
 export default function PasswordRecovery({ change = false }: { change?: boolean }) {
@@ -45,16 +49,16 @@ export default function PasswordRecovery({ change = false }: { change?: boolean 
     finally { setBusy(false); setPassword(''); setOldPassword('') }
   }
   const login = new URL(location.href); login.pathname = '/login'; login.searchParams.delete('token'); login.searchParams.delete('error')
-  return <main className="ob-page"><div className="ob-stage"><section className="ob-panel">
-    <h1>{change ? 'Alterar palavra-passe' : token ? 'Definir nova palavra-passe' : 'Recuperar acesso'}</h1>
-    {change && isPending ? <p role="status">A confirmar sessão…</p> : change && !session ? <a href={login.pathname + login.search}>Iniciar sessão</a> : !done && <form onSubmit={submit}>
+  return <OnboardingLayout><section className="ob-panel ob-recovery">
+    <header><h1>{change ? 'Alterar palavra-passe' : token ? 'Definir nova palavra-passe' : 'Recuperar acesso'}</h1></header>
+    {change && !isPending && !session ? <a href={login.pathname + login.search}>Iniciar sessão</a> : !done && <form onSubmit={submit}>
       {change && <PasswordField existing value={oldPassword} onChange={setOldPassword} />}
-      {token || change ? <PasswordField value={password} onChange={setPassword} /> : <label className="ob-field"><span>Email</span><input type="email" autoComplete="email" maxLength={254} required value={email} onChange={e => setEmail(e.target.value)} /></label>}
-      <button className="ob-button ob-primary ob-wide" disabled={busy}>{busy ? 'A processar…' : token || change ? 'Guardar palavra-passe' : 'Enviar link de recuperação'}</button>
+      {token || change ? <PasswordField value={password} onChange={setPassword} /> : <label className="ob-field ob-visible-label"><span>Email</span><input type="email" autoComplete="email" maxLength={254} required value={email} onChange={e => setEmail(e.target.value)} /></label>}
+      <button className="ob-button ob-primary ob-wide" disabled={busy || (change && isPending)}>{token || change ? 'Guardar palavra-passe' : 'Enviar link de recuperação'}</button>
     </form>}
     {notice && <p role="status">{notice}</p>}{error && <p role="alert">{error}</p>}
     {token && <button className="ob-subtle" onClick={() => { setToken(''); setError(''); const url = new URL(location.href); url.searchParams.delete('token'); history.replaceState(null, '', url) }}>Solicitar novo link</button>}
     {change && <a href="/reset-password">Recuperar acesso</a>}
     <p><a href={done && change ? '/' : login.pathname + login.search}>{done && change ? 'Voltar ao ambiente' : 'Iniciar sessão'}</a></p>
-  </section></div></main>
+  </section></OnboardingLayout>
 }

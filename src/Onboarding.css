@@ -176,3 +176,22 @@ html:has(.ob-page[data-theme=light]) { background: #fff; }
     linear-gradient(to right, rgb(38 38 38 / .035) 1px, transparent 1px),
     linear-gradient(rgb(38 38 38 / .035) 1px, transparent 1px);
 }
+
+/* Feedback stays with the current form instead of moving the stage or rewinding it. */
+.ob-password-field { text-align: left; }
+.ob-password-field > label { color: var(--ob-text); font-size: 13px; }
+.ob-password-field > small { color: var(--ob-muted); font-size: 12px; }
+.ob-password-control { position: relative; }
+.ob-password-control input { padding-right: 76px !important; }
+.ob-password-control button { position: absolute; right: 10px; top: 0; height: 100%; min-height: 0; padding: 0 4px; }
+.ob-field-error { color: #e08a85; font-size: 13px; line-height: 1.5; margin-top: 12px; }
+.ob-page[data-theme=light] .ob-field-error { color: #b03631; }
+.ob-panel input[aria-invalid=true] { border-color: #c0433b; }
+.ob-correction { margin-top: 24px; padding: 18px; border: 1px solid var(--ob-border); border-radius: 12px; text-align: left; }
+.ob-correction h2 { font-size: 16px; line-height: 1.4; }
+.ob-correction .ob-field > span, .ob-visible-label > span { position: static; width: auto; height: auto; margin: 0; clip-path: none; overflow: visible; }
+
+.ob-visible-label > span{display:block;text-align:left;font-size:13px;color:var(--ob-text)}
+.ob-recovery > p,.ob-recovery > a,.ob-recovery > button{margin-top:20px}
+
+.ob-recovery a{color:var(--ob-muted);font-size:13px;text-underline-offset:3px}
