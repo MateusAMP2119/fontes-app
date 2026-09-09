@@ -11,7 +11,7 @@ for (const engine of [chromium, webkit]) {
     const screens = page.getByRole('navigation', { name: 'Ecrãs' })
     const anchor = () => page.locator('.ob-brand').evaluate(el => el.getBoundingClientRect().top + window.scrollY)
     const originalAnchor = await anchor()
-    for (const screen of ['Email', 'Código', 'Ambiente', 'Perfil', 'Convites', 'Atualizações']) {
+    for (const screen of ['Email', 'Código', 'Palavra-passe', 'Aceitar convite', 'Ambiente', 'Perfil', 'Convites', 'Atualizações']) {
       await screens.getByRole('button', { name: screen, exact: true }).click()
       await page.locator('#ob-title:focus').waitFor()
       assert.ok(Math.abs(await anchor() - originalAnchor) < 1, `${screen}: brand stays anchored`)

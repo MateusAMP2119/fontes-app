@@ -11,12 +11,12 @@ for (const engine of [chromium, webkit]) {
     for (const [draft, expected] of [
       [{ step: 'workspace', returning: true, provider: 'email' }, 'Passo 1 de 4'],
       [{ step: 'profile', returning: true, provider: 'email' }, 'Passo 2 de 4'],
-      [{ step: 'email', returning: false, provider: 'google' }, 'Passo 1 de 6'],
-      [{ step: 'code', returning: false, provider: 'google' }, 'Passo 2 de 6'],
+      [{ step: 'email', returning: false, provider: 'google' }, 'Passo 1 de 7'],
+      [{ step: 'code', returning: false, provider: 'google' }, 'Passo 2 de 7'],
       [{ step: 'email', returning: true, provider: 'email' }, 'Passo 1 de 2'],
       [{ step: 'code', returning: true, provider: 'email' }, 'Passo 2 de 2'],
       [{ step: 'workspace', returning: false, provider: 'google' }, 'Passo 1 de 4'],
-      [{ step: 'updates', returning: false, provider: 'email' }, 'Passo 6 de 6'],
+      [{ step: 'updates', returning: false, provider: 'email' }, 'Passo 7 de 7'],
     ]) {
       await page.evaluate(draft => localStorage.setItem('fontes:onboarding-ui-preview:v1', JSON.stringify(draft)), draft)
       await page.reload()

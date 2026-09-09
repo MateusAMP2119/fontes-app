@@ -1,58 +1,69 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { authClient, type AuthSession } from './auth'
 import { inviteToken, onboardingRequest, SyncError, type Bootstrap } from './onboardingSync'
-import type { Draft } from './Onboarding'
+import { fresh, saved, steps, type Draft, type Step } from './onboardingDraft'
 
-type Setup = { operationId: string; revision: number; name: string; slug: string; profileName: string; profileImage?: string; completed: boolean; automaticSlug?: boolean; workspace?: boolean; changelog: boolean; daily: boolean }
-type Invitation = { token: string; email: string | null }
-type Record = { draft: Draft; revision: number; pending?: Setup; invitations: Invitation[]; link?: string; bootstrap?: Bootstrap; finished?: boolean }
-type Props = { preview: boolean; session: AuthSession | null; draft: Draft; setDraft: Dispatch<SetStateAction<Draft>>; setNotice: (message: string) => void; setError: (message: string) => void; onReady?: (state: Bootstrap) => void }
+type Setup = { organizationId?: string; operationId: string; revision: number; name: string; slug: string; profileName: string; profileImage?: string; completed: boolean; automaticSlug?: boolean; workspace?: boolean; changelog: boolean; daily: boolean }
+type Invitation = { organizationId?: string; token: string; email: string; status?: 'sent' | 'failed'; error?: string }
+type Record = { draft: Draft; revision: number; pending?: Setup; invitations: Invitation[]; link?: string }
+type Props = { preview: boolean; session: AuthSession | null; draft: Draft; setDraft: Dispatch<SetStateAction<Draft>>; setNotice: (message: string) => void; setError: (message: string) => void; onReady?: (state: Bootstrap) => void; onBlocked?: () => void }
 const prefix = 'fontes:onboarding:v1:'
+const transient = (e: unknown) => !(e instanceof SyncError) || e.status >= 500 || e.status === 429
 
 export function useOnboardingSync(props: Props) {
   const current = useRef(props)
   current.current = props
   const record = useRef<Record>({ draft: props.draft, revision: 0, invitations: [] })
-  const restored = useRef(false)
-  if (!restored.current && !props.preview) {
-    restored.current = true
-    try {
-      const pending = JSON.parse(sessionStorage.getItem(prefix + 'pending') || 'null')
-      if (pending?.draft?.email === props.draft.email && Array.isArray(pending.invitations) && Number.isSafeInteger(pending.revision)) record.current = { ...pending, draft: props.draft }
-    } catch { /* No pending pre-authentication draft. */ }
-  }
   const owner = useRef<string | null>(null)
-  const recordOwner = useRef<string | null>(null)
   const generation = useRef(0)
   const state = useRef<Bootstrap | null>(null)
   const running = useRef(false)
+  const authRunning = useRef(false)
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const attempts = useRef(0)
+  const reload = useRef<() => Promise<void>>(async () => {})
   const [busy, setBusy] = useState(false)
   const [failed, setFailed] = useState(false)
-  const initialized = useRef(false)
-  const verifyRunning = useRef(false)
-  const workspaceOperation = useRef<string | null>(null)
-  const slugRetries = useRef(0)
+  const [loading, setLoading] = useState(false)
   const [workspaceBusy, setWorkspaceBusy] = useState(false)
-  const [canCreateWorkspace, setCanCreateWorkspace] = useState(false)
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle')
+  const [sendingCode, setSendingCode] = useState(false)
+  const [bootstrap, setBootstrap] = useState<Bootstrap | null>(null)
+  const [invitation, setInvitation] = useState<{ name: string; role: string } | null>(null)
+  const [invitationErrors, setInvitationErrors] = useState<Invitation[]>([])
+  const [inviteLink, setInviteLink] = useState('')
+  const slugRetries = useRef(0)
 
   function persist() {
-    if (!owner.current) {
-      try { sessionStorage.setItem(prefix + 'pending', JSON.stringify(record.current)); return true } catch { return false }
-    }
-    try { localStorage.setItem(prefix + owner.current, JSON.stringify(record.current)); return true }
-    catch { current.current.setError('Armazenamento local indisponível, progresso só nesta página'); return false }
+    try {
+      if (owner.current) localStorage.setItem(prefix + owner.current, JSON.stringify(record.current))
+      else sessionStorage.setItem(prefix + 'pending', JSON.stringify({ draft: record.current.draft }))
+    } catch { current.current.setError('Armazenamento local indisponível. Progresso apenas nesta página.') }
   }
-  function schedule() {
+  function updateInvitations() {
+    setInvitationErrors(record.current.invitations.filter(i => i.status === 'failed'))
+    persist()
+  }
+  function receive(result: Bootstrap) {
+    state.current = result
+    setBootstrap(result)
+    record.current.revision = result.revision
+  }
+  function openIfReady() {
+    const s = state.current
+    if (s?.completed && s.project && s.organization && !s.passwordRequired && !s.accessLost && !record.current.pending && !new URL(location.href).searchParams.has('invite')) current.current.onReady?.(s)
+  }
+  function schedule(error?: unknown) {
     clearTimeout(timer.current)
-    timer.current = setTimeout(() => { void drain() }, Math.min(30000, 1000 * 2 ** Math.min(attempts.current++, 5)))
+    const delay = error instanceof SyncError && error.retryAfter ? error.retryAfter : Math.min(30000, 1000 * 2 ** Math.min(attempts.current++, 5))
+    timer.current = setTimeout(() => { void drain() }, delay)
   }
   async function drain() {
-    if (running.current || !owner.current || !state.current || props.preview) return
+    if (running.current || !owner.current || !state.current || state.current.passwordRequired || props.preview) return
     const epoch = generation.current
     running.current = true
     setFailed(false)
+    if (record.current.pending) setSyncStatus('saving')
     try {
       while (epoch === generation.current) {
         const snapshot = record.current.pending
@@ -60,53 +71,58 @@ export function useOnboardingSync(props: Props) {
           if (!snapshot.revision) { snapshot.revision = record.current.revision + 1; persist() }
           const result = await onboardingRequest<Bootstrap>('', snapshot)
           if (epoch !== generation.current) return
-          state.current = result
-          record.current.bootstrap = result
-          record.current.revision = result.revision
+          receive(result)
           if (record.current.pending?.operationId === snapshot.operationId) record.current.pending = undefined
           persist()
-          if (workspaceOperation.current === snapshot.operationId) {
-            workspaceOperation.current = null
+          if (snapshot.workspace) {
             setWorkspaceBusy(false)
-            current.current.setDraft(d => ({ ...d, step: 'profile' }))
+            // Profile drafting may already be underway. Never navigate on a late save.
           }
+          openIfReady()
           continue
         }
-        const invitation = record.current.invitations[0]
-        if (!invitation || !state.current.organization) break
-        await onboardingRequest('/invite', { ...invitation, organizationId: state.current.organization.id })
-        if (epoch !== generation.current) return
-        record.current.invitations = record.current.invitations.filter(item => item.token !== invitation.token)
-        persist()
+        openIfReady()
+        const item = record.current.invitations.find(i => !i.status)
+        if (!item || !state.current.organization) break
+        try {
+          await onboardingRequest('/invite', { token: item.token, email: item.email, organizationId: item.organizationId })
+          if (epoch !== generation.current) return
+          item.status = 'sent'
+        } catch (error) {
+          if (epoch !== generation.current) return
+          // Optional delivery failures cannot block other recipients or completion.
+          item.status = 'failed'
+          item.error = error instanceof SyncError ? error.message : 'Envio por confirmar. Nova tentativa disponível.'
+        }
+        updateInvitations()
       }
-      if (epoch !== generation.current) return
       attempts.current = 0
-      // Nothing is left to save: the workspace opens itself, there is no closing screen to click through.
-      if (state.current?.completed && state.current.project && !record.current.pending && !record.current.invitations.length) current.current.onReady?.(state.current)
+      if (!record.current.pending) setSyncStatus('saved')
       current.current.setError('')
     } catch (error) {
       if (epoch !== generation.current) return
       const pending = record.current.pending
-      if (error instanceof SyncError && error.status === 409 && error.step === 'workspace'
-        && pending?.automaticSlug && workspaceOperation.current === pending.operationId && slugRetries.current++ < 3) {
-        const suffix = crypto.randomUUID().slice(0, 6)
-        pending.slug = `${pending.slug.slice(0, 41)}-${suffix}`
-        record.current.draft = { ...current.current.draft, slug: pending.slug }
-        current.current.setDraft(record.current.draft)
-        persist()
-        schedule()
-        return
+      if (error instanceof SyncError && error.status === 409 && error.step === 'workspace' && pending?.automaticSlug && slugRetries.current++ < 3) {
+        pending.slug = `${pending.slug.slice(0, 41)}-${crypto.randomUUID().slice(0, 6)}`
+        current.current.setDraft(d => ({ ...d, slug: pending.slug }))
+        persist(); schedule(); return
       }
       setFailed(true)
-      if (error instanceof SyncError && error.status < 500 && error.status !== 429) {
-        workspaceOperation.current = null
+      setSyncStatus('failed')
+      current.current.setError(error instanceof SyncError ? error.message : 'Ligação interrompida. Nova tentativa em instantes.')
+      if (transient(error)) schedule(error)
+      else {
         setWorkspaceBusy(false)
-        current.current.setError(error.message)
-        if (error.step === 'workspace') current.current.setDraft(d => ({ ...d, step: 'workspace' }))
-        if (error.status === 401) current.current.setDraft(d => ({ ...d, step: 'email' }))
-      } else {
-        current.current.setError('Ligação interrompida, nova tentativa em instantes')
-        schedule()
+        if (error instanceof SyncError && error.conflict) {
+          record.current.pending = undefined
+          persist()
+          await reload.current()
+          current.current.setNotice('Configuração recuperada do servidor após alterações noutra janela.')
+        } else if (error instanceof SyncError && error.status === 401) {
+          await changeEmail()
+        } else if (error instanceof SyncError && steps.includes(error.step as Step)) {
+          current.current.setDraft(d => ({ ...d, step: error.step as Step }))
+        }
       }
     } finally {
       running.current = false
@@ -124,151 +140,212 @@ export function useOnboardingSync(props: Props) {
     if (props.preview || !props.session) return
     const session = props.session
     const epoch = ++generation.current
-    try { sessionStorage.removeItem(prefix + 'pending') } catch { /* optional storage */ }
     owner.current = session.user.id
-    if (recordOwner.current && recordOwner.current !== session.user.id) record.current = { draft: current.current.draft, revision: 0, invitations: [] }
-    recordOwner.current = session.user.id
-    initialized.current = false
-    setCanCreateWorkspace(false)
-    let saved: Record | null = null
+    state.current = null
+    setBootstrap(null)
+    setLoading(true)
+    try { sessionStorage.removeItem(prefix + 'pending') } catch { /* optional storage */ }
+    const initial = current.current.draft.email.toLowerCase() === session.user.email.toLowerCase() ? current.current.draft : { ...fresh }
+    record.current = { draft: { ...initial, email: session.user.email, profile: initial.profile || session.user.name }, revision: 0, invitations: [] }
+    let restored = false
     try {
       const value = JSON.parse(localStorage.getItem(prefix + session.user.id) || 'null')
-      // A draft saved on the closing screen that no longer exists starts from the server state instead.
-      if (value?.draft?.email === session.user.email && value.draft.step !== 'done' && Array.isArray(value.invitations) && Number.isSafeInteger(value.revision)) saved = value
-    } catch { /* Start from server state if the local copy is invalid. */ }
-    if (saved) {
-      record.current = saved
-      current.current.setDraft(saved.draft)
-      if (saved.pending?.workspace) { workspaceOperation.current = saved.pending.operationId; setWorkspaceBusy(true) }
-      if (saved.finished && saved.bootstrap?.project && saved.bootstrap.organization) {
-        state.current = saved.bootstrap
-        current.current.onReady?.({ ...saved.bootstrap, completed: true })
+      const draft = saved(value?.draft)
+      if (draft && draft.email === session.user.email && Number.isSafeInteger(value.revision) && Array.isArray(value.invitations)) {
+        restored = true
+        // Only accept known shapes. Legacy local completion is never authoritative.
+        record.current = { draft, revision: value.revision, invitations: value.invitations.filter((i: Invitation) => typeof i.email === 'string' && /^[a-f0-9]{64}$/.test(i.token)),
+          pending: value.pending && typeof value.pending.operationId === 'string' && Number.isSafeInteger(value.pending.revision) && typeof value.pending.name === 'string' && typeof value.pending.profileName === 'string' ? value.pending : undefined }
       }
-    }
-    else {
-      if (current.current.draft.email && current.current.draft.email !== session.user.email) record.current = { draft: current.current.draft, revision: 0, invitations: [] }
-      const draft = { ...current.current.draft, email: session.user.email, profile: current.current.draft.profile || session.user.name }
-      record.current.draft = draft
-      current.current.setDraft(draft)
-    }
+    } catch { /* Recover from server when local data is corrupt. */ }
     const load = async () => {
+      setLoading(true)
       try {
-        const invite = new URL(location.href).searchParams.get('invite')
-        const result = await onboardingRequest<Bootstrap>(invite ? '/join' : '', invite ? { token: invite } : undefined)
+        const result = await onboardingRequest<Bootstrap>()
         if (epoch !== generation.current) return
-        if (invite) { const url = new URL(location.href); url.searchParams.delete('invite'); history.replaceState(null, '', url) }
-        state.current = result
-        record.current.bootstrap = result
-        record.current.revision = Math.max(record.current.revision, result.revision)
-        initialized.current = true
-        setCanCreateWorkspace(true)
-        persist()
-        if (result.completed && result.project && !record.current.pending && !record.current.invitations.length) {
-          current.current.onReady?.(result)
-          return
+        const sameRevision = restored && record.current.revision === result.revision
+        receive(result)
+        setFailed(false)
+        const pending = record.current.pending
+        if (pending?.revision && result.revision >= pending.revision) {
+          record.current.pending = undefined
+          if (result.operationId !== pending.operationId) current.current.setNotice('Configuração recuperada do servidor após alterações noutra janela.')
         }
-        current.current.setDraft(d => ({ ...d, step: ['start', 'email', 'code'].includes(d.step) ? (invite ? 'profile' : 'workspace') : d.step,
-          name: d.name || result.organization?.name || '', slug: d.slug || result.organization?.slug || '',
-          profile: d.profile || result.profile.name, changelog: saved ? d.changelog : result.changelog, daily: saved ? d.daily : result.daily }))
-        void drain()
+        const d = record.current.draft
+        const keep = sameRevision || !!record.current.pending || (!result.organization && !!d.name)
+        const token = new URL(location.href).searchParams.get('invite')
+        let step: Step = result.passwordRequired ? 'password' : token ? 'join' : result.organization ? 'profile' : 'workspace'
+        if (!result.passwordRequired && !token && result.organization && ['profile', 'invites', 'updates'].includes(d.step)) step = d.step
+        if (!result.passwordRequired && !token && record.current.pending?.workspace && d.step === 'profile') step = 'profile'
+        if (step === 'invites' && result.canInvite === false) step = 'updates'
+        current.current.setDraft({ ...d, step, email: session.user.email,
+          name: keep ? d.name : result.organization?.name || d.name,
+          slug: keep ? d.slug : result.organization?.slug || d.slug,
+          profile: keep ? d.profile : result.profile.name || d.profile,
+          image: keep ? d.image : result.profile.image || '',
+          changelog: keep ? d.changelog : result.changelog, daily: keep ? d.daily : result.daily })
+        setWorkspaceBusy(!!record.current.pending?.workspace)
+        for (const item of record.current.invitations) if (!item.organizationId && item.status !== 'sent') { item.status = 'failed'; item.error = 'Convite antigo sem ambiente confirmado. É necessário remover e criar novamente.' }
+        updateInvitations()
+        if (result.passwordRequired || result.accessLost) current.current.onBlocked?.()
+        if (result.accessLost) throw new SyncError(403, 'O acesso ao ambiente deixou de estar disponível.')
+        if (token && !result.passwordRequired) {
+          setInvitation(null)
+          const detail = await onboardingRequest<{ name: string; role: string }>('/invitation', { token })
+          if (epoch !== generation.current) return
+          setInvitation(detail)
+        } else {
+          openIfReady()
+          if (!result.passwordRequired) void drain()
+        }
       } catch (error) {
         if (epoch !== generation.current) return
         setFailed(true)
-        current.current.setError(error instanceof SyncError ? error.message : 'Ambiente indisponível, nova tentativa em instantes')
-        if (!(error instanceof SyncError) || error.status >= 500) timer.current = setTimeout(() => { void load() }, 5000)
-      }
+        current.current.onBlocked?.()
+        current.current.setError(error instanceof SyncError ? error.message : 'Ambiente indisponível. Nova tentativa em instantes.')
+        if (transient(error)) timer.current = setTimeout(() => { void load() }, error instanceof SyncError && error.retryAfter ? error.retryAfter : 5000)
+      } finally { if (epoch === generation.current) setLoading(false) }
     }
+    reload.current = load
     void load()
-    const online = () => { if (initialized.current) void drain(); else void load() }
+    const online = () => { if (record.current.pending) void drain(); else void load() }
+    const storage = (e: StorageEvent) => { if (e.key === prefix + session.user.id && !running.current) void load() }
     addEventListener('online', online)
-    return () => { generation.current++; owner.current = null; state.current = null; clearTimeout(timer.current); removeEventListener('online', online) }
-  }, [props.session?.user.id, props.preview])
+    addEventListener('storage', storage)
+    return () => { generation.current++; owner.current = null; state.current = null; clearTimeout(timer.current); removeEventListener('online', online); removeEventListener('storage', storage) }
+  }, [props.session?.user.id, props.session?.session.id, props.preview])
 
-  function save(completed = false, waitForWorkspace = false) {
-    if (waitForWorkspace && (workspaceOperation.current || !initialized.current || !owner.current)) return
-    if (completed && (!state.current?.project || !state.current.organization)) {
-      current.current.setError('Confirma primeiro o ambiente de trabalho')
-      return
-    }
+  function save(completed = false, workspace = false) {
+    if (!state.current || state.current.passwordRequired || state.current.accessLost || (workspace && workspaceBusy)) return
+    if (completed && (!state.current.project || !state.current.organization)) { current.current.setError('Ambiente de trabalho por confirmar.'); return }
     const d = current.current.draft
-    record.current.pending = { operationId: crypto.randomUUID(), revision: 0, name: d.name.trim(), slug: d.slug, profileName: d.profile.trim() || d.email.split('@')[0], profileImage: d.image || undefined, completed, automaticSlug: waitForWorkspace && !d.slugEdited, workspace: waitForWorkspace, changelog: d.changelog, daily: d.daily }
+    record.current.pending = { organizationId: state.current.organization?.id, operationId: crypto.randomUUID(), revision: 0, name: d.name.trim(), slug: d.slug,
+      profileName: d.profile.trim(), profileImage: d.image, completed, automaticSlug: workspace && !d.slugEdited, workspace, changelog: d.changelog, daily: d.daily }
     record.current.draft = d
-    if (waitForWorkspace) {
-      workspaceOperation.current = record.current.pending.operationId
-      slugRetries.current = 0
-      setWorkspaceBusy(true)
-    }
-    if (completed && state.current) {
-      record.current.finished = true
-      record.current.bootstrap = { ...state.current, completed: true, profile: { name: d.profile, image: d.image }, changelog: d.changelog, daily: d.daily }
-    }
-    const durable = persist()
-    if (completed && durable && record.current.bootstrap) current.current.onReady?.(record.current.bootstrap)
-    void drain()
-  }
-  function invite(addresses: string[]) {
-    for (const email of new Set(addresses.map(value => value.toLowerCase()))) {
-      if (!record.current.invitations.some(item => item.email === email)) record.current.invitations.push({ email, token: inviteToken() })
-    }
+    setSyncStatus('saving')
+    if (workspace) { slugRetries.current = 0; setWorkspaceBusy(true); current.current.setDraft(d => ({ ...d, step: 'profile' })) }
     persist()
     void drain()
   }
-  async function start() {
-    if (busy || verifyRunning.current) return
-    setBusy(true)
-    current.current.setError('')
-    try {
-      const result = await authClient.emailOtp.sendVerificationOtp({ email: current.current.draft.email.trim(), type: 'sign-in' })
-      if (result.error) throw new Error(result.error.message || 'Erro ao enviar o código')
-      current.current.setDraft(d => ({ ...d, step: 'code', email: d.email.trim(), profile: d.profile || d.email.split('@')[0].replace(/[._-]+/g, ' ') }))
-    } catch (error) { current.current.setError(error instanceof Error ? error.message : 'Erro ao enviar o código') }
-    finally { setBusy(false) }
+  // Coalesce valid edits after typing pauses. Credentials never enter this effect.
+  useEffect(() => {
+    if (props.preview || !['profile', 'updates'].includes(props.draft.step) || !bootstrap?.organization || workspaceBusy || bootstrap.passwordRequired) return
+    const d = props.draft
+    if (!d.profile.trim() || d.profile.length > 80 || !d.name.trim() || !/^[a-z0-9][a-z0-9-]{2,47}$/.test(d.slug)) return
+    const server = state.current
+    if (!server || (d.profile.trim() === server.profile.name && d.image === (server.profile.image || '') && d.changelog === server.changelog && d.daily === server.daily)) return
+    setSyncStatus('saving')
+    const timeout = setTimeout(() => {
+      const s = state.current
+      if (!s || s.completed || record.current.pending?.completed) return
+      const latest = current.current.draft
+      if (latest.profile.trim() === s.profile.name && latest.image === (s.profile.image || '') && latest.changelog === s.changelog && latest.daily === s.daily) return
+      save()
+    }, 500)
+    return () => clearTimeout(timeout)
+  }, [props.preview, props.draft.step, props.draft.profile, props.draft.image, props.draft.name, props.draft.slug, props.draft.changelog, props.draft.daily, bootstrap?.organization?.id, bootstrap?.passwordRequired, workspaceBusy])
+
+  function invite(addresses: string[]) {
+    if (!state.current?.organization || state.current.canInvite === false) return
+    for (const email of new Set(addresses.map(v => v.trim().toLowerCase()))) {
+      if (email !== current.current.draft.email.toLowerCase() && !record.current.invitations.some(i => i.email === email)) record.current.invitations.push({ email, token: inviteToken(), organizationId: state.current.organization.id })
+    }
+    updateInvitations()
+    void drain()
   }
-  function verify(code: string) {
-    if (verifyRunning.current) return
-    verifyRunning.current = true
-    // A returning profile holds on the code screen until the session lands and the bootstrap routes it.
-    current.current.setDraft(d => (d.returning ? d : { ...d, step: 'workspace' }))
+  async function authenticate(action: () => Promise<{ error?: unknown }>, message: string) {
+    if (authRunning.current) return
+    authRunning.current = true; setBusy(true); current.current.setError('')
+    try { const result = await action(); if (result.error) throw new Error(message); return true }
+    catch { current.current.setError(message); return false }
+    finally { authRunning.current = false; setBusy(false) }
+  }
+  async function start() {
+    if (authRunning.current) return
+    const email = current.current.draft.email.trim().toLowerCase()
+    current.current.setDraft(d => ({ ...d, step: 'code', email }))
+    setSendingCode(true)
+    const sent = await authenticate(() => authClient.emailOtp.sendVerificationOtp({ email, type: 'sign-in' }), 'Não foi possível enviar o código. Nova tentativa disponível.')
+    setSendingCode(false)
+    if (!sent) current.current.setDraft(d => ({ ...d, step: 'email' }))
+  }
+  async function verify(code: string) {
+    if (authRunning.current) return
     const email = current.current.draft.email
-    void authClient.signIn.emailOtp({ email, otp: code }).then(result => {
-      if (result.error) throw new Error('Código inválido ou expirado')
-    }).catch(error => {
-      current.current.setDraft(d => ({ ...d, step: 'code' }))
-      current.current.setError(error instanceof Error ? error.message : 'Erro ao confirmar o código')
-    }).finally(() => { verifyRunning.current = false })
+    if (!current.current.draft.returning && !new URL(location.href).searchParams.has('invite')) current.current.setDraft(d => ({ ...d, step: 'workspace' }))
+    const verified = await authenticate(() => authClient.signIn.emailOtp({ email, otp: code }), 'Código inválido ou expirado. Nova tentativa disponível.')
+    if (!verified) current.current.setDraft(d => ({ ...d, step: 'code' }))
+  }
+  async function login(password: string) {
+    await authenticate(() => authClient.signIn.email({ email: current.current.draft.email.trim().toLowerCase(), password }), 'Email ou palavra-passe inválidos. A recuperação de acesso está disponível.')
   }
   async function google() {
-    setBusy(true)
+    const callback = new URL(location.href); callback.searchParams.delete('error'); callback.searchParams.delete('error_description')
+    await authenticate(() => authClient.signIn.social({ provider: 'google', callbackURL: callback.href, errorCallbackURL: callback.href }), 'Não foi possível iniciar sessão com Google.')
+  }
+  async function setPassword(newPassword: string) {
+    if (authRunning.current) return
+    authRunning.current = true; setBusy(true)
+    try { await onboardingRequest('/password', { newPassword }); await reload.current() }
+    catch (e) {
+      current.current.setError(e instanceof SyncError ? e.message : 'Não foi possível guardar a palavra-passe. Nova tentativa disponível.')
+      authRunning.current = false
+      if (e instanceof SyncError && e.status === 401) await changeEmail()
+      else await reload.current()
+    } finally { authRunning.current = false; setBusy(false) }
+  }
+  async function acceptInvite() {
+    if (authRunning.current || !invitation) return
+    authRunning.current = true; setBusy(true)
     try {
-      const result = await authClient.signIn.social({ provider: 'google', callbackURL: location.origin + '/' + location.search })
-      if (result.error) throw new Error(result.error.message)
-    } catch { current.current.setError('Erro no login com Google'); setBusy(false) }
+      const result = await onboardingRequest<Bootstrap>('/join', { token: new URL(location.href).searchParams.get('invite') })
+      const url = new URL(location.href); url.searchParams.delete('invite'); history.replaceState(null, '', url)
+      record.current = { draft: { ...fresh, email: current.current.draft.email }, revision: result.revision, invitations: [] }
+      persist()
+      await reload.current()
+    } catch (e) { current.current.setError(e instanceof SyncError ? e.message : 'Não foi possível aceitar o convite.') }
+    finally { authRunning.current = false; setBusy(false) }
+  }
+  async function dismissInvite() {
+    const url = new URL(location.href); url.searchParams.delete('invite'); history.replaceState(null, '', url)
+    await reload.current()
   }
   async function changeEmail() {
-    // Wait for verification before signing out so its late response cannot restore
-    // an identity after the user has chosen a different email.
-    if (verifyRunning.current) { current.current.setError('Confirmação do email em curso'); return }
+    if (authRunning.current) { current.current.setError('Autenticação em curso.'); return }
     if (current.current.session) {
-      const result = await authClient.signOut()
-      if (result.error) { current.current.setError('Erro ao sair'); return }
+      try { const result = await authClient.signOut(); if (result.error) throw new Error() }
+      catch { current.current.setError('Não foi possível terminar a sessão.'); return }
     }
-    if (owner.current) { try { localStorage.removeItem(prefix + owner.current) } catch { /* optional storage */ } }
-    generation.current++; owner.current = null; recordOwner.current = null; state.current = null
-    record.current = { draft: current.current.draft, revision: 0, invitations: [] }
-    current.current.setDraft(d => ({ ...d, step: 'email', returning: false, provider: 'email', email: '', name: '', slug: '', slugEdited: false, profile: '', invitations: '', changelog: false, daily: false }))
+    generation.current++; owner.current = null; state.current = null
+    clearTimeout(timer.current)
+    record.current = { draft: { ...fresh, step: 'email' }, revision: 0, invitations: [] }
+    setBootstrap(null); setWorkspaceBusy(false); setSyncStatus('idle'); setFailed(false); setLoading(false); setInvitation(null); setInvitationErrors([]); setInviteLink('')
+    current.current.setDraft(record.current.draft)
+    persist()
   }
   async function copyInvite() {
-    const token = record.current.link || inviteToken()
-    if (!record.current.link) {
-      record.current.link = token
-      record.current.invitations.push({ token, email: null })
-      persist()
-      void drain()
-    }
-    try { await navigator.clipboard.writeText(`${location.origin}/?invite=${token}`); current.current.setNotice('Link copiado, ativo assim que for guardado') }
-    catch { current.current.setError('Link não copiado, sem acesso à área de transferência') }
+    if (busy || !state.current?.organization || state.current.canInvite === false) return
+    setBusy(true)
+    const epoch = generation.current
+    try {
+      const token = record.current.link || inviteToken()
+      await onboardingRequest('/invite', { token, email: null, organizationId: state.current.organization.id })
+      if (epoch !== generation.current) return
+      record.current.link = token; persist()
+      const link = `${location.origin}/?invite=${token}`
+      setInviteLink(link)
+      try { await navigator.clipboard.writeText(link); current.current.setNotice('Link de convite copiado.') }
+      catch { current.current.setNotice('Link de convite disponível para cópia manual.') }
+    } catch (e) { if (e instanceof SyncError && e.status === 410) record.current.link = undefined; current.current.setError(e instanceof SyncError ? e.message : 'Não foi possível criar o link de convite.') }
+    finally { setBusy(false) }
   }
-  return { busy, workspaceBusy, canCreateWorkspace, failed, start, verify, google, save, invite, copyInvite, changeEmail,
-    retry: () => { if (!initialized.current) location.reload(); else void drain() },
+  function retryInvitation(token: string, remove = false) {
+    if (remove) record.current.invitations = record.current.invitations.filter(i => i.token !== token)
+    else record.current.invitations = record.current.invitations.map(i => i.token === token ? { token: i.token, email: i.email, organizationId: i.organizationId, ...(!i.organizationId ? { status: 'failed' as const, error: i.error } : {}) } : i)
+    updateInvitations(); void drain()
   }
+  return { busy, failed, loading, workspaceBusy, syncStatus, sendingCode, organizationId: bootstrap?.organization?.id, canSaveProfile: !!bootstrap?.organization && !workspaceBusy && !bootstrap.passwordRequired, canCreateWorkspace: !!bootstrap && !loading && !bootstrap.passwordRequired && !bootstrap.accessLost,
+    canEditWorkspace: bootstrap?.canEditWorkspace !== false, canInvite: bootstrap?.canInvite !== false,
+    invitation, invitationErrors, inviteLink, start, verify, login, google, setPassword, acceptInvite, dismissInvite, save, invite, copyInvite, changeEmail, retryInvitation,
+    retry: () => { if (record.current.pending) void drain(); else void reload.current() } }
 }

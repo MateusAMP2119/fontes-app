@@ -4,7 +4,7 @@ import { inferAdditionalFields, jwtClient, organizationClient, emailOTPClient } 
 
 export const authClient = createAuthClient({
   baseURL: API,
-  fetchOptions: { credentials: 'include' },
+  fetchOptions: { credentials: 'include', timeout: 20000 },
   plugins: [
     jwtClient({ jwks: { jwksPath: '/.well-known/jwks.json' } }),
     organizationClient(),

@@ -153,6 +153,7 @@ function AccountMenu({ session, project }: { session: AuthSession; project: Proj
       {open && (
         <div className="make-account-menu" role="menu">
           <div className="make-account-email" title={session.user.email}>Conta<br /><span>{session.user.email}</span></div>
+          <a role="menuitem" href="/account/password">Alterar palavra-passe</a>
           {project && (
             <div className="make-account-email" title={project.name}>Projeto<br /><span>{project.name}</span></div>
           )}

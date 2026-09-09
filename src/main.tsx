@@ -1,3 +1,5 @@
+import { restoreDestination } from './authDestination'
+import PasswordRecovery from './Password'
 import PwaConnection from './PwaConnection'
 import { StrictMode, useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -38,16 +40,17 @@ function Gate({ path }: { path: string }) {
   const settled = useRef(false)
   if (!isPending) settled.current = true
   useEffect(() => { if (!session) setReady(null) }, [session])
-  if (!settled.current) return null
+  if (!settled.current) return <main className="ob-page"><p role="status">A confirmar sessão…</p></main>
   const opened = !!session && ready?.userId === session.user.id
   return <>
-    <Onboarding session={session} background={opened} onReady={state => { if (session) setReady({ userId: session.user.id, state }) }} />
+    <Onboarding session={session} background={opened} onBlocked={() => setReady(null)} onReady={state => { if (session) { setReady({ userId: session.user.id, state }); restoreDestination() } }} />
     {opened && <Routes path={path} session={session} project={ready.state.project} />}
   </>
 }
 
 function App() {
   const path = usePath()
+  if (path === '/reset-password' || path === '/account/password') return <PasswordRecovery change={path === '/account/password'} />
   if (import.meta.env.DEV && path === '/onboarding-preview') return <Onboarding preview />
   if (!AUTH_ENABLED) return <Routes path={path} session={null} project={null} />
   return <Gate path={path} />

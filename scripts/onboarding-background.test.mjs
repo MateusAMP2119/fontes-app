@@ -3,7 +3,7 @@ import { test } from 'node:test'
 import { chromium } from 'playwright'
 const origin = process.env.TEST_ORIGIN || 'http://localhost:5173'
 
-test('workspace confirmation, automatic URL collision, local completion and background recovery', async () => {
+test('workspace confirmation, automatic URL collision, confirmed completion and offline recovery', async () => {
   const browser = await chromium.launch()
   try {
     const page = await browser.newPage()
@@ -29,8 +29,10 @@ test('workspace confirmation, automatic URL collision, local completion and back
     await page.getByRole('textbox', { name:'Nome', exact:true }).fill('Equipa')
     await page.getByRole('button', { name:'Criar ambiente', exact:true }).click()
     await page.waitForFunction(() => JSON.parse(localStorage.getItem('fontes:onboarding:v1:background-test')).draft.slug !== 'equipa')
-    assert.equal(await page.locator('.ob-workspace').count(), 1)
-    assert.equal(await page.locator('.ob-profile').count(), 0, 'cannot advance before workspace confirmation')
+    await page.locator('.ob-profile').waitFor()
+    assert.equal(await page.locator('.ob-workspace').count(), 0)
+    assert.equal(await page.locator('.ob-profile').count(), 1, 'profile drafting does not wait for workspace creation')
+    assert.equal(await page.getByRole('button', { name:'Criar perfil', exact:true }).isDisabled(), true, 'submission still waits for workspace confirmation')
     blocked = false
     await page.evaluate(() => dispatchEvent(new Event('online')))
     await page.getByRole('textbox', { name:'Nome do perfil' }).fill('Nome final')
@@ -38,20 +40,22 @@ test('workspace confirmation, automatic URL collision, local completion and back
     await page.getByRole('button', { name:'Criar perfil', exact:true }).click()
     await page.getByRole('button', { name:'Saltar', exact:true }).click()
     await page.getByRole('button', { name:'Começar', exact:true }).click()
-    await page.locator('.make-shell').waitFor()
-    assert.equal(state.completed, false, 'app opens while final save is still offline')
+    await page.getByRole('alert').waitFor()
+    assert.equal(await page.locator('.make-shell').count(), 0)
+    assert.equal(state.completed, false, 'app waits for server confirmation')
     const local = await page.evaluate(() => JSON.parse(localStorage.getItem('fontes:onboarding:v1:background-test')))
-    assert.equal(local.finished, true)
+    assert.equal(local.finished, undefined)
     assert.equal(local.pending.completed, true)
     assert.equal(local.pending.profileName, 'Nome final')
     await page.waitForFunction(() => JSON.parse(localStorage.getItem('fontes:onboarding:v1:background-test')).pending?.revision > 0)
     assert.ok(writes.some(body => body.completed), 'final save runs after the app opens')
     await page.reload()
-    await page.locator('.make-shell').waitFor()
-    assert.equal(await page.locator('.ob-page').count(), 0, 'reload resumes the locally completed workspace')
+    await page.locator('.ob-updates').waitFor()
+    assert.equal(await page.locator('.make-shell').count(), 0, 'reload preserves pending completion')
     completionOffline = false
     await page.evaluate(() => dispatchEvent(new Event('online')))
     await page.waitForFunction(() => !JSON.parse(localStorage.getItem('fontes:onboarding:v1:background-test')).pending)
+    await page.locator('.make-shell').waitFor()
     assert.equal(state.completed, true)
     assert.equal(state.profile.name, 'Nome final')
     assert.deepEqual(errors, [])

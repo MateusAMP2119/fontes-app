@@ -142,22 +142,24 @@ restored flows and step counts in Chromium and WebKit.
 
 With the dev server running, run `node --test scripts/auth-regression.test.mjs`.
 These browser tests mock auth responses and never create accounts or send email.
-They cover password-manager fills without change events, submission, confirmation,
-password reset and native-control spacing. They do not complete a real Google login.
+The flow suite in `scripts/onboarding-flows.test.mjs` covers password setup, login,
+reset, invitation acceptance, sync recovery and return destinations. They do not complete a real Google login.
 
 ## Signup and onboarding
 
-The shared `Onboarding.tsx` screens replace the old password/organization/username
-wizard at `/` and `/login`. Google and email OTP establish the real session;
-workspace creation waits for server confirmation before advancing. Display names
-can repeat; automatically generated URLs retry with a suffix if taken, while a
-custom URL stays editable on conflict. The step counter only appears for signup.
-The final step persists completion and the pending snapshot locally, then opens
-the app immediately. The sync hook remains mounted in the background and retries
-on reconnect; a reload resumes local completion and pending writes. Drafts and
-pending writes are scoped to the user
-in localStorage; pre-authentication drafts use sessionStorage, and OTPs stay in
-memory. Reload and reconnect resume authenticated pending writes. Appearance follows the system light/dark preference and updates live. Permanent API errors remain visible for correction.
+The shared `Onboarding.tsx` screens serve `/` and `/login`. New email accounts
+verify ownership by code and set a password before workspace setup. Returning
+accounts can use a password or email-code fallback. Google accounts do not need
+a password. Recovery and password changes are available at `/reset-password` and
+`/account/password`.
+
+Workspace creation runs behind an immediately editable profile form. Profile
+submission and final completion wait for server confirmation. Pending
+changes are scoped to the account and workspace; passwords and OTPs are never
+stored in the onboarding draft. Existing workspaces resume setup, invitation
+acceptance is explicit, and failed invitation deliveries can be retried or removed
+individually. See [onboarding reliability](docs/onboarding-reliability.md) for the
+full behavior, tests and API-first release order.
 
 Development-only `/onboarding-preview` renders the same screens with simulated
 actions and a screen picker. It makes no API requests. Run the Vite dev server,
