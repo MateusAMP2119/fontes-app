@@ -644,7 +644,7 @@ test('unrelated popup messages cannot authenticate the original page',async t=>{
  await mockGoogle(f,{failure:'cancel'});await p.goto(origin)
  const popupPromise=p.waitForEvent('popup');await f.button('Continuar com Google').click();const popup=await popupPromise
  await p.evaluate(()=>window.postMessage({type:'complete',attempt:'spoofed'},location.origin))
- await popup.waitForURL('**/google-auth.html?**waiting=1')
+ await popup.waitForURL(/\/google-auth(?:\.html)?\?.*waiting=1/)
  await popup.evaluate(()=>window.opener.postMessage({type:'complete',attempt:'spoofed'},location.origin))
  await delay(100)
  assert.equal(await p.locator('.ob-workspace, .make-shell').count(),0)

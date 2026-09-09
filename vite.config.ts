@@ -30,7 +30,7 @@ export default defineConfig({
       clientsClaim: true,
       globPatterns: ['**/*.{js,css,html,woff2,png,jpg,svg}'],
       navigateFallback: 'index.html',
-      navigateFallbackDenylist: [/^\/google-auth\.html(?:\?|$)/, /^\/api(?:\/|$)/, /^\/\.well-known\//],
+      navigateFallbackDenylist: [/^\/google-auth(?:\.html)?(?:\?|$)/, /^\/api(?:\/|$)/, /^\/\.well-known\//],
       // Only packaged static assets are cached; API/session responses stay online.
       cleanupOutdatedCaches: true,
     },
