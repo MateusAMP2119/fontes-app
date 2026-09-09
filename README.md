@@ -129,7 +129,11 @@ Cloudflare Workers Builds deploys this as an assets-only Worker named `fontes-ap
 `wrangler.jsonc` serves `dist` with SPA fallback for routes such as `/login`.
 The custom domains are `app.fonteslabs.com` and `www.app.fonteslabs.com`.
 There are no Worker scripts, Pages functions, database bindings or migrations.
-The old GitHub Pages deployment workflow was removed; Cloudflare owns Git builds.
+Every push to `main` runs `.github/workflows/deploy.yml`, which triggers the
+Cloudflare Workers Builds deploy hook stored in the GitHub repository secret
+`CLOUDFLARE_DEPLOY_HOOK_URL`. The hook must target `main` for `fontes-app`.
+GitHub checks that Cloudflare accepted the build; build and deployment completion
+are reported in Cloudflare's build history. The hook URL is never committed.
 For a manual deployment, run `npm run deploy`.
 
 ## Auth UI regression checks
