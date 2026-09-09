@@ -8,12 +8,18 @@
 - Sign-out displayed the previously completed onboarding screen with a disabled completion button. Session loss now clears account-specific form state. Explicit account switching still opens email entry.
 - WebKit retried bootstrap from a document being unloaded during password saving. Navigation now prevents that stale follow-up; returning from the browser back-forward cache restores synchronization.
 
+- A stale signup draft overrode direct navigation to `/login`. Explicit login now opens the returning-user form. This was retested in Chromium, WebKit and live Safari after account deletion.
+
 ## Verification
 
-Live Safari: Gmail verification retrieval, email signup, user-submitted password, workspace creation, profile edit with immediate reload, back navigation through workspace setup, invitation skipping, preferences restoration on reload, server-confirmed completion, and sign-out. The password transition was exercised using controlled browser responses because real credential creation requires user interaction.
+Live Safari: Gmail verification retrieval, email signup, user-submitted password, workspace creation, profile edit with immediate reload, back navigation through workspace setup, invitation skipping, preferences restoration on reload, server-confirmed completion, sign-out, returning email-code access, and the login screen after deletion. The password transition was exercised using controlled browser responses because real credential creation requires user interaction.
 
-Controlled Chromium: 24 tests across authentication, background saving, flow recovery, and app reload/update behavior. Controlled WebKit: 19 flow tests. Coverage includes delayed email/OTP/password/workspace requests, invalid OTP, rejected password, reload during password saving, failed confirmation after successful password saving, explicit and automatic slug conflicts, stale responses, throttling, access loss, conflicting revisions, invitation acceptance and failures, clipboard fallback, account switching, sign-out, reset destinations, and credential exclusion from local/session storage.
+Controlled Chromium: 25 tests across authentication, background saving, flow recovery, and app reload/update behavior. Controlled WebKit: 20 flow tests. Coverage includes delayed email/OTP/password/workspace requests, invalid OTP, rejected password, reload during password saving, failed confirmation after successful password saving, explicit and automatic slug conflicts, stale responses, throttling, access loss, conflicting revisions, invitation acceptance and failures, clipboard fallback, account switching, sign-out, reset destinations, and credential exclusion from local/session storage.
 
 Mobile Chromium and WebKit: all onboarding screen anchors, readable inputs, viewport resizing, scroll reachability, restored progress and step counts. Production PWA: installability, offline root/deep links, reconnection, static-only caching, and update activation while a tab remains open.
 
 These checks cover the exercised flows; they do not establish zero network latency or prove every possible external-provider failure. No invitations were sent and optional subscriptions remained disabled during the live test.
+
+## Cleanup
+
+The live test account and its sole-member test workspace were deleted after testing. Database checks confirmed zero remaining user, credential, session, membership, workspace or project records for this test identity. Account deletion used the administrative database interface; the app currently has no account-deletion menu item. Live password login and password recovery submission were not performed; their request and state handling were tested with controlled responses.
