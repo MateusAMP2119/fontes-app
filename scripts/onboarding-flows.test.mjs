@@ -630,8 +630,9 @@ for(const failure of ['cancel','oauth','network','unverified']) test(`Google ${f
  await mockGoogle(f,{failure});await p.goto(origin)
  const popupPromise=p.waitForEvent('popup')
  await f.button('Continuar com Google').click();const popup=await popupPromise
- if(failure==='cancel')await popup.close()
- await p.getByRole('alert').waitFor()
+ if(failure==='cancel'){await popup.close();await f.button('Cancelar').click()}
+ if(failure!=='cancel')await p.getByRole('alert').waitFor()
+ await p.waitForFunction(()=>!document.querySelector('.ob-provider').disabled)
  assert.equal(await f.button('Continuar com Google').isEnabled(),true)
  assert.equal(await p.locator('.ob-panel h1').isVisible(),true)
  assert.equal(await p.locator('.make-shell, .ob-workspace').count(),0)
@@ -649,7 +650,7 @@ test('unrelated popup messages cannot authenticate the original page',async t=>{
  await delay(100)
  assert.equal(await p.locator('.ob-workspace, .make-shell').count(),0)
  assert.equal(await f.button('Continuar com Google').isDisabled(),true)
- await popup.close();await p.getByRole('alert').waitFor()
+ await popup.close();await f.button('Cancelar').click();assert.equal(await f.button('Continuar com Google').isEnabled(),true)
 })
 
 test('email sign-in retains the complete form while the authenticated setup request is pending',async t=>{
@@ -688,4 +689,25 @@ test('Google sign-in can be cancelled from the original page',async t=>{
  await assertEventually(()=>p.context().pages().length===1)
  assert.equal(await f.button('Continuar com Google').isEnabled(),true)
  await f.button('Continuar com email').click();await p.locator('.ob-email').waitFor()
+})
+
+test('Google provider window isolation cannot be mistaken for cancellation',async t=>{
+ const f=await fixture(t,{authenticated:false,state:{...workspace(),completed:true}}),p=f.page
+ let callback
+ await p.context().route('**/sign-in/social',route=>{callback=route.request().postDataJSON().callbackURL;return route.fulfill({json:{redirect:false,url:'https://google-test.example/signin'}})})
+ await p.context().route('https://google-test.example/signin',route=>route.fulfill({contentType:'text/html',headers:{'cross-origin-opener-policy':'same-origin'},body:'<html><a href="'+callback.replaceAll('&','&amp;')+'">Confirmar</a></html>'}))
+ await p.goto(origin+'/login')
+ const popupPromise=p.waitForEvent('popup');await f.button('Continuar com Google').click();const popup=await popupPromise
+ await popup.getByRole('link',{name:'Confirmar',exact:true}).waitFor()
+ // Chromium enforces COOP on this intercepted cross-origin document. Headless
+ // WebKit does not, so explicitly remove its opener to exercise the same
+ // BroadcastChannel return path; native Safari is checked separately.
+ if(process.env.TEST_BROWSER==='webkit')await popup.evaluate(()=>{window.opener=null})
+ assert.equal(await popup.evaluate(()=>window.opener===null),true,'callback cannot rely on an opener')
+ // The old closed-window poll incorrectly cancelled after 500 ms.
+ await delay(750)
+ assert.equal(await f.button('Continuar com Google').isDisabled(),true)
+ assert.equal(await p.getByRole('alert').count(),0)
+ f.authenticated=true;await popup.getByRole('link',{name:'Confirmar',exact:true}).click()
+ await p.locator('.make-shell').waitFor();await assertEventually(()=>p.context().pages().length===1)
 })

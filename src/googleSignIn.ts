@@ -31,9 +31,11 @@ export async function googleSignIn(prepare: (session: AuthSession) => Promise<vo
       channel.onmessage = event => receive(event.data)
       addEventListener('message', message)
       signal.addEventListener('abort', abort, { once: true })
-      const poll = setInterval(() => { if (popup.closed) finish(new GoogleSignInError('Início de sessão cancelado. Nova tentativa disponível.')) }, 500)
+      // Safari can report `closed` during provider window isolation. Only an
+      // explicit cancellation or timeout ends the attempt; the return channel
+      // remains live even when the original WindowProxy has been disconnected.
       const timeout = setTimeout(() => finish(new GoogleSignInError('O início de sessão expirou. Nova tentativa disponível.')), 180000)
-      cleanup = () => { clearInterval(poll); clearTimeout(timeout); removeEventListener('message', message); signal.removeEventListener('abort', abort); channel.onmessage = null }
+      cleanup = () => { clearTimeout(timeout); removeEventListener('message', message); signal.removeEventListener('abort', abort); channel.onmessage = null }
       if (signal.aborted) { abort(); return }
       void authClient.signIn.social({ provider: 'google', callbackURL: callback.href, errorCallbackURL: callback.href, disableRedirect: true }).then(result => {
         if (finished) return
