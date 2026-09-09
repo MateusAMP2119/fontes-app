@@ -18,6 +18,13 @@ try {
   await page.evaluate(() => navigator.serviceWorker.ready)
   await page.reload()
   await page.waitForFunction(() => navigator.serviceWorker.controller !== null)
+  // OAuth callbacks include an attempt query. The worker must serve the helper,
+  // not rewrite that navigation to the entire application.
+  const callback = await context.newPage()
+  await callback.goto(origin + '/google-auth.html?attempt=invalid&complete=1')
+  await callback.getByText('Esta ligação de início de sessão já não está disponível.', {exact:true}).waitFor()
+  assert.equal(await callback.locator('#root').count(), 0)
+  await callback.close()
   const manifest = await page.evaluate(async () => {
     const link = document.querySelector('link[rel="manifest"]')
     return (await fetch(link.href)).json()

@@ -12,7 +12,7 @@ export default defineConfig({
       id: '/',
       name: 'Fontes',
       short_name: 'Fontes',
-      description: 'O teu espaço para acompanhar e explorar as notícias.',
+      description: 'Um espaço para acompanhar e explorar as notícias.',
       lang: 'pt-PT',
       start_url: '/',
       scope: '/',
@@ -30,7 +30,7 @@ export default defineConfig({
       clientsClaim: true,
       globPatterns: ['**/*.{js,css,html,woff2,png,jpg,svg}'],
       navigateFallback: 'index.html',
-      navigateFallbackDenylist: [/^\/api(?:\/|$)/, /^\/\.well-known\//],
+      navigateFallbackDenylist: [/^\/google-auth\.html(?:\?|$)/, /^\/api(?:\/|$)/, /^\/\.well-known\//],
       // Only packaged static assets are cached; API/session responses stay online.
       cleanupOutdatedCaches: true,
     },

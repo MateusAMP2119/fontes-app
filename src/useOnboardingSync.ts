@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { authClient, type AuthSession } from './auth'
+import { googleSignIn, GoogleSignInError } from './googleSignIn'
 import { inviteToken, onboardingRequest, SyncError, type Bootstrap } from './onboardingSync'
 import { fresh, saved, steps, type Draft, type Step } from './onboardingDraft'
 
@@ -25,6 +26,11 @@ export function useOnboardingSync(props: Props) {
   const completionRequested = useRef(false)
   const requiresVerification = useRef(false)
   const authRunning = useRef(false)
+  const googleAbort = useRef<AbortController | null>(null)
+  const googlePrepared = useRef<{ sessionId: string; userId: string; resolve: () => void } | null>(null)
+  const [googleSession, setGoogleSession] = useState('')
+  const [googleActive, setGoogleActive] = useState(false)
+  useEffect(() => () => { googleAbort.current?.abort(); googlePrepared.current?.resolve() }, [])
   // Credentials wait in memory for verification, never in the persisted draft.
   const pendingPassword = useRef<string | null>(null)
   const passwordRunning = useRef(false)
@@ -412,12 +418,39 @@ export function useOnboardingSync(props: Props) {
   async function login(password: string) {
     return authenticate(() => authClient.signIn.email({ email: current.current.draft.email.trim().toLowerCase(), password }), 'Email ou palavra-passe inválidos. A recuperação de acesso está disponível.')
   }
+  // Resolve only after React has committed the authenticated destination or a
+  // recoverable error. Closing the Google window then cannot expose an empty page.
+  useEffect(() => {
+    const pending = googlePrepared.current
+    if (pending && props.session?.session.id === pending.sessionId && props.session.user.id === pending.userId &&
+      !loading && (failed || (bootstrap && !['start', 'email', 'code'].includes(props.draft.step)))) {
+      googlePrepared.current = null
+      pending.resolve()
+    }
+  }, [googleSession, props.session, props.draft.step, loading, bootstrap, failed])
+
   async function google() {
+    if (authRunning.current) return
+    authRunning.current = true; setBusy(true); current.current.setError('')
+    const controller = new AbortController()
+    googleAbort.current = controller
+    setGoogleActive(true)
     record.current.draft = { ...current.current.draft, provider: 'google' }
     current.current.setDraft(record.current.draft)
     persist(true)
-    const callback = new URL(location.href); callback.searchParams.delete('error'); callback.searchParams.delete('error_description')
-    await authenticate(() => authClient.signIn.social({ provider: 'google', callbackURL: callback.href, errorCallbackURL: callback.href }), 'Não foi possível iniciar sessão com Google.')
+    try {
+      await googleSignIn(session => new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => { googlePrepared.current = null; reject(new Error('Setup confirmation timed out')) }, 25000)
+        googlePrepared.current = { sessionId: session.session.id, userId: session.user.id, resolve: () => { clearTimeout(timeout); resolve() } }
+        setGoogleSession(session.session.id)
+      }), controller.signal)
+    } catch (error) {
+      if (!controller.signal.aborted) current.current.setError(error instanceof GoogleSignInError ? error.message : 'Não foi possível concluir o início de sessão com Google. Nova tentativa disponível.')
+    } finally {
+      googleAbort.current = null
+      setGoogleActive(false)
+      authRunning.current = false; setBusy(false)
+    }
   }
   function setPassword(newPassword: string) {
     if (pendingPassword.current !== null || passwordRunning.current) return
@@ -515,7 +548,7 @@ export function useOnboardingSync(props: Props) {
     else record.current.invitations = record.current.invitations.map(i => i.token === token ? { token: i.token, email: i.email, organizationId: i.organizationId, ...(!i.organizationId ? { status: 'failed' as const, error: i.error } : {}) } : i)
     updateInvitations(); void drain()
   }
-  return { busy, failed, issue, loading, savingPassword, restoring: !props.preview && !!props.session && !bootstrap && !failed, workspaceBusy, syncStatus, sendingCode, organizationId: bootstrap?.organization?.id, canSaveProfile: !!record.current.pending || (!!bootstrap?.organization && !bootstrap.passwordRequired), canCreateWorkspace: !!record.current.pending || pendingPassword.current !== null || savingPassword || (!!bootstrap && !loading && !bootstrap.passwordRequired && !bootstrap.accessLost),
+  return { googleActive, cancelGoogle: () => { googleAbort.current?.abort(); googlePrepared.current?.resolve() }, busy, failed, issue, loading, savingPassword, restoring: !props.preview && !!props.session && !bootstrap && !failed, workspaceBusy, syncStatus, sendingCode, organizationId: bootstrap?.organization?.id, canSaveProfile: !!record.current.pending || (!!bootstrap?.organization && !bootstrap.passwordRequired), canCreateWorkspace: !!record.current.pending || pendingPassword.current !== null || savingPassword || (!!bootstrap && !loading && !bootstrap.passwordRequired && !bootstrap.accessLost),
     canEditWorkspace: !!record.current.pending?.workspace || bootstrap?.canEditWorkspace !== false, canInvite: !!record.current.pending?.workspace || bootstrap?.canInvite !== false,
     invitation, invitationErrors, inviteLink, start, verify, login, google, setPassword, acceptInvite, dismissInvite, save, invite, copyInvite, changeEmail, retryInvitation,
     retry: () => { if (record.current.pending && state.current && !state.current.passwordRequired) void drain(); else void reload.current() } }

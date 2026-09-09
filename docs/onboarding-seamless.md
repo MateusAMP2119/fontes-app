@@ -89,12 +89,25 @@ A real Google signup was completed in the in-app browser using `mateuscosta464@g
 
 The changed final-entry behavior and corrected Google counters are covered by production-build browser tests. The live Google run described here must not be mistaken for a new-account run of the follow-up build.
 
-## Google return and signup presentation
+## Previous Google presentation change, superseded on 10 September
 
-The user identified a logo-only pause immediately after returning from Google. Two loading branches rendered the brand before session/setup confirmation supplied the first form. Initial confirmation now keeps the page background without painting a partial screen; the logo and confirmed form appear together. This removes the staged logo/form presentation, not the network time needed to establish the authenticated account. An already visible email/login form remains mounted during the setup check, with duplicate authentication submissions disabled.
+The user identified a logo-only pause immediately after returning from Google. Two loading branches rendered the brand before session/setup confirmation supplied the first form. The previous patch kept only the background during confirmation, then painted the logo and form together. That removed the logo-only stage but left a blank page. The user reproduced this on both Google signup and login. It was an incomplete fix, superseded by the mounted-page handoff below. An already visible email/login form remains mounted during the setup check, with duplicate authentication submissions disabled.
 
 The new browser regression holds session and setup responses separately and samples animation frames. It verifies zero frames with a logo but no form, followed by the correct first Google setup screen. A second regression verifies that the complete email login form remains visible until authenticated entry is ready. The existing completed-account regression still checks that signup never flashes during restoration.
 
 Signup panels now share a 360px maximum width, including the final Começar action. Phone forms use the available width instead of the former 270px cap. Email, confirmation code, workspace, profile and invitation labels stay visible after typing. The first document also preloads the existing mark and font. No new transition delay, progress animation or spinner was added.
 
 The final markup was checked through the full signup preview and mobile suites in Chromium and WebKit. Mobile tests cover fixed brand anchors, keyboard-height viewport changes, readable inputs, scroll reachability and horizontal overflow. All 18 desktop/mobile screen captures and four recovery/auth captures are available in the workspace folder `docs/onboarding-screen-polish-2026-09-09/`.
+
+
+## Google signup and login handoff, 10 September 2026
+
+Both Google entry points now keep the original Fontes document mounted. A sign-in window handles Google, then signals the original page using an unpredictable attempt identifier. The original page refetches the real server session and prepares the authenticated onboarding step or existing workspace. Only after React commits that destination does the window close. The original path, invitation and return destination stay in the original document throughout the flow.
+
+The return page sends no identity, tokens or credentials to the original page. Window messages require the expected origin, window and attempt. A same-origin BroadcastChannel supports provider window isolation. A signal without a server-confirmed session cannot open setup or the app. Cancel, blocked windows, provider errors and network failures preserve the original form and allow retry. The original page also provides cancellation if the sign-in window is inaccessible.
+
+The service worker excludes the callback path including its query string. Workbox tests pathname plus query, so a regex ending immediately after `.html` was insufficient; the worker-enabled regression covers this case. The app uses `same-origin-allow-popups` for the OAuth window, consistent with [Google's popup integration guidance](https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid#cross_origin_opener_policy).
+
+Verification now checks the stronger invariant: no blank frames and no document reload while session and setup responses are independently stalled. Both signup and returning login are covered. Additional tests cover full four-step Google onboarding, completion and reload, destination preservation, popup and original-page cancellation, popup blocking, provider/network failures, retry, unverified completion and unrelated messages. Existing email, final-button, persistence, conflict, image and authentication regressions remain in the suite.
+
+Real OAuth cannot be verified from localhost against production in Safari: its cross-site state cookie was unavailable and Google returned `state_mismatch`. This is separate from the production app and API, which share the Fontes site. Production verification is recorded with release evidence in the workspace's `docs/google-handoff-2026-09-10/` folder.

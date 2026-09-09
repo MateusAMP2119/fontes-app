@@ -80,11 +80,20 @@ test('one failed invitation does not block another recipient or completion',asyn
  assert.ok(f.calls.some(c=>c.path==='/api/onboarding/invite'&&c.body.email==='good@example.com'))
  await f.button('Remover convite').click();assert.equal(await f.button('Remover convite').count(),0)
 })
-test('Google callback preserves event path and query',async t=>{
- const f=await fixture(t,{authenticated:false}),p=f.page;await p.goto(origin+'/eventos/test?source=shared')
+test('Google sign-in keeps the original document, event path and query',async t=>{
+ const f=await fixture(t,{authenticated:false}),p=f.page
+ await mockGoogle(f)
+ await p.goto(origin+'/eventos/test?source=shared')
+ await p.evaluate(()=>window.originalDocument=true)
  await f.button('Continuar com Google').click()
- await p.waitForFunction(()=>document.querySelector('.ob-page'))
- const call=f.calls.find(c=>c.path.endsWith('/sign-in/social'));assert.ok(call);assert.equal(call.body.callbackURL,origin+'/eventos/test?source=shared')
+ await p.locator('.ob-workspace').waitFor()
+ assert.equal(p.url(),origin+'/eventos/test?source=shared')
+ assert.equal(await p.evaluate(()=>window.originalDocument),true)
+ const call=f.calls.find(c=>c.path.endsWith('/sign-in/social'))
+ assert.equal(call.body.disableRedirect,true)
+ assert.equal(new URL(call.body.callbackURL).pathname,'/google-auth.html')
+ assert.equal(call.body.errorCallbackURL,call.body.callbackURL)
+ await assertEventually(()=>p.context().pages().length===1)
 })
 test('returning email uses password; reset and password change never persist credentials',async t=>{
  const f=await fixture(t,{authenticated:false,state:{...workspace(),completed:true}}),p=f.page
@@ -545,7 +554,7 @@ test('Começar opens confirmed setup before an unresolved final response and ret
 
 for (const entry of ['/', '/login']) test(`Google callback at ${entry} keeps four-step progress across reload and needs no password setup`,async t=>{
  const f=await fixture(t,{authenticated:false,state:{...blank(),hasPassword:false}}),p=f.page
- await p.route('**/sign-in/social',route=>{f.authenticated=true;return route.fulfill({json:{redirect:true,url:origin+entry+'?oauth-test=1'}})})
+ await mockGoogle(f)
  await p.goto(origin+entry);await f.button('Continuar com Google').click();await p.locator('.ob-workspace').waitFor()
  await p.getByLabel('Passo 1 de 4').waitFor()
  await p.reload();await p.getByLabel('Passo 1 de 4').waitFor()
@@ -579,24 +588,68 @@ for (const kind of ['conflict','expired','revoked']) test(`a late ${kind} on bac
  assert.equal(await p.getByRole('switch',{name:/Novidades da Fontes/}).evaluate(el=>el.checked),true)
 })
 
-test('Google return paints its logo and first form together after session and setup confirmation',async t=>{
- const f=await fixture(t,{state:{...blank(),hasPassword:false}}),p=f.page
+for (const returning of [false,true]) test(`Google ${returning?'login':'signup'} keeps a complete screen through slow session and setup responses`,async t=>{
+ const f=await fixture(t,{authenticated:false,state:returning?{...workspace(),completed:true}:{...blank(),hasPassword:false}}),p=f.page
  let releaseSession,releaseSetup
- await p.addInitScript(()=>{
-  sessionStorage.setItem('fontes:onboarding:v1:pending',JSON.stringify({draft:{step:'start',provider:'google'}}))
-  window.logoOnlyFrames=0
-  const inspect=()=>{if(document.querySelector('.ob-brand')&&!document.querySelector('.ob-panel h1'))window.logoOnlyFrames++;requestAnimationFrame(inspect)}
+ await mockGoogle(f)
+ await p.goto(origin+(returning?'/login':'/'))
+ await f.button('Continuar com Google').waitFor()
+ await p.evaluate(()=>{
+  window.blankFrames=0;window.originalDocument=true
+  const inspect=()=>{if(!document.querySelector('.ob-panel h1, .make-shell'))window.blankFrames++;requestAnimationFrame(inspect)}
   requestAnimationFrame(inspect)
  })
- await p.route('**/get-session',async route=>{await new Promise(r=>{releaseSession=r});return route.fallback()})
- await p.route('**/api/onboarding',async route=>{await new Promise(r=>{releaseSetup=r});return route.fallback()})
- await p.goto(origin);await p.locator('.ob-page').waitFor();await assertEventually(()=>!!releaseSession)
- assert.equal(await p.locator('.ob-brand').count(),0)
+ await p.context().route('**/get-session',async route=>{if(f.authenticated)await new Promise(r=>{releaseSession=r});return route.fallback()})
+ await p.context().route('**/api/onboarding',async route=>{await new Promise(r=>{releaseSetup=r});return route.fallback()})
+ await f.button('Continuar com Google').click();await assertEventually(()=>!!releaseSession)
+ assert.equal(await p.locator('.ob-panel h1').isVisible(),true)
+ assert.equal(await f.button('Continuar com Google').isDisabled(),true)
  releaseSession();await assertEventually(()=>!!releaseSetup)
- assert.equal(await p.locator('.ob-brand').count(),0)
- releaseSetup();await p.locator('.ob-workspace').waitFor();await p.locator('.ob-brand').waitFor()
- await p.getByLabel('Passo 1 de 4').waitFor();await delay(60)
- assert.equal(await p.evaluate(()=>window.logoOnlyFrames),0)
+ assert.equal(await p.locator('.ob-panel h1').isVisible(),true)
+ assert.equal(await p.locator('.ob-brand').isVisible(),true)
+ assert.equal(p.context().pages().length,2,'Google window remains until the destination is ready')
+ releaseSetup();await p.locator(returning?'.make-shell':'.ob-workspace').waitFor()
+ await assertEventually(()=>p.context().pages().length===1)
+ assert.equal(await p.evaluate(()=>window.originalDocument),true)
+ assert.equal(await p.evaluate(()=>window.blankFrames),0)
+})
+
+test('blocked Google window leaves a usable form and retries successfully',async t=>{
+ const f=await fixture(t,{authenticated:false}),p=f.page
+ await mockGoogle(f);await p.goto(origin);await f.button('Continuar com Google').waitFor()
+ await p.evaluate(()=>{window.actualOpen=window.open;window.open=()=>null})
+ await f.button('Continuar com Google').click();await p.getByRole('alert').filter({hasText:'bloqueada'}).waitFor()
+ assert.equal(await f.button('Continuar com Google').isEnabled(),true)
+ assert.ok(!f.calls.some(c=>c.path.endsWith('/sign-in/social')))
+ await p.evaluate(()=>window.open=window.actualOpen)
+ await f.button('Continuar com Google').click();await p.locator('.ob-workspace').waitFor()
+})
+
+for(const failure of ['cancel','oauth','network','unverified']) test(`Google ${failure} failure preserves the form and permits retry`,async t=>{
+ const f=await fixture(t,{authenticated:false}),p=f.page
+ await mockGoogle(f,{failure});await p.goto(origin)
+ const popupPromise=p.waitForEvent('popup')
+ await f.button('Continuar com Google').click();const popup=await popupPromise
+ if(failure==='cancel')await popup.close()
+ await p.getByRole('alert').waitFor()
+ assert.equal(await f.button('Continuar com Google').isEnabled(),true)
+ assert.equal(await p.locator('.ob-panel h1').isVisible(),true)
+ assert.equal(await p.locator('.make-shell, .ob-workspace').count(),0)
+ await mockGoogle(f);await f.button('Continuar com Google').click();await p.locator('.ob-workspace').waitFor()
+ await assertEventually(()=>p.context().pages().length===1)
+})
+
+test('unrelated popup messages cannot authenticate the original page',async t=>{
+ const f=await fixture(t,{authenticated:false}),p=f.page
+ await mockGoogle(f,{failure:'cancel'});await p.goto(origin)
+ const popupPromise=p.waitForEvent('popup');await f.button('Continuar com Google').click();const popup=await popupPromise
+ await p.evaluate(()=>window.postMessage({type:'complete',attempt:'spoofed'},location.origin))
+ await popup.waitForURL('**/google-auth.html?**waiting=1')
+ await popup.evaluate(()=>window.opener.postMessage({type:'complete',attempt:'spoofed'},location.origin))
+ await delay(100)
+ assert.equal(await p.locator('.ob-workspace, .make-shell').count(),0)
+ assert.equal(await f.button('Continuar com Google').isDisabled(),true)
+ await popup.close();await p.getByRole('alert').waitFor()
 })
 
 test('email sign-in retains the complete form while the authenticated setup request is pending',async t=>{
@@ -611,4 +664,28 @@ test('email sign-in retains the complete form while the authenticated setup requ
  assert.equal(await f.button('Iniciar sessão').isDisabled(),true)
  assert.equal(await p.locator('.ob-brand').isVisible(),true)
  release();await p.locator('.make-shell').waitFor()
+})
+
+async function mockGoogle(f,{failure}={}) {
+ await f.page.context().route('**/sign-in/social',async route=>{
+  const body=route.request().postDataJSON();f.calls.push({path:'/api/auth/sign-in/social',body})
+  if(failure==='network')return route.fulfill({status:503,json:{message:'Unavailable'}})
+  const callback=new URL(body.callbackURL)
+  if(failure==='cancel'){callback.searchParams.delete('complete');callback.searchParams.set('waiting','1')}
+  else if(failure==='oauth')callback.searchParams.set('error','access_denied')
+  else if(failure!=='unverified')f.authenticated=true
+  await route.fulfill({json:{redirect:false,url:callback.href}})
+ })
+}
+
+test('Google sign-in can be cancelled from the original page',async t=>{
+ const f=await fixture(t,{authenticated:false}),p=f.page
+ await mockGoogle(f,{failure:'cancel'});await p.goto(origin)
+ await f.button('Continuar com Google').click()
+ await p.getByRole('status').filter({hasText:'janela Google'}).waitFor()
+ assert.equal(await f.button('Continuar com email').isDisabled(),true)
+ await f.button('Cancelar').click()
+ await assertEventually(()=>p.context().pages().length===1)
+ assert.equal(await f.button('Continuar com Google').isEnabled(),true)
+ await f.button('Continuar com email').click();await p.locator('.ob-email').waitFor()
 })
