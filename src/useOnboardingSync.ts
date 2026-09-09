@@ -83,6 +83,9 @@ export function useOnboardingSync(props: Props) {
     if (completionRequested.current && current.current.draft.step !== 'updates') return
     if (s?.completed && s.project && s.organization && !s.passwordRequired && !s.accessLost && !record.current.pending && !new URL(location.href).searchParams.has('invite')) current.current.onReady?.(s)
   }
+  // Restoration updates the draft after the server response. Recheck readiness
+  // once that step is rendered, so confirmed completion also survives a reload.
+  useEffect(() => { openIfReady() }, [props.draft.step])
   function schedule(error?: unknown) {
     clearTimeout(timer.current)
     const delay = error instanceof SyncError && error.retryAfter ? error.retryAfter : Math.min(30000, 1000 * 2 ** Math.min(attempts.current++, 5))

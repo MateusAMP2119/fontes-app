@@ -56,6 +56,12 @@ test('new email account requires password; completion waits for server across re
  assert.equal(f.state.completed,true);assert.equal(f.state.profile.name,'Pessoa final')
  const storage=await p.evaluate(()=>JSON.stringify(localStorage)+JSON.stringify(sessionStorage))
  assert.ok(!storage.includes('test-secret-password'));assert.ok(!storage.includes('123456'))
+ const confirmedWrites=f.writes.length
+ await p.reload();await p.locator('.make-shell').waitFor()
+ await f.button('Abrir menu da conta').click();await p.getByRole('menuitem',{name:'Terminar sessão'}).click()
+ await f.button('Login').click();await f.input('Endereço de email').fill(user.email)
+ await p.locator('input[autocomplete="current-password"]').fill('test-secret-password');await f.button('Iniciar sessão').click();await p.locator('.make-shell').waitFor()
+ assert.equal(f.writes.length,confirmedWrites,'confirmed completion restores without another setup save')
 })
 test('invitation has explicit acceptance, skips owner setup and owner-only back/invites',async t=>{
  const f=await fixture(t),p=f.page;await p.goto(origin+'/?invite='+'ab'.repeat(32))
