@@ -7,7 +7,9 @@ export async function googleSignIn(prepare: (session: AuthSession) => Promise<vo
   const attempt = crypto.randomUUID()
   const callback = new URL('/google-auth.html', location.origin)
   callback.searchParams.set('attempt', attempt)
-  const popup = window.open(callback.href, `fontes-google-${attempt}`, 'popup,width=500,height=640')
+  // Reserve the provider window during the click so browsers allow it.
+  // Its first navigation goes directly to the Google URL returned by auth.
+  const popup = window.open('', `fontes-google-${attempt}`, 'popup,width=500,height=640')
   if (!popup) throw new GoogleSignInError('A janela de início de sessão foi bloqueada pelo navegador. Nova tentativa disponível.')
   callback.searchParams.set('complete', '1')
   const channel = new BroadcastChannel(`fontes-google-${attempt}`)

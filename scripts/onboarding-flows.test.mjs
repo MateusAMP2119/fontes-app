@@ -727,6 +727,23 @@ async function mockGoogle(f,{failure}={}) {
  })
 }
 
+test('Google opens without a Fontes intermediary before navigating to the provider', async t => {
+ const f = await fixture(t, { authenticated:false }), p = f.page
+ let release
+ await mockGoogle(f)
+ await p.context().route('**/sign-in/social', async route => { await new Promise(resolve => { release = resolve }); await route.fallback() })
+ await p.goto(origin)
+ const popupPromise = p.waitForEvent('popup')
+ await f.button('Continuar com Google').click()
+ const popup = await popupPromise
+ await assertEventually(() => !!release)
+ assert.equal(popup.url(), 'about:blank')
+ assert.equal(await popup.locator('body').innerText(), '')
+ await p.getByRole('status', {name:'Ligação ao Google em curso'}).waitFor()
+ release()
+ await p.locator('.ob-workspace').waitFor()
+ await assertEventually(() => p.context().pages().length === 1)
+})
 test('Google sign-in can be cancelled from the original page',async t=>{
  const f=await fixture(t,{authenticated:false}),p=f.page
  await mockGoogle(f,{failure:'cancel'});await p.goto(origin)
