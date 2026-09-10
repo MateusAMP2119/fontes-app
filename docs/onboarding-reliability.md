@@ -43,3 +43,19 @@ Workspace submission opens the profile form immediately. Creation continues in t
 The workspace URL is never asked for. It is derived from the workspace name, and the write enforces uniqueness: a conflict is retried up to three times with a fresh random suffix before the correction form asks for another name.
 
 Valid profile and preference edits are coalesced after a 500 ms typing pause and saved in the background. Saving, saved and failed states remain visible. Passwords and OTPs never enter this process, and background saving never marks onboarding complete.
+
+## Invitation completion regression (10 September 2026)
+
+The live invitation email and acceptance succeeded, but a new member's completion
+request contained an empty workspace name and slug. Acceptance had reset the draft
+to defaults, and restoration treated those empty values as preserved local edits.
+The API correctly rejected the invalid setup payload.
+
+Acceptance now seeds the draft from the join response. For members without workspace
+editing rights, restoration uses the confirmed workspace identity and repairs matching
+queued profile/completion snapshots, retaining profile edits and preferences. The
+stepper also disables workspace and invitation shortcuts unavailable to that member.
+
+The browser API fixture now rejects blank workspace identity like the real API.
+Regression coverage includes fresh acceptance and reloading a previously rejected
+completion snapshot without losing the member's edits.

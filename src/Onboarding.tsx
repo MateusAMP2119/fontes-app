@@ -58,6 +58,9 @@ function Avatar({ seed }: { seed: string }) {
   }, [seed])
   return <img className="ob-avatar" src={picture} alt=""/>
 }
+/** The hint promises a comma list, so typed or pasted line breaks become one. */
+export function commas(value: string) { return value.replace(/\s*[\n;]+\s*/g, ', ') }
+
 function Field({ label, children, name, error, hint }: { label: string; children: ReactNode; name?: string; error?: string; hint?: string }) { return <label className="ob-field"><span>{label}</span>{children}<FieldError id={`ob-${name}-error`} message={error} hint={hint} hintId={`ob-${name}-hint`}/></label> }
 
 function StepPanel({ step, children }: { step: Step; children: ReactNode }) {
@@ -170,7 +173,7 @@ export default function Onboarding({ preview = false, session = null, onReady, o
     if (draft.step === 'workspace') go('profile')
     if (draft.step === 'profile') go(live.canInvite ? 'invites' : 'updates')
     if (draft.step === 'invites') {
-      const addresses = draft.invitations.split(/[,;\n]+/).map(v => v.trim()).filter(Boolean)
+      const addresses = draft.invitations.split(/[,;\s]+/).filter(Boolean)
       if (addresses.some(value => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))) { toast('Endereço de convite inválido', 'invitations'); return }
       if (!preview) live.invite(addresses)
       go('updates')
@@ -209,6 +212,8 @@ export default function Onboarding({ preview = false, session = null, onReady, o
   const answered = (step: Step) => settled.includes(step) || filled[step]
   const reachable = (i: number) => i !== progress
     && (preview || !['email', 'code', 'password'].includes(flow[i]))
+    && (preview || flow[i] !== 'workspace' || live.canEditWorkspace)
+    && (preview || flow[i] !== 'invites' || live.canInvite)
     && flow.slice(0, i).every((step, j) => j < progress || answered(step))
   // The mark anchors the stage: it holds its place while each step's panel grows below it.
   const brand = preview ? <a className="ob-brand" href="/onboarding-preview" onClick={e => { e.preventDefault(); go('start') }} aria-label="Fontes, início"><img src="/mark.png" width="36" height="36" alt=""/></a> : <span className="ob-brand"><img src="/mark.png" width="36" height="36" alt="Fontes"/></span>
@@ -242,9 +247,9 @@ export default function Onboarding({ preview = false, session = null, onReady, o
           {draft.step === 'invites' && <>
             <div className="ob-invite-card">
               <button className="ob-copy ob-invite-link" type="button" onClick={() => preview ? setNotice('Link de convite disponível com o ambiente ligado à API') : void live.copyInvite()}><Icon kind="link"/>Copiar link</button>
-              <label className="ob-field"><textarea {...fieldProps('invitations')} aria-label="Emails dos membros" placeholder={'nome@equipa.pt\noutro@equipa.pt'} rows={2} value={draft.invitations} onChange={e => patch({ invitations: e.target.value })}/><FieldError id="ob-invitations-error" message={fieldMessage('invitations')} hint="Vários emails separados por vírgulas." hintId="ob-invitations-hint"/></label>
+              <label className="ob-field"><textarea {...fieldProps('invitations')} aria-label="Emails dos membros" placeholder="nome@equipa.pt, outro@equipa.pt" rows={2} value={draft.invitations} onChange={e => patch({ invitations: commas(e.target.value) })}/></label>
+              <div className="ob-invite-hint"><FieldError id="ob-invitations-error" message={fieldMessage('invitations')} hint="Emails separados por vírgulas." hintId="ob-invitations-hint"/><button type="button" className="ob-subtle ob-skip" onClick={() => go('updates')}>Saltar<Icon kind="arrow"/></button></div>
               <button className="ob-button ob-primary ob-wide">{draft.invitations.trim() ? 'Enviar convite por email' : 'Continuar'}</button>
-              <button type="button" className="ob-subtle ob-centered ob-skip" onClick={() => go('updates')}>Saltar<Icon kind="arrow"/></button>
             </div>
           </>}
 
@@ -252,7 +257,7 @@ export default function Onboarding({ preview = false, session = null, onReady, o
           {draft.step === 'invites' && live.inviteLink && <input aria-label="Link de convite" readOnly value={live.inviteLink} onFocus={e => e.target.select()} />}
           {invitationFailures}
           {draft.step === 'invites' && <><div className="ob-account-note"><p>Ambiente para <span>{email}</span></p><button type="button" className="ob-subtle" onClick={() => { if (!preview) { void live.changeEmail(); return }; patch({ returning: false, provider: 'email' }); go('email') }}>Utilizar um email diferente</button></div></>}
-          {draft.step === 'updates' && <button type="button" className="ob-subtle ob-centered" onClick={() => go(live.canInvite ? 'invites' : 'profile')}>Voltar</button>}
+          {draft.step === 'updates' && <><div className="ob-account-note"><p>Ambiente para <span>{email}</span></p><button type="button" className="ob-subtle" onClick={() => { if (!preview) { void live.changeEmail(); return }; patch({ returning: false, provider: 'email' }); go('email') }}>Utilizar um email diferente</button></div></>}
         </form>}
         {!preview && live.failed && <div className="ob-actions"><button className="ob-subtle" onClick={live.retry}>Tentar novamente</button><button className="ob-subtle" onClick={() => void live.changeEmail()}>Utilizar um email diferente</button></div>}
         {!preview && live.issue && live.issue !== draft.step && <form className="ob-correction" aria-label="Correção da configuração" noValidate onInput={clearFieldError} onSubmit={event => {

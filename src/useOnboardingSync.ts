@@ -78,6 +78,13 @@ export function useOnboardingSync(props: Props) {
     setBootstrap(result)
     record.current.revision = result.revision
     if (result.organization) {
+      // Members cannot edit workspace identity. Repair old, rejected invitation
+      // snapshots from the confirmed workspace before the outbox retries them.
+      const pending = record.current.pending
+      if (result.canEditWorkspace === false && pending?.organizationId === result.organization.id && !pending.workspace) {
+        pending.name = result.organization.name
+        pending.slug = result.organization.slug
+      }
       for (const item of record.current.invitations) {
         if (item.awaitingWorkspace) { item.organizationId = result.organization.id; delete item.awaitingWorkspace }
       }
@@ -284,8 +291,8 @@ export function useOnboardingSync(props: Props) {
         }
         if (step === 'invites' && result.canInvite === false && !record.current.pending?.workspace) step = 'updates'
         current.current.setDraft({ ...d, step, email: session.user.email,
-          name: keep || (previous && d.name !== previous.organization?.name) ? d.name : result.organization?.name || d.name,
-          slug: keep || (previous && d.slug !== previous.organization?.slug) ? d.slug : result.organization?.slug || d.slug,
+          name: result.canEditWorkspace === false && result.organization ? result.organization.name : keep || (previous && d.name !== previous.organization?.name) ? d.name : result.organization?.name || d.name,
+          slug: result.canEditWorkspace === false && result.organization ? result.organization.slug : keep || (previous && d.slug !== previous.organization?.slug) ? d.slug : result.organization?.slug || d.slug,
           profile: ((keep || (previous && d.profile !== previous.profile.name)) ? d.profile : result.profile.name || d.profile) || session.user.name || session.user.email.split('@')[0],
           image: keep || (previous && d.image !== (previous.profile.image || '')) ? d.image : result.profile.image || '',
           changelog: keep || (previous && d.changelog !== previous.changelog) ? d.changelog : result.changelog,
@@ -503,7 +510,7 @@ export function useOnboardingSync(props: Props) {
     try {
       const result = await onboardingRequest<Bootstrap>('/join', { token: new URL(location.href).searchParams.get('invite') })
       const url = new URL(location.href); url.searchParams.delete('invite'); history.replaceState(null, '', url)
-      record.current = { draft: { ...fresh, email: current.current.draft.email }, revision: result.revision, invitations: [] }
+      record.current = { draft: { ...fresh, email: current.current.draft.email, name: result.organization?.name || '', slug: result.organization?.slug || '', profile: result.profile.name, image: result.profile.image || '', changelog: result.changelog, daily: result.daily }, revision: result.revision, invitations: [] }
       persist()
       await reload.current()
     } catch (e) { current.current.setError(e instanceof SyncError ? e.message : 'Não foi possível aceitar o convite.') }

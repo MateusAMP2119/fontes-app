@@ -29,6 +29,7 @@ async function fixture(t, options={}) {
   if(path==='/api/onboarding'){
    if(!b)return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:f.state})
    f.writes.push(b)
+   if (!b.name?.trim() || !/^[a-z0-9][a-z0-9-]{2,47}$/.test(b.slug || '') || !b.profileName?.trim()) return route.fulfill({status:400,json:{message:'Nome, URL ou perfil inválido.',step:'workspace'}})
    if(f.offline&&b.completed)return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},status:503,json:{message:'Indisponível.'}})
    f.state={...f.state,organization:f.state.organization||workspace().organization,project:workspace().project,profile:{name:b.profileName,image:b.profileImage},revision:b.revision,operationId:b.operationId,completed:b.completed,changelog:b.changelog,daily:b.daily}
    return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:f.state})
@@ -69,8 +70,50 @@ test('invitation has explicit acceptance, skips owner setup and owner-only back/
  await p.getByText('Convite para participar no ambiente de Equipa convidada.',{exact:false}).waitFor();assert.equal(f.joins,0)
  await f.button('Aceitar convite').click();await p.locator('.ob-profile').waitFor()
  assert.equal(await f.button('Voltar').count(),0);assert.equal(await p.locator('.ob-workspace').count(),0)
+ assert.equal(await f.button('Ambiente').isDisabled(),true);assert.equal(await f.button('Convites').isDisabled(),true)
  await f.button('Continuar').click();await p.locator('.ob-updates').waitFor();await f.button('Começar').click();await p.locator('.make-shell').waitFor()
  assert.equal(f.joins,1);assert.ok(!p.url().includes('invite='))
+})
+test('an invited member reload repairs an empty workspace snapshot without losing profile edits', async t => {
+ const state = { ...workspace(), project:null, canInvite:false, canEditWorkspace:false }
+ const f = await fixture(t, { state }), p = f.page
+ await p.addInitScript(({ user }) => {
+  localStorage.setItem('fontes:onboarding:v1:' + user.id, JSON.stringify({
+   draft:{ step:'updates', email:user.email, name:'', slug:'', profile:'Edited member', image:'', changelog:true, daily:false },
+   revision:0, invitations:[], completionRequested:true,
+   pending:{ organizationId:'org', operationId:'stuck-invitation-save', revision:1, name:'', slug:'', profileName:'Edited member', profileImage:'', completed:true, workspace:false, changelog:true, daily:false }
+  }))
+ }, { user })
+ await p.goto(origin)
+ await p.locator('.make-shell').waitFor()
+ assert.ok(f.writes.length > 0)
+ assert.ok(f.writes.every(write => write.name === 'Equipa' && write.slug === 'equipa'))
+ assert.equal(f.state.profile.name, 'Edited member')
+ assert.equal(f.state.changelog, true)
+ await p.reload()
+ await p.locator('.make-shell').waitFor()
+})
+test('setup invitation input normalizes pasted lists and sends each recipient once', async t => {
+ const f = await fixture(t, { state: workspace() }), p = f.page
+ await p.goto(origin)
+ await f.button('Continuar').click()
+ const input = f.input('Emails dos membros')
+ await input.fill('ANA@example.com\nines@example.com; ana@example.com, person@example.com third@example.com')
+ assert.equal(await input.inputValue(), 'ANA@example.com, ines@example.com, ana@example.com, person@example.com third@example.com')
+ await f.button('Enviar convite por email').click()
+ await p.locator('.ob-updates').waitFor()
+ const requests = () => f.calls.filter(call => call.path === '/api/onboarding/invite')
+ await assertEventually(() => requests().length === 3)
+ assert.deepEqual(requests().map(call => call.body.email).sort(), ['ana@example.com', 'ines@example.com', 'third@example.com'])
+ for (const { body } of requests()) {
+  assert.equal(body.organizationId, 'org')
+  assert.match(body.token, /^[a-f0-9]{64}$/)
+ }
+ await p.locator('.ob-progress button').nth(5).click()
+ await f.button('Enviar convite por email').click()
+ await f.button('Começar').click()
+ await p.locator('.make-shell').waitFor()
+ assert.equal(requests().length, 3, 'revisiting setup does not resend queued recipients')
 })
 test('one failed invitation does not block another recipient or completion',async t=>{
  const f=await fixture(t,{state:workspace()}),p=f.page;f.failInvite=true;await p.goto(origin)

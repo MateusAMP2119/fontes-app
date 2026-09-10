@@ -25,7 +25,7 @@
 .ob-panel textarea{height:auto;resize:vertical;min-height:100px;line-height:1.8}
 .ob-panel input.ob-code,.ob-panel input[type=email]{text-align:center}
 .ob-field{display:flex;flex-direction:column;gap:8px}.ob-field>span{display:block;text-align:left;font-size:13px;color:var(--ob-text)}
-.ob-subtle{border:0;background:none;color:var(--ob-muted);font:inherit;font-size:13px;padding:8px 0;min-height:36px}.ob-subtle:hover{color:#ededee}.ob-centered{align-self:center;margin-top:-8px}
+.ob-subtle{border:0;background:none;color:var(--ob-muted);font:inherit;font-size:13px;padding:8px 0;min-height:36px}.ob-subtle:hover{color:#ededee}
 /* The progress slot stays in the shell so its arrival never moves the brand. */
 .ob-progress-slot{height:8px;flex:none;margin-bottom:24px;display:flex;align-items:center;justify-content:center}
 .ob-progress{display:flex;align-items:center;justify-content:center;gap:8px;height:8px}
@@ -234,4 +234,7 @@ span.ob-field-feedback:has(small){grid-template-rows:1fr}
 .ob-invite-tile small{color:var(--ob-muted);font-size:13px;line-height:1.5}
 .ob-invite-card{display:flex;flex-direction:column;gap:16px}
 .ob-invite-card textarea{height:82px;min-height:82px;resize:none}
+.ob-invite-hint{display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-top:-4px}
+.ob-invite-hint .ob-field-feedback{flex:1 1 auto;width:auto;min-width:0;text-align:left}
+.ob-invite-hint .ob-skip{flex:none}
 .ob-invite-link{align-self:flex-end;margin-bottom:-8px}
