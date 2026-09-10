@@ -238,3 +238,13 @@ span.ob-field-feedback:has(small){grid-template-rows:1fr}
 .ob-invite-hint .ob-field-feedback{flex:1 1 auto;width:auto;min-width:0;text-align:left}
 .ob-invite-hint .ob-skip{flex:none}
 .ob-invite-link{align-self:flex-end;margin-bottom:-8px}
+
+/* The Google spinner and stepper share one fixed-height anchor. */
+.ob-progress-transition{position:relative;display:flex;align-items:center;justify-content:center;height:8px;min-width:8px}
+.ob-google-spinner{position:absolute;left:50%;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;border:2px solid var(--ob-border);border-top-color:var(--ob-text);border-radius:50%;opacity:0;scale:.35;pointer-events:none;transition:opacity .22s ease,scale .35s ease}
+.ob-progress-transition[data-loading=true] .ob-google-spinner{opacity:1;scale:1;animation:ob-google-spin .8s linear infinite}
+.ob-progress-transition .ob-progress{transition:opacity .25s ease,transform .35s cubic-bezier(.22,1,.36,1);opacity:1;transform:scaleX(1)}
+.ob-progress-transition[data-loading=true] .ob-progress{opacity:0;transform:scaleX(.15);pointer-events:none}
+@starting-style{.ob-progress-transition .ob-progress{opacity:0;transform:scaleX(.15)}}
+@keyframes ob-google-spin{to{rotate:360deg}}
+@media(prefers-reduced-motion:reduce){.ob-progress-transition[data-loading=true] .ob-google-spinner{animation:none}}
