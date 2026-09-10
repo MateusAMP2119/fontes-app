@@ -47,6 +47,10 @@ export async function googleSignIn(prepare: (session: AuthSession) => Promise<vo
       }).catch(() => finish(new Error('Google sign-in unavailable')))
     })
     if (signal.aborted) return
+    // Return to the original frozen form immediately. Setup continues there.
+    channel.postMessage({ type: 'close', attempt })
+    popup.close()
+    window.focus()
     // A callback is only a wake-up signal. Session identity always comes from the API.
     await authClient.$store.atoms.session.get().refetch()
     const session = authClient.$store.atoms.session.get().data

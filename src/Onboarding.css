@@ -248,3 +248,6 @@ span.ob-field-feedback:has(small){grid-template-rows:1fr}
 @starting-style{.ob-progress-transition .ob-progress{opacity:0;transform:scaleX(.15)}}
 @keyframes ob-google-spin{to{rotate:360deg}}
 @media(prefers-reduced-motion:reduce){.ob-progress-transition[data-loading=true] .ob-google-spinner{animation:none}}
+
+.ob-frozen-fields{display:contents}
+.ob-google-cancel{position:fixed;bottom:max(24px,env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);font:inherit;font-size:13px;color:var(--ob-muted);background:none;border:0;cursor:pointer}

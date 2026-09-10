@@ -63,10 +63,10 @@ export function commas(value: string) { return value.replace(/\s*[\n;]+\s*/g, ',
 
 function Field({ label, children, name, error, hint }: { label: string; children: ReactNode; name?: string; error?: string; hint?: string }) { return <label className="ob-field"><span>{label}</span>{children}<FieldError id={`ob-${name}-error`} message={error} hint={hint} hintId={`ob-${name}-hint`}/></label> }
 
-function StepPanel({ step, children }: { step: Step; children: ReactNode }) {
+function StepPanel({ step, children, frozen = false }: { step: Step; children: ReactNode; frozen?: boolean }) {
   const panel = useRef<HTMLElement>(null)
   useEffect(() => { panel.current?.querySelector<HTMLHeadingElement>('h1')?.focus({ preventScroll: true }) }, [step])
-  return <section ref={panel} className={`ob-panel ob-${step}`} aria-labelledby="ob-title">{children}</section>
+  return <section ref={panel} className={`ob-panel ob-${step}`} aria-labelledby="ob-title" onClickCapture={event => { if (frozen) { event.preventDefault(); event.stopPropagation() } }}><fieldset disabled={frozen} className="ob-frozen-fields">{children}</fieldset></section>
 }
 
 /** Shared signup/onboarding screens; simulation is available only on the development preview route. */
@@ -221,7 +221,7 @@ export default function Onboarding({ preview = false, session = null, onReady, o
   </div> : null
   if (!screenShown.current) return <OnboardingLayout pending />
   return <OnboardingLayout brand={brand} progress={<div className="ob-progress-transition" data-loading={live.googleActive}><span className="ob-google-spinner" role="status" aria-label="Ligação ao Google em curso" aria-hidden={!live.googleActive}/>{(!draft.returning || !authenticating) && progress >= 0 && <nav className="ob-progress" aria-hidden={live.googleActive} aria-label={`Passo ${progress + 1} de ${flow.length}`}>{flow.map((step, i) => <button key={step} type="button" className={i === progress ? 'current' : i < progress ? 'past' : ''} aria-label={labels[steps.indexOf(step)]} aria-current={i === progress ? 'step' : undefined} disabled={live.googleActive || !reachable(i)} onClick={() => go(step)}/>)}</nav>}</div>} footer={preview && <aside className="ob-preview-bar" aria-label="Controlos da pré-visualização"><span>Pré-visualização</span><nav aria-label="Ecrãs">{steps.map((step, i) => <button key={step} aria-current={draft.step === step ? 'step' : undefined} onClick={() => go(step)}>{labels[i]}</button>)}</nav><button className="ob-reset" onClick={() => { setDraft(fresh); setCode(''); setNotice(''); setError(null); setFieldError(null) }}>Reiniciar</button></aside>}>
-      <StepPanel step={draft.step}>
+      <StepPanel step={draft.step} frozen={live.googleActive}>
         <header className="ob-step-heading"><h1 id="ob-title" tabIndex={-1}>{titles[draft.step]}</h1>{descriptions[draft.step] && <p>{descriptions[draft.step]}</p>}</header>
         <div className="ob-step-content" key={draft.step}>
         {draft.step === 'start' ? <div className="ob-start-actions">
@@ -270,9 +270,9 @@ export default function Onboarding({ preview = false, session = null, onReady, o
           {live.issue === 'profile' && <Field label="Nome de perfil" name="profile" error={fieldMessage('profile')}><input {...fieldProps('profile')} aria-label="Nome do perfil a corrigir" required maxLength={80} value={draft.profile} onChange={event => patch({ profile: event.target.value })}/></Field>}
           <button className="ob-button ob-primary ob-wide" disabled={live.busy || (live.issue === 'password' && live.savingPassword)}>Confirmar correção</button>
         </form>}
-        {live.googleActive && <p className="ob-notice" role="status">Início de sessão em curso na janela Google. <button type="button" className="ob-link" onClick={live.cancelGoogle}>Cancelar</button></p>}
         </div>
       </StepPanel>
+      {live.googleActive && <button type="button" className="ob-link ob-google-cancel" onClick={live.cancelGoogle}>Cancelar</button>}
       {(error || notice) && <div className="ob-toasts">
         {error && <Toast key={`error-${error.n}`} message={error.text} error onDismiss={() => setError(null)}/>}
         {notice && <Toast key={notice} message={notice} onDismiss={() => setNotice('')}/>}
