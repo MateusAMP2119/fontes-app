@@ -241,7 +241,7 @@ test('invalid OTP can be corrected from the current draft without unverified wor
  let release
  await p.route('**/sign-in/email-otp',async route=>{await new Promise(r=>{release=r});return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},status:400,json:{message:'Invalid code'}})})
  await p.goto(origin);await f.button('Continuar com email').click();await f.input('Endereço de email').fill(user.email);await f.button('Continuar com email').click();await f.input(/^Código (?:temporário|de confirmação)$/).fill('000000');await f.button('Continuar com código').click()
- await p.locator('.ob-password').waitFor();assert.equal(await f.button('Guardar palavra-passe').isDisabled(),false);release()
+ await p.locator('.ob-password').waitFor();assert.equal(await f.button('Guardar palavra-passe').isDisabled(),true,'empty passwords cannot submit');release()
  await p.getByRole('form',{name:'Correção da configuração'}).waitFor();await p.getByRole('alert').waitFor();assert.equal(f.writes.length,0)
  assert.equal(await p.locator('section.ob-password').count(),1)
  await p.unroute('**/sign-in/email-otp')
