@@ -44,7 +44,7 @@ test('new email account requires password; confirmed setup opens while final pre
  const f=await fixture(t,{authenticated:false,state:{...blank(),passwordRequired:true}}),p=f.page
  await p.goto(origin)
  await f.button('Continuar com email').click();await f.input('Endereço de email').fill(user.email);await f.button('Continuar com email').click()
- await f.input('Código de confirmação').fill('123456');await f.button('Continuar com código').click()
+ await f.input(/^Código (?:temporário|de confirmação)$/).fill('123456');await f.button('Continuar com código').click()
  await p.getByRole('heading',{name:'Definir palavra-passe',exact:true}).waitFor()
  await p.locator('input[autocomplete="new-password"]').fill('test-secret-password');await f.button('Guardar palavra-passe').click()
  await f.input('Nome').fill('Equipa');await f.button('Criar ambiente').click()
@@ -60,13 +60,13 @@ test('new email account requires password; confirmed setup opens while final pre
  const confirmedWrites=f.writes.length
  await p.reload();await p.locator('.make-shell').waitFor()
  await f.button('Abrir menu da conta').click();await p.getByRole('menuitem',{name:'Terminar sessão'}).click()
- await f.button('Login').click();await f.input('Endereço de email').fill(user.email)
+ await f.button('Entrar').click();await f.input('Endereço de email').fill(user.email)
  await p.locator('input[autocomplete="current-password"]').fill('test-secret-password');await f.button('Iniciar sessão').click();await p.locator('.make-shell').waitFor()
  assert.equal(f.writes.length,confirmedWrites,'confirmed completion restores without another setup save')
 })
 test('invitation has explicit acceptance, skips owner setup and owner-only back/invites',async t=>{
  const f=await fixture(t),p=f.page;await p.goto(origin+'/?invite='+'ab'.repeat(32))
- await p.getByText('Convite para Equipa convidada.',{exact:false}).waitFor();assert.equal(f.joins,0)
+ await p.getByText('Convite para participar no ambiente de Equipa convidada.',{exact:false}).waitFor();assert.equal(f.joins,0)
  await f.button('Aceitar convite').click();await p.locator('.ob-profile').waitFor()
  assert.equal(await f.button('Voltar').count(),0);assert.equal(await p.locator('.ob-workspace').count(),0)
  await f.button('Continuar').click();await p.locator('.ob-updates').waitFor();await f.button('Começar').click();await p.locator('.make-shell').waitFor()
@@ -108,7 +108,7 @@ test('returning email uses password; reset and password change never persist cre
 test('existing workspace resumes profile and account switch clears avatar',async t=>{
  const f=await fixture(t,{state:{...workspace(),profile:{name:'Existing',image:'data:image/webp;base64,AAAA'}}}),p=f.page
  await p.goto(origin);await p.locator('.ob-profile').waitFor();assert.equal(await p.locator('.ob-workspace').count(),0)
- await f.button('Voltar').click();await f.button('Utilizar um email diferente').click();await p.locator('.ob-email').waitFor()
+ await f.button('Utilizar um email diferente').click();await p.locator('.ob-email').waitFor()
  const pending=await p.evaluate(()=>JSON.parse(sessionStorage.getItem('fontes:onboarding:v1:pending')))
  assert.equal(pending.draft.image,'');assert.equal(pending.draft.name,'')
 })
@@ -149,7 +149,7 @@ test('copy invite waits for server confirmation and provides manual copy fallbac
 
 test('password recovery retains the content destination and rejects external return targets',async t=>{
  const f=await fixture(t,{authenticated:false,state:{...workspace(),completed:true}}),p=f.page
- await p.goto(origin+'/eventos/example?source=shared');await f.button('Login').click()
+ await p.goto(origin+'/eventos/example?source=shared');await f.button('Entrar').click()
  const recovery=await p.getByRole('link',{name:'Recuperar acesso',exact:true}).getAttribute('href')
  assert.equal(new URL(recovery,origin).searchParams.get('returnTo'),'/eventos/example?source=shared')
  await p.goto(origin+'/login?returnTo='+encodeURIComponent('https://evil.example/'))
@@ -165,9 +165,9 @@ test('email and workspace forms appear before stalled requests finish',async t=>
  await p.goto(origin);await f.button('Continuar com email').click();await f.input('Endereço de email').fill(user.email)
  assert.equal(f.calls.filter(c=>c.path.includes('email')&&!c.path.includes('get-session')).length,0,'typing email never searches accounts or sends email')
  await f.button('Continuar com email').click();await p.locator('section.ob-code').waitFor();await p.getByText('Envio de código em curso para',{exact:false}).waitFor()
- await f.input('Código de confirmação').fill('123456');assert.equal(await p.locator('.ob-code button[type="submit"], .ob-code button.ob-primary').isDisabled(),true)
+ await f.input(/^Código (?:temporário|de confirmação)$/).fill('123456');assert.equal(await p.locator('.ob-code button[type="submit"], .ob-code button.ob-primary').isDisabled(),true)
  releaseEmail();await f.button('Continuar com código').click();await p.locator('.ob-password').waitFor()
- assert.equal(await p.locator('.ob-workspace').count(),0);assert.equal(await f.button('Guardar palavra-passe').isDisabled(),false);assert.equal(f.writes.length,0)
+ assert.equal(await p.locator('.ob-workspace').count(),0);assert.equal(await f.button('Guardar palavra-passe').isDisabled(),true,'empty passwords cannot submit');assert.equal(f.writes.length,0)
  await p.route('**/api/onboarding/password',async route=>{await new Promise(r=>{releasePassword=r});await route.fallback()})
  releaseVerify();await p.locator('.ob-password').waitFor();await p.locator('input[autocomplete="new-password"]').fill('password-verified');await f.button('Guardar palavra-passe').click()
  await p.locator('.ob-workspace').waitFor();await f.input('Nome').fill('Draft during password save');assert.equal(await f.button('Criar ambiente').isDisabled(),false)
@@ -177,25 +177,6 @@ test('email and workspace forms appear before stalled requests finish',async t=>
  assert.equal(await f.button('Continuar').isDisabled(),false);assert.equal(await p.locator('.make-shell').count(),0)
  releaseWorkspace();await f.button('Continuar').waitFor();await p.waitForFunction(()=>!document.querySelector('.ob-profile .ob-primary').disabled)
  assert.equal(await f.input('Nome do perfil').inputValue(),'Draft during creation')
-})
-
-test('workspace URL preflight debounces, caches exact results and ignores stale responses',async t=>{
- const f=await fixture(t),p=f.page,checks=[]
- let releaseOld
- await p.route('**/api/onboarding/availability',async route=>{
-  const body=route.request().postDataJSON();checks.push(body.slug)
-  if(body.slug==='old-name'){await new Promise(r=>{releaseOld=r});try{await route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:{available:false}})}catch{};return}
-  await route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:{available:true}})
- })
- await p.goto(origin);await f.input('Nome').fill('Old name')
- await p.waitForFunction(()=>document.querySelector('.ob-workspace'))
- for(let i=0;!releaseOld&&i<200;i++)await new Promise(r=>setTimeout(r,10));assert.ok(releaseOld)
- await f.input('Nome').fill('New name');await assertEventually(()=>checks.includes('new-name'))
- releaseOld();assert.equal(await p.getByText('Este URL já está em uso.',{exact:true}).count(),0)
- await f.input('Nome').fill('Temporary');await f.input('Nome').fill('New name')
- await delay(450)
- assert.equal(checks.filter(v=>v==='new-name').length,1)
- assert.equal(checks.includes('temporary'),false);assert.equal(f.writes.length,0)
 })
 
 test('profile and preferences save after a typing pause without completing onboarding',async t=>{
@@ -259,12 +240,12 @@ test('invalid OTP can be corrected from the current draft without unverified wor
  const f=await fixture(t,{authenticated:false,state:{...blank(),passwordRequired:true}}),p=f.page
  let release
  await p.route('**/sign-in/email-otp',async route=>{await new Promise(r=>{release=r});return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},status:400,json:{message:'Invalid code'}})})
- await p.goto(origin);await f.button('Continuar com email').click();await f.input('Endereço de email').fill(user.email);await f.button('Continuar com email').click();await f.input('Código de confirmação').fill('000000');await f.button('Continuar com código').click()
+ await p.goto(origin);await f.button('Continuar com email').click();await f.input('Endereço de email').fill(user.email);await f.button('Continuar com email').click();await f.input(/^Código (?:temporário|de confirmação)$/).fill('000000');await f.button('Continuar com código').click()
  await p.locator('.ob-password').waitFor();assert.equal(await f.button('Guardar palavra-passe').isDisabled(),false);release()
  await p.getByRole('form',{name:'Correção da configuração'}).waitFor();await p.getByRole('alert').waitFor();assert.equal(f.writes.length,0)
  assert.equal(await p.locator('section.ob-password').count(),1)
  await p.unroute('**/sign-in/email-otp')
- await f.input('Código de confirmação').fill('123456');await f.button('Confirmar correção').click()
+ await f.input(/^Código (?:temporário|de confirmação)$/).fill('123456');await f.button('Confirmar correção').click()
  await assertEventually(()=>f.authenticated)
  await p.locator('input[autocomplete="new-password"]').fill('corrected-code-password');await f.button('Guardar palavra-passe').click()
  await f.input('Nome').fill('Corrected code workspace');await f.button('Criar ambiente').click()
@@ -291,7 +272,7 @@ test('password form keeps its input and focus while session bootstrap is pending
  await p.route('**/sign-in/email-otp',async route=>{await new Promise(r=>{releaseVerify=r});await route.fallback()})
  await p.route('**/api/onboarding',async route=>{if(route.request().method()==='GET')await new Promise(r=>{releaseBootstrap=r});await route.fallback()})
  await p.goto(origin);await f.button('Continuar com email').click();await f.input('Endereço de email').fill(user.email);await f.button('Continuar com email').click()
- await f.input('Código de confirmação').fill('123456');await f.button('Continuar com código').click()
+ await f.input(/^Código (?:temporário|de confirmação)$/).fill('123456');await f.button('Continuar com código').click()
  const input=p.locator('input[autocomplete="new-password"]')
  await input.fill('half-typed-password')
  await input.evaluate(el=>{window.passwordInput=el;el.focus()})
@@ -312,7 +293,7 @@ test('password and workspace submit instantly before verification, then sync in 
  await p.route('**/sign-in/email-otp',async route=>{await new Promise(r=>{releaseVerify=r});await route.fallback()})
  await p.route('**/api/onboarding/password',async route=>{await new Promise(r=>{releasePassword=r});await route.fallback()})
  await p.goto(origin);await f.button('Continuar com email').click();await f.input('Endereço de email').fill(user.email);await f.button('Continuar com email').click()
- await f.input('Código de confirmação').fill('123456');await f.button('Continuar com código').click()
+ await f.input(/^Código (?:temporário|de confirmação)$/).fill('123456');await f.button('Continuar com código').click()
  await p.locator('input[autocomplete="new-password"]').fill('queued-secret-password');await f.button('Guardar palavra-passe').click()
  await f.input('Nome').fill('Instant workspace');await f.button('Criar ambiente').click()
  await f.input('Nome do perfil').fill('Uninterrupted profile')
@@ -339,7 +320,7 @@ test('the entire draft reaches the final screen while verification is stalled, t
  let releaseVerify
  await p.route('**/sign-in/email-otp',async route=>{await new Promise(r=>{releaseVerify=r});await route.fallback()})
  await p.goto(origin);await f.button('Continuar com email').click();await f.input('Endereço de email').fill(user.email);await f.button('Continuar com email').click()
- await f.input('Código de confirmação').fill('123456');await f.button('Continuar com código').click()
+ await f.input(/^Código (?:temporário|de confirmação)$/).fill('123456');await f.button('Continuar com código').click()
  await p.locator('input[autocomplete="new-password"]').fill('queued-secret-password');await f.button('Guardar palavra-passe').click()
  await f.input('Nome').fill('Uninterrupted workspace');await f.button('Criar ambiente').click();await f.input('Nome do perfil').fill('Uninterrupted profile');await f.button('Continuar').click()
  await f.input('Emails dos membros').fill('member@example.com');await f.button('Enviar convite por email').click()
@@ -406,11 +387,11 @@ test('a late invalid code can be corrected on the final screen and finish the qu
  let release
  await p.route('**/sign-in/email-otp',async route=>{await new Promise(r=>{release=r});await route.fulfill({status:400,json:{message:'Invalid code'}})})
  await p.goto(origin);await f.button('Continuar com email').click();await f.input('Endereço de email').fill(user.email);await f.button('Continuar com email').click()
- await f.input('Código de confirmação').fill('000000');await f.button('Continuar com código').click()
+ await f.input(/^Código (?:temporário|de confirmação)$/).fill('000000');await f.button('Continuar com código').click()
  await p.locator('input[autocomplete="new-password"]').fill('final-correction-password');await f.button('Guardar palavra-passe').click()
  await f.input('Nome').fill('Final correction');await f.button('Criar ambiente').click();await f.input('Nome do perfil').fill('Preserved profile');await f.button('Continuar').click();await f.button('Saltar').click();await f.button('Começar').click()
  release();await p.getByRole('form',{name:'Correção da configuração'}).waitFor();assert.equal(await p.locator('section.ob-updates').count(),1);assert.equal(f.writes.length,0)
- await p.unroute('**/sign-in/email-otp');await f.input('Código de confirmação').fill('123456');await f.button('Confirmar correção').click();await p.locator('.make-shell').waitFor()
+ await p.unroute('**/sign-in/email-otp');await f.input(/^Código (?:temporário|de confirmação)$/).fill('123456');await f.button('Confirmar correção').click();await p.locator('.make-shell').waitFor()
  assert.equal(f.state.profile.name,'Preserved profile');assert.equal(f.state.completed,true)
 })
 
@@ -420,7 +401,7 @@ test('recovery uses the onboarding theme and keeps email and password labels vis
  for(const colorScheme of ['light','dark']){
   await p.emulateMedia({colorScheme});await p.goto(origin+'/reset-password')
   assert.equal(await p.locator('.ob-page').getAttribute('data-theme'),colorScheme)
-  const label=p.locator('.ob-visible-label > span')
+  const label=p.locator('.ob-visible-label > span:not(.ob-field-feedback)')
   assert.ok(await label.evaluate(el=>el.getBoundingClientRect().width>20&&getComputedStyle(el).clipPath==='none'))
   await f.input('Email').fill('test@example.com');await f.button('Enviar link de recuperação').click()
   await p.getByRole('status').filter({hasText:'Se existir uma conta'}).waitFor()
@@ -441,7 +422,7 @@ test('an expired authentication can be renewed on the current screen without los
  release();await p.getByRole('form',{name:'Correção da configuração'}).waitFor({timeout:2000})
  assert.equal(await p.locator('section.ob-updates').count(),1);assert.equal(f.writes.length,0)
  await p.unroute('**/api/onboarding/password');await f.button('Reenviar código').click()
- await f.input('Código de confirmação').fill('123456');await f.button('Confirmar correção').click();await p.locator('.make-shell').waitFor()
+ await f.input(/^Código (?:temporário|de confirmação)$/).fill('123456');await f.button('Confirmar correção').click();await p.locator('.make-shell').waitFor()
  assert.equal(f.state.profile.name,'Retained profile');assert.equal(f.state.completed,true)
 })
 
@@ -454,13 +435,6 @@ test('a failed password login retains the field for retry and never persists it'
  assert.equal(await field.inputValue(),'retryable-login-secret')
  assert.ok(!(await p.evaluate(()=>JSON.stringify(localStorage)+JSON.stringify(sessionStorage))).includes('retryable-login-secret'))
  await p.unroute('**/sign-in/email');await f.button('Iniciar sessão').click();await p.locator('.make-shell').waitFor()
-})
-
-test('email-code fallback validates the address before sending or advancing',async t=>{
- const f=await fixture(t,{authenticated:false}),p=f.page
- await p.goto(origin+'/login');await f.button('Continuar com código de email').click();await p.getByRole('alert').waitFor()
- assert.equal(await p.locator('section.ob-email').count(),1);assert.equal(f.calls.filter(c=>c.path.endsWith('/send-verification-otp')).length,0)
- assert.equal(await f.input('Endereço de email').evaluate(el=>el===document.activeElement),true)
 })
 
 test('an invite-link request made during workspace creation completes without a second click',async t=>{
@@ -710,4 +684,60 @@ test('Google provider window isolation cannot be mistaken for cancellation',asyn
  assert.equal(await p.getByRole('alert').count(),0)
  f.authenticated=true;await popup.getByRole('link',{name:'Confirmar',exact:true}).click()
  await p.locator('.make-shell').waitFor();await assertEventually(()=>p.context().pages().length===1)
+})
+
+
+for (const invited of [false, true]) test(`recovery requires fresh sign-in instead of opening another account${invited ? ' and retains its invitation' : ''}`, async t => {
+ const f = await fixture(t, { authenticated: true, state: { ...workspace(), completed: true } }), p = f.page
+ const destination = '/?source=recovery#saved'
+ const query = new URLSearchParams({ token: 'reset-for-another-account', returnTo: destination })
+ const token = 'ab'.repeat(32)
+ if (invited) query.set('invite', token)
+ await p.goto(origin + '/reset-password?' + query)
+ await p.locator('input[autocomplete="new-password"]').fill('changed-password-456')
+ await f.button('Guardar palavra-passe').click()
+ await p.getByText('Palavra-passe atualizada. Início de sessão disponível.').waitFor()
+ assert.equal(f.authenticated, true, 'resetting B leaves the existing A session intact until the login action')
+ await f.button('Iniciar sessão').click()
+ await p.locator('.ob-email').waitFor()
+ assert.equal(f.authenticated, false)
+ assert.equal(await p.locator('.make-shell').count(), 0)
+ assert.equal(new URL(p.url()).pathname, '/login')
+ assert.equal(new URL(p.url()).searchParams.get('returnTo'), destination)
+ assert.equal(new URL(p.url()).searchParams.has('token'), false)
+ assert.equal(f.calls.filter(c => c.path.endsWith('/reset-password')).length, 1)
+ await f.input('Endereço de email').fill(user.email)
+ await p.locator('input[autocomplete="current-password"]').fill('changed-password-456')
+ await f.button('Iniciar sessão').click()
+ if (invited) {
+  await p.locator('.ob-join').waitFor()
+  assert.equal(new URL(p.url()).searchParams.get('invite'), token)
+  assert.equal(f.joins, 0, 'recovery does not implicitly accept an invitation')
+ } else {
+  await p.locator('.make-shell').waitFor()
+  assert.equal(p.url(), origin + destination)
+ }
+})
+
+for (const failure of ['http', 'network']) test(`recovery preserves success and retries a ${failure} sign-out failure without reusing the reset token`, async t => {
+ const f = await fixture(t, { authenticated: true, state: { ...workspace(), completed: true } }), p = f.page
+ let attempts = 0
+ await p.route('**/api/auth/sign-out', route => {
+  if (++attempts > 1) return route.fallback()
+  if (failure === 'network') return route.abort('failed')
+  return route.fulfill({ headers: { 'access-control-allow-origin': origin, 'access-control-allow-credentials': 'true' }, status: 503, json: { message: 'Unavailable' } })
+ })
+ await p.goto(origin + '/reset-password?token=single-use-token')
+ await p.locator('input[autocomplete="new-password"]').fill('changed-password-456')
+ await f.button('Guardar palavra-passe').click()
+ await f.button('Iniciar sessão').click()
+ await p.getByRole('alert').filter({ hasText: 'Não foi possível terminar a sessão atual.' }).waitFor()
+ assert.equal(new URL(p.url()).pathname, '/reset-password')
+ assert.equal(await p.locator('.make-shell').count(), 0)
+ assert.equal(f.authenticated, true)
+ await p.getByText('Palavra-passe atualizada. Início de sessão disponível.').waitFor()
+ await f.button('Iniciar sessão').click()
+ await p.locator('.ob-email').waitFor()
+ assert.equal(f.authenticated, false)
+ assert.equal(f.calls.filter(c => c.path.endsWith('/reset-password')).length, 1)
 })

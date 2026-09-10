@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import './Onboarding.css'
 
 /** Keep authentication, recovery and setup on the same stable surface. */
-export default function OnboardingLayout({ children, brand, footer, pending = false }: { children?: ReactNode; brand?: ReactNode; footer?: ReactNode; pending?: boolean }) {
+export default function OnboardingLayout({ children, brand, progress, footer, pending = false }: { children?: ReactNode; brand?: ReactNode; progress?: ReactNode; footer?: ReactNode; pending?: boolean }) {
   const [light, setLight] = useState(() => !matchMedia('(prefers-color-scheme: dark)').matches)
   useEffect(() => {
     const media = matchMedia('(prefers-color-scheme: dark)')
@@ -22,6 +22,7 @@ export default function OnboardingLayout({ children, brand, footer, pending = fa
       <div className="make-background-grid"/>
     </div>
     {!pending && <div className="ob-stage">
+      <div className="ob-progress-slot">{progress}</div>
       {brand || <span className="ob-brand"><img src="/mark.png" width="36" height="36" alt="Fontes"/></span>}
       {children}
     </div>}

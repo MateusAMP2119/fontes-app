@@ -1,74 +1,60 @@
-// Layout check for the code screen: the CSS `order` values decide what the reader sees,
-// so assert the painted order against a real engine, with no dev server involved.
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
-import { chromium } from 'playwright'
-const css = readFileSync('src/Onboarding.css', 'utf8')
-const html = `<style>${css}</style>
-<main class="ob-page"><div class="ob-stage"><section class="ob-panel ob-code"><header><h1>Email de confirmação</h1><p>Foi enviado um email.</p></header>
-<form>
-  <input class="ob-code" placeholder="Introduzir código">
-  <input type="email" placeholder="Endereço de email">
-  <input type="file" id="picker" hidden>
-  <button class="ob-button ob-primary ob-wide">Continuar com código</button>
-  <button type="button" class="ob-subtle ob-resend" id="resend">Reenviar código</button>
-  <button type="button" class="ob-subtle ob-centered" id="back">Voltar ao início</button>
-  <div class="ob-progress"><span></span><span class="current"></span></div>
-  <p class="ob-notice">aviso</p>
-</form></section></div></main>`
-const browser = await chromium.launch()
-const page = await browser.newPage({ viewport: { width: 1440, height: 950 } })
-await page.setContent(html)
-const y = async sel => (await page.locator(sel).boundingBox()).y
-const [resend, dots, back, notice] = await Promise.all([y('#resend'), y('.ob-progress'), y('#back'), y('.ob-notice')])
-assert.ok(resend < dots, 'Reenviar código sits above the step counter')
-assert.ok(dots < back, 'Voltar ao início sits below the step counter')
-assert.ok(back < notice, 'the notice stays last')
-// The profile screen's image picker is a hidden input inside the form: the panel's own
-// display rule must not paint it as a control.
-assert.equal(await page.locator('#picker').evaluate(el => getComputedStyle(el).display), 'none', 'a hidden input stays hidden')
-assert.equal(await page.locator('h1').evaluate(el => getComputedStyle(el).textAlign), 'center')
-assert.equal(await page.locator('.ob-progress').evaluate(el => getComputedStyle(el).justifyContent), 'center')
-assert.equal(await page.locator('input.ob-code').evaluate(el => getComputedStyle(el).textAlign), 'center')
-assert.equal(await page.locator('input[type=email]').evaluate(el => getComputedStyle(el).textAlign), 'center')
-const gap = async () => {
-  const dots = await page.locator('.ob-progress').boundingBox()
-  const link = await page.locator('#back').boundingBox()
-  return link.y - (dots.y + dots.height)
+import { chromium, webkit } from 'playwright'
+
+// Exercise the mounted application: the shell must survive actual step changes.
+const url = process.env.ONBOARDING_TEST_URL || 'http://localhost:5173/onboarding-preview'
+for (const engine of [chromium, webkit]) {
+ const browser = await engine.launch()
+ try {
+  for (const viewport of [{ width: 1440, height: 950 }, { width: 390, height: 844 }]) {
+   const page = await browser.newPage({ viewport })
+   await page.goto(url)
+   const grid = page.locator('.ob-background .make-background-grid')
+   assert.match(await grid.evaluate(el => getComputedStyle(el).maskImage), /onboarding-grid\.svg/, 'onboarding uses the shared grid asset')
+   const gridAsset = await page.request.get(new URL('/onboarding-grid.svg', url).href)
+   assert.equal(gridAsset.status(), 200)
+   assert.match(await gridAsset.text(), /<svg/, 'grid URL serves SVG rather than the SPA fallback')
+   await page.evaluate(() => document.fonts.ready)
+   const screens = page.getByRole('navigation', { name: 'Ecrãs' })
+   const choose = name => screens.getByRole('button', { name, exact: true }).click()
+   const settle = () => page.locator('.ob-stage').evaluate(el => Promise.all(el.getAnimations({ subtree: true }).map(a => a.finished)))
+   const anchors = () => page.evaluate(() => Object.fromEntries(['.ob-brand', '#ob-title', '.ob-step-content'].map(selector => [selector, document.querySelector(selector).getBoundingClientRect().top + scrollY])))
+   await choose('Email'); await settle()
+   const initial = await anchors()
+   await page.evaluate(() => {
+    window.shell = { brand: document.querySelector('.ob-brand'), heading: document.querySelector('.ob-step-heading'), title: document.querySelector('#ob-title'), progress: document.querySelector('.ob-progress'), firstDot: document.querySelector('.ob-progress button'), content: document.querySelector('.ob-step-content') }
+   })
+   await choose('Código')
+   const transition = await page.evaluate(() => ({
+    staticNodes: window.shell.brand === document.querySelector('.ob-brand') && window.shell.heading === document.querySelector('.ob-step-heading') && window.shell.title === document.querySelector('#ob-title') && window.shell.progress === document.querySelector('.ob-progress') && window.shell.firstDot === document.querySelector('.ob-progress button'),
+    newContent: window.shell.content !== document.querySelector('.ob-step-content'),
+    formAnimation: document.querySelector('.ob-step-content').getAnimations().length > 0,
+    progressAnimation: document.querySelector('.ob-progress').getAnimations({ subtree: true }).length > 0,
+   }))
+   assert.equal(transition.staticNodes, true, 'brand, heading and stepper keep their DOM identity')
+   assert.equal(transition.newContent, true)
+   assert.equal(transition.formAnimation, true, 'only incoming form content animates')
+   assert.equal(transition.progressAnimation, true, 'the mounted stepper animates between steps')
+   for (const screen of ['Código', 'Palavra-passe', 'Ambiente', 'Perfil', 'Convites', 'Atualizações', 'Início', 'Email']) {
+    await choose(screen); await settle()
+    const current = await anchors()
+    for (const selector of Object.keys(initial)) assert.ok(Math.abs(current[selector] - initial[selector]) < 1, `${screen}: ${selector} stays anchored at ${JSON.stringify(viewport)}`)
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${screen}: no horizontal overflow`)
+    const progress = page.locator('.ob-progress')
+    if (await progress.count()) {
+     const dots = await progress.boundingBox(), brand = await page.locator('.ob-brand').boundingBox()
+     assert.ok(brand.y - dots.y - dots.height >= 23, 'stepper stays above the logo with a stable gap')
+    }
+   }
+   await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'dark' })
+   await choose('Código')
+   assert.equal(await page.locator('.ob-step-content').evaluate(el => el.getAnimations().length), 0)
+   assert.equal(await page.locator('.ob-progress').evaluate(el => el.getAnimations({ subtree: true }).length), 0)
+   await page.getByRole('textbox', { name: /^Código (?:temporário|de confirmação)$/ }).fill('123456')
+   await page.getByRole('button', { name: 'Continuar com código', exact: true }).click()
+   await page.getByRole('heading', { name: 'Definir palavra-passe', exact: true }).waitFor()
+   await page.close()
+  }
+  console.log(`${engine.name()}: stable shell, heading and form anchors; animated top stepper; reduced motion and mobile layout passed`)
+ } finally { await browser.close() }
 }
-const run = await page.locator('.ob-primary').boundingBox()
-const resendBox = await page.locator('#resend').boundingBox()
-assert.ok(resendBox.y - (run.y + run.height) < 18, 'the resend link hugs the run button')
-const wide = await gap()
-await page.setViewportSize({ width: 390, height: 844 })
-const narrow = await gap()
-assert.ok(narrow < wide - 3, `phone tightens the counter/back gap (${narrow} vs ${wide})`)
-// The workspace screen's foot: the counter, the account line and the email link read as one group.
-await page.setViewportSize({ width: 1440, height: 950 })
-await page.setContent(`<style>${css}</style>
-<main class="ob-page"><div class="ob-stage"><section class="ob-panel ob-workspace"><header><h1>Criar novo ambiente de trabalho</h1><p>Ambientes de trabalho estão desenhados para colaboração.</p></header>
-<form>
-  <label class="ob-field" id="name"><span>Nome</span><input placeholder="Nome do ambiente de trabalho"></label>
-  <label class="ob-field" id="url"><span>URL</span><input placeholder="nome-da-equipa"></label>
-  <button class="ob-button ob-primary ob-wide" id="create">Criar ambiente</button>
-  <div class="ob-account-note"><p id="for">Ambiente para <span>zz@xx.com</span></p><button type="button" class="ob-subtle" id="other">Utilizar um email diferente</button></div>
-  <div class="ob-progress"><span class="current"></span><span></span></div>
-</form></section></div></main>`)
-const counter = await page.locator('.ob-progress').boundingBox()
-const name = await page.locator('#name').boundingBox()
-const url = await page.locator('#url').boundingBox()
-const create = await page.locator('#create').boundingBox()
-// It rides the shared rhythm, so its controls space exactly as the code screen's do.
-const near = (got, want, what) => assert.ok(Math.abs(got - want) < 2, `${what} (${got} vs ${want})`)
-near(url.y - (name.y + name.height), 24, 'the two fields sit a form gap apart')
-const head = await page.locator('.ob-workspace header').boundingBox()
-near(name.y - (head.y + head.height), 32, 'the fields follow the lede at the header gap')
-near(counter.y - (create.y + create.height), 24, 'the counter sits a form gap under the run button')
-assert.ok((await page.locator('#name span').boundingBox()).width > 1, 'the field label remains visible after typing')
-assert.equal(await page.locator('#name span').textContent(), 'Nome', 'and still names the input')
-const note = await page.locator('#for').boundingBox()
-const other = await page.locator('#other').boundingBox()
-assert.ok(note.y - (counter.y + counter.height) < 12, `the account line follows the counter closely (${note.y - (counter.y + counter.height)})`)
-assert.ok(other.y - (note.y + note.height) < 8, 'the email link follows the account line closely')
-await browser.close()
-console.log('ok: reenviar → contador → voltar, centred')

@@ -7,7 +7,7 @@ import { fresh, saved, steps, type Draft, type Step } from './onboardingDraft'
 type Setup = { organizationId?: string; operationId: string; revision: number; name: string; slug: string; profileName: string; profileImage?: string; completed: boolean; automaticSlug?: boolean; workspace?: boolean; changelog: boolean; daily: boolean }
 type Invitation = { organizationId?: string; awaitingWorkspace?: boolean; token: string; email: string; status?: 'sent' | 'failed'; error?: string }
 type Record = { needsConfirmation?: boolean; completionRequested?: boolean; draft: Draft; revision: number; pending?: Setup; invitations: Invitation[]; link?: string }
-type Props = { imagePending?: boolean; preview: boolean; session: AuthSession | null; draft: Draft; setDraft: Dispatch<SetStateAction<Draft>>; setNotice: (message: string) => void; setError: (message: string) => void; onReady?: (state: Bootstrap) => void; onBlocked?: () => void }
+type Props = { imagePending?: boolean; preview: boolean; session: AuthSession | null; draft: Draft; setDraft: Dispatch<SetStateAction<Draft>>; setNotice: (message: string) => void; setError: (message: string, field?: string) => void; onReady?: (state: Bootstrap) => void; onBlocked?: () => void }
 const prefix = 'fontes:onboarding:v1:'
 const transient = (e: unknown) => !(e instanceof SyncError) || e.status >= 500 || e.status === 429
 
@@ -46,7 +46,7 @@ export function useOnboardingSync(props: Props) {
   const [savingPassword, setSavingPassword] = useState(false)
   const [sendingCode, setSendingCode] = useState(false)
   const [bootstrap, setBootstrap] = useState<Bootstrap | null>(null)
-  const [invitation, setInvitation] = useState<{ name: string; role: string } | null>(null)
+  const [invitation, setInvitation] = useState<{ name: string; role: string; invitedBy?: string } | null>(null)
   const [invitationErrors, setInvitationErrors] = useState<Invitation[]>([])
   const [inviteLink, setInviteLink] = useState('')
   const slugRetries = useRef(0)
@@ -297,7 +297,7 @@ export function useOnboardingSync(props: Props) {
         if (result.accessLost) throw new SyncError(403, 'O acesso ao ambiente deixou de estar disponível.')
         if (token && !result.passwordRequired) {
           setInvitation(null)
-          const detail = await onboardingRequest<{ name: string; role: string }>('/invitation', { token })
+          const detail = await onboardingRequest<{ name: string; role: string; invitedBy?: string }>('/invitation', { token })
           if (epoch !== generation.current) return
           setInvitation(detail)
         } else {
@@ -344,7 +344,7 @@ export function useOnboardingSync(props: Props) {
     }
     const creating = workspace || !!pending?.workspace
     record.current.pending = { organizationId: state.current?.organization?.id, operationId: crypto.randomUUID(), revision: 0, name: d.name.trim(), slug: d.slug,
-      profileName: d.profile.trim() || d.email.split('@')[0], profileImage: d.image, completed: complete, automaticSlug: creating && !d.slugEdited, workspace: creating, changelog: d.changelog, daily: d.daily }
+      profileName: d.profile.trim() || d.email.split('@')[0], profileImage: d.image, completed: complete, automaticSlug: creating, workspace: creating, changelog: d.changelog, daily: d.daily }
     record.current.draft = d
     setIssue(value => value === 'workspace' || value === 'profile' ? null : value)
     setSyncStatus('saving')
@@ -385,11 +385,19 @@ export function useOnboardingSync(props: Props) {
     updateInvitations()
     void drain()
   }
-  async function authenticate(action: () => Promise<{ error?: unknown }>, message: string) {
+  async function authenticate(action: () => Promise<{ error?: unknown }>, message: string, field?: string) {
     if (authRunning.current) return
     authRunning.current = true; setBusy(true); current.current.setError('')
-    try { const result = await action(); if (result.error) throw new Error(message); return true }
-    catch { current.current.setError(message); return false }
+    try {
+      const result = await action()
+      if (result.error) {
+        const status = typeof result.error === 'object' && 'status' in result.error ? Number(result.error.status) : 0
+        const unavailable = status >= 500 || status === 429
+        current.current.setError(unavailable ? 'Não foi possível concluir o pedido. Nova tentativa disponível.' : message, unavailable ? undefined : field)
+        return false
+      }
+      return true
+    } catch { current.current.setError('Ligação interrompida. Nova tentativa disponível.'); return false }
     finally { authRunning.current = false; setBusy(false); void flushPassword() }
   }
   async function start() {
@@ -405,7 +413,7 @@ export function useOnboardingSync(props: Props) {
     if (authRunning.current) return
     const email = current.current.draft.email
     if (current.current.draft.step === 'code' && !current.current.draft.returning && !new URL(location.href).searchParams.has('invite')) current.current.setDraft(d => ({ ...d, step: 'password' }))
-    const verified = await authenticate(() => authClient.signIn.emailOtp({ email, otp: code }), 'Código inválido ou expirado. Nova tentativa disponível.')
+    const verified = await authenticate(() => authClient.signIn.emailOtp({ email, otp: code }), 'Código inválido ou expirado. Nova tentativa disponível.', 'code')
     if (!verified) {
       setIssue('code')
     } else {
@@ -416,7 +424,7 @@ export function useOnboardingSync(props: Props) {
     }
   }
   async function login(password: string) {
-    return authenticate(() => authClient.signIn.email({ email: current.current.draft.email.trim().toLowerCase(), password }), 'Email ou palavra-passe inválidos. A recuperação de acesso está disponível.')
+    return authenticate(() => authClient.signIn.email({ email: current.current.draft.email.trim().toLowerCase(), password }), 'Email ou palavra-passe inválidos. A recuperação de acesso está disponível.', 'oldPassword')
   }
   // Resolve only after React has committed the authenticated destination or a
   // recoverable error. Closing the Google window then cannot expose an empty page.
@@ -480,12 +488,12 @@ export function useOnboardingSync(props: Props) {
     } catch (e) {
       if (epoch !== generation.current || pageHidden.current) return
       passwordRunning.current = false
-      current.current.setError(e instanceof SyncError ? e.message : 'Não foi possível guardar a palavra-passe. Nova tentativa disponível.')
+      current.current.setError(e instanceof SyncError ? e.message : 'Não foi possível guardar a palavra-passe. Nova tentativa disponível.', e instanceof SyncError && [400, 422].includes(e.status) ? 'password' : undefined)
       if (e instanceof SyncError && e.status === 401) { pendingPassword.current = newPassword; renewAuthentication() }
       else {
         setIssue('password')
         await reload.current()
-        current.current.setError(e instanceof SyncError ? e.message : 'Não foi possível guardar a palavra-passe. Nova tentativa disponível.')
+        current.current.setError(e instanceof SyncError ? e.message : 'Não foi possível guardar a palavra-passe. Nova tentativa disponível.', e instanceof SyncError && [400, 422].includes(e.status) ? 'password' : undefined)
       }
     } finally { passwordRunning.current = false; setSavingPassword(false) }
   }

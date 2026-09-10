@@ -62,7 +62,7 @@ test('workspace confirmation, automatic URL collision, confirmed completion and 
   } finally { await browser.close() }
 })
 
-test('an explicitly chosen URL stays editable after a conflict', async () => {
+test('a generated URL retries under conflict and then asks for another name', async () => {
   const browser = await chromium.launch()
   try {
     const page = await browser.newPage()
@@ -79,13 +79,12 @@ test('an explicitly chosen URL stays editable after a conflict', async () => {
     })
     await page.goto(origin)
     await page.getByRole('textbox', { name:'Nome', exact:true }).fill('Equipa')
-    await page.getByRole('textbox', { name:'URL do ambiente' }).fill('url-escolhido')
     await page.getByRole('button', { name:'Criar ambiente', exact:true }).click()
-    await page.getByRole('alert').filter({ hasText:'Este URL já está em uso' }).waitFor()
-    assert.equal(await page.getByRole('textbox', { name:'URL do ambiente' }).inputValue(), 'url-escolhido')
-    assert.equal(await page.getByRole('textbox', { name:'URL do ambiente' }).isEnabled(), true)
-    assert.equal(writes.length, 1)
-    assert.equal(await page.locator('.ob-profile').count(), 1)
     await page.getByRole('form', { name:'Correção da configuração' }).waitFor()
+    assert.equal(await page.getByRole('textbox', { name:'URL do ambiente' }).count(), 0, 'the URL is never asked for')
+    assert.equal(writes.length, 4, 'the generated URL is retried three times before the correction form')
+    assert.equal(new Set(writes.map(body => body.slug)).size, 4, 'every retry carries a different URL')
+    assert.ok(writes.every(body => body.automaticSlug), 'every write is a generated URL')
+    assert.equal(await page.locator('.ob-profile').count(), 1)
   } finally { await browser.close() }
 })

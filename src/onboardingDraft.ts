@@ -1,7 +1,7 @@
 export type Step = 'start' | 'email' | 'code' | 'password' | 'join' | 'workspace' | 'profile' | 'invites' | 'updates'
-export type Draft = { step: Step; returning: boolean; provider: 'email' | 'google'; email: string; name: string; slug: string; slugEdited: boolean; profile: string; image: string; invitations: string; changelog: boolean; daily: boolean }
+export type Draft = { step: Step; returning: boolean; provider: 'email' | 'google'; email: string; name: string; slug: string; profile: string; image: string; invitations: string; changelog: boolean; daily: boolean }
 export const steps: Step[] = ['start', 'email', 'code', 'password', 'join', 'workspace', 'profile', 'invites', 'updates']
-export const fresh: Draft = { step: 'start', returning: false, provider: 'email', email: '', name: '', slug: '', slugEdited: false, profile: '', image: '', invitations: '', changelog: false, daily: false }
+export const fresh: Draft = { step: 'start', returning: false, provider: 'email', email: '', name: '', slug: '', profile: '', image: '', invitations: '', changelog: false, daily: false }
 // A draft stored before a field existed still opens: the saved values sit on top of the
 // defaults, so only the keys it does carry have to match.
 export function saved(value: unknown): Draft | null {

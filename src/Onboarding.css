@@ -5,39 +5,48 @@
 .ob-brand{display:flex;width:fit-content;margin-inline:auto;padding:6px;border-radius:13px;background:#171719;box-shadow:0 0 0 1px #ffffff12,0 1px 3px #00000059}
 .ob-brand:focus-visible{outline:2px solid #95c1fb;outline-offset:4px}
 .ob-brand img{display:block;width:36px;height:36px;object-fit:cover;border-radius:8px}
-.ob-stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:590px;padding:max(64px,calc((100dvh - 400px) / 2)) 0 74px}
-.ob-stage .ob-brand{margin-bottom:22px}
+.ob-stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:590px;padding:clamp(48px,calc((100svh - 600px) / 2),180px) 0 48px}
+.ob-stage .ob-brand{margin-bottom:24px}
 .ob-panel{width:100%;max-width:360px;text-align:center}
 .ob-panel header{margin-bottom:32px}
 .ob-panel h1{font-size:24px;font-weight:550;line-height:1.25;letter-spacing:-.65px;outline:none;text-wrap:balance}
 .ob-panel header p{margin-top:12px;color:var(--ob-muted);font-size:14px;line-height:1.6;text-wrap:pretty}
 .ob-panel strong{font-weight:500;color:var(--ob-text)}
 .ob-start header{margin-bottom:32px}
-.ob-start-actions{display:flex;flex-direction:column;gap:17px}
+.ob-start-actions{display:flex;flex-direction:column;gap:16px}
 .ob-panel button{cursor:pointer}.ob-panel button:focus-visible,.ob-preview-bar button:focus-visible{outline:2px solid #95c1fb;outline-offset:4px}
 .ob-button{border:1px solid #2a2a2e;border-radius:var(--ob-control-radius);padding:11px 22px;min-height:var(--ob-control-h);min-width:var(--ob-control-min-w);display:inline-flex;align-items:center;justify-content:center;gap:10px;background:#202022;color:var(--ob-text);font:inherit;font-size:13px;font-weight:500;transition:background .15s,border-color .15s}
 .ob-button:hover{background:#2b2b2e;border-color:#404045}.ob-primary{background:#232326}.ob-wide{width:100%}.ob-provider{width:100%;background:#171719}
 .ob-divider{display:flex;align-items:center;gap:15px;color:#66666d;font-size:12px}.ob-divider:before,.ob-divider:after{content:'';flex:1;height:1px;background:#242426}
 .ob-account{text-align:center;color:var(--ob-muted);font-size:13px;padding-top:12px}.ob-link{background:none;border:0;color:#d1d1d5;text-decoration:underline;text-underline-offset:4px;font:inherit;margin-left:4px}
-.ob-panel form{display:flex;flex-direction:column;gap:24px}
+.ob-panel form{display:flex;flex-direction:column;gap:20px}
 .ob-panel input:not([type=checkbox],[hidden]),.ob-panel textarea{display:block;width:100%;min-width:0;height:var(--ob-control-h);border:1px solid #38383c;border-radius:var(--ob-control-radius);padding:11px 13px;background:#121213;color:var(--ob-text);font:inherit;font-size:14px;text-align:left;outline:none;transition:border-color .15s,box-shadow .15s}
 .ob-panel input::placeholder,.ob-panel textarea::placeholder{color:#65656d}.ob-panel input:not([type=checkbox],[type=file]):focus,.ob-panel textarea:focus{border-color:#83838d;box-shadow:0 0 0 2px #ffffff08}
 .ob-panel textarea{height:auto;resize:vertical;min-height:100px;line-height:1.8}
 .ob-panel input.ob-code,.ob-panel input[type=email]{text-align:center}
-.ob-field{display:flex;flex-direction:column;gap:10px}.ob-field>span{display:block;text-align:left;font-size:13px;color:var(--ob-text)}
-.ob-subtle{border:0;background:none;color:var(--ob-muted);font:inherit;font-size:13px;padding:8px 0;min-height:36px}.ob-subtle:hover{color:#ededee}.ob-centered{align-self:center;margin-top:-10px}
-.ob-resend{margin-top:-12px}
-/* Profile's back link closes the form on the workspace step's rhythm: same 8px under the counter as its account note. */
-.ob-profile .ob-progress,.ob-invites .ob-progress,.ob-updates .ob-progress{margin-top:4px}.ob-panel.ob-profile form>.ob-centered,.ob-panel.ob-invites form>.ob-centered,.ob-panel.ob-updates form>.ob-centered{margin-top:-24px}
-.ob-progress{display:flex;align-items:center;justify-content:center;gap:8px;height:8px;order:1}
-/* The counter sits at the form's foot: the step's own trailing rows (the back links, the account note, the actions) follow it, and a notice stays last. */
-.ob-panel form>.ob-centered,.ob-panel form>.ob-account-note,.ob-panel form>.ob-actions{order:2}
+.ob-field{display:flex;flex-direction:column;gap:8px}.ob-field>span{display:block;text-align:left;font-size:13px;color:var(--ob-text)}
+.ob-subtle{border:0;background:none;color:var(--ob-muted);font:inherit;font-size:13px;padding:8px 0;min-height:36px}.ob-subtle:hover{color:#ededee}.ob-centered{align-self:center;margin-top:-8px}
+/* The progress slot stays in the shell so its arrival never moves the brand. */
+.ob-progress-slot{height:8px;flex:none;margin-bottom:24px;display:flex;align-items:center;justify-content:center}
+.ob-progress{display:flex;align-items:center;justify-content:center;gap:8px;height:8px}
+/* The row is 25px plus a dot each, so it only stays put while the collapsing pill and the opening
+   one share one curve. Any delay or second timing on .current slides the whole centred row. */
+.ob-progress button{display:block;flex:none;position:relative;padding:0;border:0;appearance:none;width:7px;height:7px;border-radius:9px;background:#404044;transition:width .4s ease,background-color .4s ease}
+/* A 7px dot is not a target: the hit area is an overlay, so the row's geometry is untouched. */
+.ob-progress button:enabled{cursor:pointer}
+.ob-progress button:enabled::before{content:'';position:absolute;inset:-9px -4px}
+.ob-progress .past{background:#77777e}
+.ob-progress button:enabled:hover{background:#b0b0b8}
+.ob-progress .current{width:25px;background:#e6e6ec}
+/* Titles update in place; only the changing form enters. No delayed navigation. */
+.ob-panel .ob-step-heading{min-height:110px;margin-bottom:0}
+.ob-step-heading p{overflow-wrap:anywhere}
+.ob-step-content{width:100%;animation:ob-step-enter .5s ease-in-out both}
+@keyframes ob-step-enter{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:scale(1)}}
+/* The code field wears the password field's label row: label left, resend right. */
+.ob-code-field{display:flex;flex-direction:column;gap:8px}
 .ob-panel form>.ob-notice{order:3}
-/* Updates closes the flow, so its actions sit above the counter and the counter ends the form. */
-.ob-panel.ob-updates form>.ob-actions{order:0;margin-top:0}
-.ob-progress span{width:7px;height:7px;border-radius:9px;background:#404044}.ob-progress .past{background:#77777e}.ob-progress .current{width:25px;background:linear-gradient(90deg,#efeff1,#8e8e95)}
-.ob-url{display:flex;align-items:center;height:var(--ob-control-h);border:1px solid #38383c;border-radius:var(--ob-control-radius);background:#121213;overflow:hidden}.ob-url:focus-within{border-color:#83838d;box-shadow:0 0 0 2px #ffffff08}.ob-url>span{display:flex;align-items:center;align-self:stretch;padding:0 13px;border-right:1px solid #262629;background:#1b1b1e;color:#8d8e95;white-space:nowrap}.ob-url input:not([type=checkbox],[type=file]){height:100%;border:0;padding-left:13px;background:transparent;box-shadow:none}
-.ob-account-note{text-align:center;color:#6e6e77;font-size:12px;margin-top:-16px}.ob-account-note p{margin:0}.ob-account-note span{color:#b0b0b8}.ob-account-note button{font-size:12px;padding:2px 0;min-height:22px}
+.ob-account-note{text-align:center;color:#6e6e77;font-size:12px;margin-top:0}.ob-account-note p{margin:0}.ob-account-note span{color:#b0b0b8}.ob-account-note button{font-size:12px;padding:2px 0;min-height:22px}
 .ob-profile-input{display:flex;gap:12px;align-items:center;height:var(--ob-control-h)}.ob-avatar{width:var(--ob-control-h);height:var(--ob-control-h);border-radius:var(--ob-control-radius);flex-shrink:0;display:block;object-fit:cover}
 /* The mark is the file control itself: the picker covers it and the lens fades in over it. */
 .ob-photo{position:relative;display:block;flex-shrink:0;padding:0;border:0;background:none;width:var(--ob-control-h);height:var(--ob-control-h);border-radius:var(--ob-control-radius);cursor:pointer}
@@ -51,36 +60,41 @@
 /* A touch screen has no hover, so the cross stays out. */
 @media(hover:none){.ob-photo-clear{opacity:1}}
 .ob-photo-clear:hover{background:#2a2a2e;color:#fff}
-.ob-actions{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:8px}.ob-actions>.ob-primary{width:100%}
-.ob-copy-row{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:0 8px;margin-bottom:-18px}
+.ob-actions{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:0}.ob-actions>.ob-primary{width:100%}
+.ob-copy-row{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:0;margin-bottom:0}
 .ob-copy{display:flex;align-items:center;gap:9px;align-self:center;padding:3px 0;background:none;border:0;color:#c5c5cb;font:inherit;font-size:13px}.ob-copy:hover{color:white}
 .ob-preferences{border-top:1px solid var(--ob-border)}.ob-preference{display:flex;align-items:center;gap:26px;justify-content:space-between;padding:20px 0;border-bottom:1px solid var(--ob-border);cursor:pointer}.ob-preference>span{display:grid;gap:5px;text-align:left}.ob-preference strong{font-size:14px}.ob-preference small{font-size:13px;line-height:1.6;color:var(--ob-muted)}
 .ob-preference input{appearance:none;position:relative;width:31px;height:19px;flex-shrink:0;border:0;border-radius:99px;background:#505057;cursor:pointer;transition:background .15s}.ob-preference input:before{content:'';position:absolute;top:3px;left:3px;width:13px;height:13px;border-radius:50%;background:#fff;box-shadow:0 1px 2px #0005;transition:transform .15s}.ob-preference input:checked{background:#3e8ef7}.ob-preference input:checked:before{transform:translateX(12px)}.ob-preference input:focus-visible{outline:2px solid #95c1fb;outline-offset:4px}
 .ob-notice{font-size:12px;color:#9ec7fb;line-height:1.6;margin-top:8px}
 .ob-preview-bar{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:16px;max-width:calc(100% - 32px);padding:9px 13px;border:1px solid #303035;border-radius:12px;background:#171719f5;box-shadow:0 8px 30px #0004;font-size:11px;z-index:5}.ob-preview-bar>span{color:#777780;white-space:nowrap}.ob-preview-bar nav{display:flex;gap:3px;overflow:auto}.ob-preview-bar button{border:0;background:transparent;color:#8e8e98;font:inherit;padding:6px 8px;border-radius:6px;white-space:nowrap;cursor:pointer}.ob-preview-bar button:hover{color:#efeff2}.ob-preview-bar button[aria-current]{color:#efeff2;background:#303035}.ob-preview-bar .ob-reset{border-left:1px solid #343439;border-radius:0;padding-left:14px;color:#bcbcc5}
-/* The error toast is a quiet plate on the page's own stroke; left/right auto centring keeps ob-enter's transform free. */
-.ob-toast{position:fixed;top:18px;left:0;right:0;width:fit-content;max-width:min(440px,calc(100% - 32px));margin-inline:auto;z-index:7;display:flex;align-items:center;padding:6px 13px;border:1px solid #553233;border-radius:99px;background:#161618;color:#e08a85;font-size:12px;line-height:1.5;text-align:left;text-wrap:pretty;animation:ob-enter .22s ease-out}
+/* Notifications sit outside the animated form so their position stays fixed. */
+.ob-toasts{position:fixed;bottom:calc(24px + env(safe-area-inset-bottom,0px));left:0;right:0;width:fit-content;max-width:min(420px,calc(100% - 32px));margin-inline:auto;z-index:7;display:flex;flex-direction:column;gap:8px;max-height:50svh;overflow:auto}
+.ob-toast{display:flex;align-items:center;gap:8px;padding:7px 8px 7px 12px;border:1px solid #ffffff14;border-radius:12px;background:#202022;color:var(--ob-text);box-shadow:0 8px 28px #0003;font-size:13px;line-height:1.5;text-align:left;animation:ob-enter .3s ease-out}
+.ob-toast p{margin:0;min-width:0;overflow-wrap:anywhere}
+.ob-toast-icon{flex:none;width:16px;height:16px;color:var(--ob-muted)}
+.ob-toast button{display:grid;place-items:center;flex:none;width:22px;height:22px;padding:0;border:0;border-radius:6px;background:transparent;color:var(--ob-muted);cursor:pointer}
+.ob-toast button:hover{background:#ffffff08;color:var(--ob-text)}
+.ob-toast button:focus-visible{outline:2px solid #95c1fb;outline-offset:2px}
+.ob-page:has(.ob-preview-bar) .ob-toasts{bottom:calc(88px + env(safe-area-inset-bottom,0px))}
 @keyframes ob-enter{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
-@media(max-width:600px){.ob-panel form>.ob-centered{margin-top:-16px}.ob-page{padding:0 25px 115px}.ob-stage{min-height:530px;padding-bottom:30px}.ob-panel h1{font-size:23px}.ob-preview-bar{bottom:10px;gap:4px;padding:7px;max-width:calc(100% - 16px);width:max-content}.ob-preview-bar>span{display:none}.ob-preview-bar button{padding:7px 6px;font-size:10px}.ob-preview-bar .ob-reset{padding-left:8px}.ob-panel header p{font-size:13px}.ob-panel form,.ob-start-actions,.ob-wide{display:flex;width:100%;margin-inline:auto}.ob-panel header{width:100%;margin-inline:auto}}
-@media(prefers-reduced-motion:reduce){.ob-panel,.ob-toast{animation:none}.ob-page *{transition:none!important}}
+@media(max-width:600px){.ob-page{padding:0 25px 115px}.ob-stage{min-height:530px;padding-bottom:30px}.ob-panel h1{font-size:23px}.ob-preview-bar{bottom:10px;gap:4px;padding:7px;max-width:calc(100% - 16px);width:max-content}.ob-preview-bar>span{display:none}.ob-preview-bar button{padding:7px 6px;font-size:10px}.ob-preview-bar .ob-reset{padding-left:8px}.ob-panel header p{font-size:13px}.ob-panel form,.ob-start-actions,.ob-wide{display:flex;width:100%;margin-inline:auto}.ob-panel header{width:100%;margin-inline:auto}}
+@media(prefers-reduced-motion:reduce){.ob-panel,.ob-step-content,.ob-toast{animation:none}.ob-page *{transition:none!important}}
 
 .ob-page[data-theme=light]{--ob-text:#222225;--ob-muted:#73737c;--ob-border:#e4e4e7;background:radial-gradient(128% 88% at 50% 8%,#fff 0%,#fcfcfd 40%,#f4f4f6 100%) #fff;color-scheme:light}
 .ob-page[data-theme=light] .ob-button{background:#f1f1f3;border-color:#e4e4e7;color:#27272b}
 .ob-page[data-theme=light] .ob-button:hover{background:#e8e8ec;border-color:#d3d3da}
 .ob-page[data-theme=light] .ob-provider{background:#fafafa}
-.ob-page[data-theme=light] .ob-panel input:not([type=checkbox],[type=file]),.ob-page[data-theme=light] .ob-panel textarea,.ob-page[data-theme=light] .ob-url{background:#fafafa;border-color:#d9d9de}
-.ob-page[data-theme=light] .ob-url input:not([type=checkbox],[type=file]){background:transparent;border:0}
-.ob-page[data-theme=light] .ob-url>span{border-right-color:#e4e4e7;background:#f1f1f3;color:#6e6e77}
-.ob-page[data-theme=light] .ob-panel input:not([type=checkbox],[type=file]):focus,.ob-page[data-theme=light] .ob-panel textarea:focus,.ob-page[data-theme=light] .ob-url:focus-within{border-color:#91919d;box-shadow:0 0 0 2px #25253508}
-.ob-page[data-theme=light] .ob-url input:not([type=checkbox],[type=file]):focus{box-shadow:none}
+.ob-page[data-theme=light] .ob-panel input:not([type=checkbox],[type=file]),.ob-page[data-theme=light] .ob-panel textarea{background:#fafafa;border-color:#d9d9de}
+.ob-page[data-theme=light] .ob-panel input:not([type=checkbox],[type=file]):focus,.ob-page[data-theme=light] .ob-panel textarea:focus{border-color:#91919d;box-shadow:0 0 0 2px #25253508}
 .ob-page[data-theme=light] .ob-field>span{color:#696971}
 .ob-page[data-theme=light] .ob-panel input::placeholder,.ob-page[data-theme=light] .ob-panel textarea::placeholder{color:#92929b}
 .ob-page[data-theme=light] .ob-link,.ob-page[data-theme=light] .ob-copy,.ob-page[data-theme=light] .ob-account-note span{color:#4f4f59}
 .ob-page[data-theme=light] .ob-subtle:hover,.ob-page[data-theme=light] .ob-copy:hover{color:#19191d}
 .ob-page[data-theme=light] .ob-divider:before,.ob-page[data-theme=light] .ob-divider:after{background:#e4e4e7}
-.ob-page[data-theme=light] .ob-progress span{background:#d8d8dd}
+.ob-page[data-theme=light] .ob-progress button{background:#d8d8dd}
 .ob-page[data-theme=light] .ob-progress .past{background:#a0a0aa}
-.ob-page[data-theme=light] .ob-progress .current{background:linear-gradient(90deg,#555560,#b3b3bc)}
+.ob-page[data-theme=light] .ob-progress button:enabled:hover{background:#555560}
+.ob-page[data-theme=light] .ob-progress .current{background:#555560}
 .ob-page[data-theme=light] .ob-preference input{background:#c9c9d0}
 .ob-page[data-theme=light] .ob-preference input:checked{background:#3e8ef7}
 .ob-page[data-theme=light] .ob-notice{color:#2f6bb9}
@@ -89,7 +103,8 @@
 .ob-page[data-theme=light] .ob-preview-bar button:hover{color:#222225}
 .ob-page[data-theme=light] .ob-preview-bar button[aria-current]{color:#222225;background:#eaeaec}
 .ob-page[data-theme=light] .ob-preview-bar .ob-reset{border-color:#dddde3;color:#5c5c67}
-.ob-page[data-theme=light] .ob-toast{background:#fff;border-color:#ebc7c7;color:#c0433b}
+.ob-page[data-theme=light] .ob-toast{background:#fff;border-color:#e4e4e7;box-shadow:0 8px 28px #00000012}
+.ob-page[data-theme=light] .ob-toast button:hover{background:#00000005}
 .ob-page[data-theme=light] .ob-brand{background:#fff;box-shadow:0 0 56px #00000014,0 0 20px #0000000d,0 0 0 1px #26262612}
 .ob-button:disabled{opacity:.5;cursor:default}
 
@@ -109,7 +124,6 @@ html:has(.ob-page[data-theme=light]) {
   color-scheme: light;
 }
 html:has(.ob-page[data-theme=light]) .ob-page { background: transparent; }
-.ob-toast { top: calc(18px + env(safe-area-inset-top, 0px)); }
 .ob-page {
   position: relative;
   min-height: 100dvh;
@@ -141,18 +155,17 @@ html:has(.ob-page[data-theme=light]) .ob-page { background: transparent; }
   }
   /* Keep the anchor stable as browser chrome and the keyboard change height.
      Long steps remain scrollable instead of squeezing the form to fit. */
-  .ob-stage { flex: 1 0 auto; padding-top: 64px; }
+  .ob-stage { flex: 1 0 auto; padding-top: 40px; }
   .ob-panel { animation: none; }
-  /* iPhone focus zoom is triggered by small editable text, including the URL. */
+  /* iPhone focus zoom is triggered by small editable text. */
   .ob-panel input:not([type=checkbox]),
-  .ob-panel textarea,
-  .ob-url input:not([type=checkbox]) { font-size: 16px; }
+  .ob-panel textarea { font-size: 16px; }
 }
 
 .ob-sync-status { position: fixed; bottom: max(16px, env(safe-area-inset-bottom)); left: 16px; right: 16px; z-index: 100; margin: auto; width: fit-content; max-width: calc(100% - 32px); padding: 12px 16px; border-radius: 12px; background: #202022; color: #fff; font-size: 14px; }
 .ob-sync-status button { margin-left: 12px; color: inherit; text-decoration: underline; cursor: pointer; }
 
-/* Background experiment: the previous login's 16px grid in neutral tones. */
+/* Fontes Labs geometry, faded across the entire viewport on every screen. */
 html:has(.ob-page[data-theme=dark]) { background: #101012; }
 html:has(.ob-page[data-theme=light]) { background: #fff; }
 .ob-page { isolation: isolate; }
@@ -160,37 +173,65 @@ html:has(.ob-page[data-theme=light]) { background: #fff; }
 .ob-background {
   --make-bg: #101012;
   position: fixed;
-  background: var(--make-bg);
-  mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 78%, transparent);
+  background: transparent;
 }
 .ob-background .make-purple-blob { display: none; }
 .ob-background .make-background-grid {
-  background-image:
-    linear-gradient(to right, rgb(255 255 255 / .035) 1px, transparent 1px),
-    linear-gradient(rgb(255 255 255 / .035) 1px, transparent 1px);
+  opacity: 1;
+  background: rgb(255 255 255 / .018);
+  mask: url('/onboarding-grid.svg') center top / 101px 101px repeat;
 }
-.ob-page[data-theme=light] .ob-background { --make-bg: #fff; background: #fff; }
-.ob-page[data-theme=light] .make-background-grid {
-  background-image:
-    linear-gradient(to right, rgb(38 38 38 / .035) 1px, transparent 1px),
-    linear-gradient(rgb(38 38 38 / .035) 1px, transparent 1px);
-}
+.ob-page[data-theme=light] .ob-background { --make-bg: #fff; }
+.ob-page[data-theme=light] .make-background-grid { background: rgb(38 38 38 / .018); }
 
 /* Feedback stays with the current form instead of moving the stage or rewinding it. */
 .ob-password-field { text-align: left; }
 .ob-password-field > label { color: var(--ob-text); font-size: 13px; }
+.ob-password-head, .ob-code-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.ob-password-recovery, .ob-code-resend, .ob-skip { display: inline-flex; align-items: center; gap: 2px; padding: 0; min-height: 0; text-decoration: none; }
+.ob-password-recovery svg, .ob-code-resend svg, .ob-skip svg { width: 14px; height: 14px; }
 .ob-password-field > small { color: var(--ob-muted); font-size: 12px; }
 .ob-password-control { position: relative; }
 .ob-password-control input { padding-right: 76px !important; }
 .ob-password-control button { position: absolute; right: 10px; top: 0; height: 100%; min-height: 0; padding: 0 4px; }
-.ob-field-error { color: #e08a85; font-size: 13px; line-height: 1.5; margin-top: 12px; }
-.ob-page[data-theme=light] .ob-field-error { color: #b03631; }
-.ob-panel input[aria-invalid=true] { border-color: #c0433b; }
+.ob-strength { display: flex; gap: 4px; color: #d0605c; }
+.ob-strength[data-strength="2"] { color: #d8a13c; }
+.ob-strength[data-strength="3"] { color: #5fa86a; }
+.ob-strength > span { flex: 1; height: 4px; border-radius: 2px; background: #26262a; overflow: hidden; }
+.ob-strength i { display: block; height: 100%; background: currentColor; transform-origin: left; transition: transform .15s; }
+.ob-page[data-theme=light] .ob-strength > span { background: #e4e4e7; }
+/* Collapsed until there is something to say, then it opens: the 39px reserve kept the
+   layout still but cost every field a blank line. */
+span.ob-field-feedback{display:grid;grid-template-rows:0fr;flex:none;width:100%;text-align:left;transition:grid-template-rows .32s cubic-bezier(.32,.72,0,1)}
+span.ob-field-feedback:has(small){grid-template-rows:1fr}
+.ob-field-feedback>small{overflow:hidden;min-height:0;opacity:1;translate:0 0;transition:opacity .24s ease-out,translate .32s cubic-bezier(.32,.72,0,1)}
+/* The message mounts with the row already opening, so it needs a start state of its own. */
+@starting-style{.ob-field-feedback>small{opacity:0;translate:0 -4px}}
+.ob-field-feedback .ob-field-hint{display:block;font-size:13px;line-height:1.5;color:var(--ob-muted)}
+.ob-field-error { display:block; color:#e08a85; font-size:13px; line-height:1.5; margin:0; text-align:left; }
+.ob-field > .ob-field-error { color:#e08a85; }
+.ob-page[data-theme=light] .ob-field-error,.ob-page[data-theme=light] .ob-field > .ob-field-error { color: #b03631; }
+.ob-page[data-theme] .ob-panel :is(input,textarea)[aria-invalid=true],.ob-page[data-theme] .ob-panel :is(input,textarea)[aria-invalid=true]:focus { border-color:#b75e5b; }
 .ob-correction { margin-top: 24px; padding: 18px; border: 1px solid var(--ob-border); border-radius: 12px; text-align: left; }
 .ob-correction h2 { font-size: 16px; line-height: 1.4; }
-.ob-correction .ob-field > span, .ob-visible-label > span { position: static; width: auto; height: auto; margin: 0; clip-path: none; overflow: visible; }
+.ob-correction .ob-field > span:not(.ob-field-feedback), .ob-visible-label > span:not(.ob-field-feedback) { position: static; width: auto; height: auto; margin: 0; clip-path: none; overflow: visible; }
 
 .ob-visible-label > span{display:block;text-align:left;font-size:13px;color:var(--ob-text)}
 .ob-recovery > p,.ob-recovery > a,.ob-recovery > button{margin-top:20px}
 
 .ob-recovery a{color:var(--ob-muted);font-size:13px;text-underline-offset:3px}
+
+/* The join screen is the start screen's stack: the confirmed tile, then its actions. */
+.ob-invite-tile{display:grid;justify-items:center;padding:4px 0 12px}
+/* The confirmation draws itself once the step lands: ring first, then the tick. */
+.ob-invite-check{color:#3e8ef7}
+.ob-invite-check circle{stroke-dasharray:57;stroke-dashoffset:57;animation:ob-draw .6s cubic-bezier(.65,0,.35,1) forwards}
+.ob-invite-check path{stroke-dasharray:12;stroke-dashoffset:12;animation:ob-draw .3s .45s cubic-bezier(.65,0,.35,1) forwards}
+@keyframes ob-draw{to{stroke-dashoffset:0}}
+@media(prefers-reduced-motion:reduce){.ob-invite-check circle,.ob-invite-check path{animation:none;stroke-dashoffset:0}}
+.ob-invite-tile>span{display:grid;gap:3px}
+.ob-invite-tile strong{font-size:14px}
+.ob-invite-tile small{color:var(--ob-muted);font-size:13px;line-height:1.5}
+.ob-invite-card{display:flex;flex-direction:column;gap:16px}
+.ob-invite-card textarea{height:82px;min-height:82px;resize:none}
+.ob-invite-link{align-self:flex-end;margin-bottom:-8px}

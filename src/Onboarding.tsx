@@ -1,5 +1,5 @@
 import OnboardingLayout from './OnboardingLayout'
-import { useSlugAvailability } from './useSlugAvailability'
+import { FieldError, Icon, Toast } from './OnboardingFeedback'
 import { recoveryURL } from './authDestination'
 import { fresh, saved, steps, type Step, type Draft } from './onboardingDraft'
 import { PasswordField } from './Password'
@@ -36,9 +36,6 @@ function slug(value: string) {
   const base = value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48)
   return !base ? 'equipa' : base.length < 3 ? `${base}-equipa` : base
 }
-function Icon({ kind }: { kind: 'email' | 'link' | 'arrow' | 'camera' }) {
-  return <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{kind === 'camera' ? <><path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.2a1 1 0 0 0 .8-.4l.9-1.2a1 1 0 0 1 .8-.4h5.6a1 1 0 0 1 .8.4l.9 1.2a1 1 0 0 0 .8.4h2.2A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5Z"/><circle cx="12" cy="12.5" r="3.4"/></> : kind === 'email' ? <><rect x="3" y="5" width="18" height="14" rx="3"/><path d="m4 7 8 6 8-6"/></> : kind === 'link' ? <><path d="m10 13 4-4m-6 5-1 1a3.5 3.5 0 0 0 5 5l4-4a3.5 3.5 0 0 0 0-5m0-1 1-1a3.5 3.5 0 0 0-5-5l-4 4a3.5 3.5 0 0 0 0 5"/></> : <path d="m9 5 7 7-7 7"/>}</svg>
-}
 function Google() {
   return <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.2c0-.7-.1-1.4-.2-2.2H12v4.3h5.4a4.6 4.6 0 0 1-2 3v2.5h3.3c1.9-1.8 2.9-4.4 2.9-7.6Z"/><path fill="#34A853" d="M12 22c2.7 0 5-.9 6.7-2.4l-3.3-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.2H3v2.6A10 10 0 0 0 12 22Z"/><path fill="#FBBC05" d="M6.4 13.9a6 6 0 0 1 0-3.8V7.5H3a10 10 0 0 0 0 9l3.4-2.6Z"/><path fill="#EA4335" d="M12 6c1.5 0 2.8.5 3.8 1.5l2.9-2.9A9.6 9.6 0 0 0 12 2a10 10 0 0 0-9 5.5l3.4 2.6C7.2 7.8 9.4 6 12 6Z"/></svg>
 }
@@ -61,7 +58,7 @@ function Avatar({ seed }: { seed: string }) {
   }, [seed])
   return <img className="ob-avatar" src={picture} alt=""/>
 }
-function Field({ label, children }: { label: string; children: ReactNode }) { return <label className="ob-field"><span>{label}</span>{children}</label> }
+function Field({ label, children, name, error, hint }: { label: string; children: ReactNode; name?: string; error?: string; hint?: string }) { return <label className="ob-field"><span>{label}</span>{children}<FieldError id={`ob-${name}-error`} message={error} hint={hint} hintId={`ob-${name}-hint`}/></label> }
 
 function StepPanel({ step, children }: { step: Step; children: ReactNode }) {
   const panel = useRef<HTMLElement>(null)
@@ -76,12 +73,21 @@ export default function Onboarding({ preview = false, session = null, onReady, o
   const [password, setPassword] = useState('')
   const imageGeneration = useRef(0)
   const [imagePending, setImagePending] = useState(false)
-  useEffect(() => { setPassword(''); setCode('') }, [draft.step, draft.email])
+  // The code and the password outlive a step change on the preview, so a screen already answered is
+  // not answered twice. The live flow still drops the credential the moment its screen is left, and
+  // a different email invalidates both everywhere.
+  useEffect(() => { if (!preview) { setPassword(''); setCode('') } }, [preview, draft.step])
+  useEffect(() => { setPassword(''); setCode('') }, [draft.email])
   useEffect(() => { imageGeneration.current++; setImagePending(false); return () => { imageGeneration.current++ } }, [draft.email])
   const [notice, setNotice] = useState('')
-  // Keep the current error beside the form, including corrections of earlier steps.
+  const [fieldError, setFieldError] = useState<{ name: string; text: string } | null>(null)
+  const fieldMessage = (name: string) => fieldError?.name === name ? fieldError.text : undefined
+  const fieldProps = (name: string) => ({ name, 'aria-invalid': fieldMessage(name) ? true : undefined, 'aria-describedby': fieldMessage(name) ? `ob-${name}-error` : ['invitations', 'code'].includes(name) ? `ob-${name}-hint` : undefined })
   const [error, setError] = useState<{ text: string; n: number } | null>(() => new URL(location.href).searchParams.has('error') ? { text: 'Não foi possível concluir a autenticação. Nova tentativa disponível.', n: 0 } : null)
-  const toast = (text: string) => setError(prev => text ? { text, n: (prev?.n ?? 0) + 1 } : null)
+  const toast = (text: string, field?: string) => {
+    setFieldError(text && field ? { name: field, text } : null)
+    setError(prev => text && !field ? { text, n: (prev?.n ?? 0) + 1 } : null)
+  }
   // The last save opens the workspace on its own, so the button only reports that it is running.
   const [finishing, setFinishing] = useState(false)
   useEffect(() => { setFinishing(false) }, [draft.step, draft.changelog, draft.daily])
@@ -90,18 +96,25 @@ export default function Onboarding({ preview = false, session = null, onReady, o
   // callback, paint the brand and the first confirmed screen in the same commit.
   const screenShown = useRef(false)
   if (!live.restoring || !['start', 'email', 'code'].includes(draft.step)) screenShown.current = true
-  const availability = useSlugAvailability(draft.slug, !preview && draft.step === 'workspace' ? session?.user.id : undefined, live.organizationId)
   const file = useRef<HTMLInputElement>(null)
   const patch = (value: Partial<Draft>) => setDraft(current => ({ ...current, ...value }))
-  const go = (step: Step) => { if ((live.busy || live.restoring) && ['start', 'email', 'code'].includes(draft.step)) return; patch({ step }); setNotice(''); setError(null) }
+  const go = (step: Step) => { if ((live.busy || live.restoring) && ['start', 'email', 'code'].includes(draft.step)) return; patch({ step }); setNotice(''); setError(null); setFieldError(null) }
   useEffect(() => { if (preview) { try { localStorage.setItem(key, JSON.stringify(draft)) } catch { /* In-memory fallback. */ } } }, [draft, preview])
   const email = draft.email || 'email@email.com'
-  const titles: Record<Step, string> = { start: 'Criar conta', email: draft.returning ? 'Iniciar sessão' : 'Registo com email', code: 'Confirmar email', password: 'Definir palavra-passe', join: 'Convite para ambiente', workspace: 'Novo ambiente de trabalho', profile: 'Personalizar perfil', invites: 'Convidar membros', updates: 'Preferências de email' }
+  const invitation = live.invitation || (preview ? { name: 'Equipa Fontes', role: 'member', invitedBy: 'mateus@fonteslabs.com' } : null)
+  const titles: Record<Step, string> = { start: 'Criar conta', email: draft.returning ? 'Iniciar sessão' : 'Registar email', code: 'Confirmar email', password: 'Definir palavra-passe', join: 'Convite recebido', workspace: 'Novo ambiente de trabalho', profile: 'Personalizar perfil', invites: 'Convidar membros', updates: 'Preferências de email' }
   const descriptions: Partial<Record<Step, ReactNode>> = {
+    start: 'Configurações de acessos antes da criação de um ambiente de trabalho.',
+    email: draft.returning ? 'Acesso com Google, palavra-passe ou código de email.' : 'Criar uma nova conta através email e código de confirmação.',
     code: <>{live.sendingCode ? 'Envio de código em curso para ' : 'Foi enviado um código temporário para '}<strong>{email}</strong>.</>,
+    password: 'A palavra-passe permite voltar a iniciar sessão com este email.',
+    join: invitation?.invitedBy
+      ? <><strong>{invitation.invitedBy}</strong> enviou um convite para participar no ambiente de <strong>{invitation.name}</strong>.</>
+      : invitation ? <>Convite para participar no ambiente de <strong>{invitation.name}</strong>.</> : 'Convite por confirmar.',
     workspace: 'Ambientes de trabalho estão desenhados para colaboração dentro de equipas.',
     profile: 'Nomes e imagens podem ser visíveis a outros utilizadores.',
     invites: 'Novos convites podem ser feitos a qualquer altura.',
+    updates: 'Preferências opcionais para novidades e resumos diários.',
   }
   // The picture is cropped square and redrawn at 160px before it goes anywhere: the draft is
   // carried in storage and in the setup payload, and a phone camera's original is megabytes.
@@ -130,16 +143,23 @@ export default function Onboarding({ preview = false, session = null, onReady, o
     } catch { if (epoch === imageGeneration.current) toast('Imagem ilegível') }
     finally { if (epoch === imageGeneration.current) setImagePending(false) }
   }
-  // Inline validation keeps the error and focus beside the relevant field;
-  // a field with a title (the slug) speaks for itself, the rest take the step's line.
-  const required: Partial<Record<Step, string>> = { email: 'Endereço de email inválido', code: 'Código de seis dígitos em falta', workspace: 'Nome do ambiente em falta', profile: 'Nome de perfil em falta' }
+  function validate(form: HTMLFormElement) {
+    const invalid = form.querySelector<HTMLInputElement | HTMLTextAreaElement>(':invalid')
+    if (!invalid) { setFieldError(null); return true }
+    const messages: Record<string, string> = { email: 'Endereço de email inválido', code: 'Código de seis dígitos em falta', password: 'A palavra-passe deve ter entre 8 e 128 caracteres.', oldPassword: 'Palavra-passe em falta', name: 'Nome do ambiente em falta', profile: 'Nome de perfil em falta' }
+    toast(invalid.title || messages[invalid.name] || 'Campo por preencher', invalid.name)
+    invalid.focus({ preventScroll: true })
+    return false
+  }
+  function clearFieldError(event: FormEvent<HTMLFormElement>) {
+    if ((event.target as HTMLInputElement).name === fieldError?.name) setFieldError(null)
+  }
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const invalid = event.currentTarget.querySelector<HTMLInputElement>(':invalid')
-    if (invalid) { invalid.setAttribute('aria-invalid', 'true'); invalid.focus({ preventScroll: true }); toast(invalid.title || required[draft.step] || 'Campos por preencher'); return }
+    if (!validate(event.currentTarget)) return
     if (!preview && draft.step === 'email') { if (draft.returning) { void live.login(password).then(success => { if (success) setPassword('') }) } else void live.start(); return }
     if (draft.step === 'password') { if (preview) go('workspace'); else { void live.setPassword(password); setPassword('') }; return }
-    if (draft.step === 'join') { void live.acceptInvite(); return }
+    if (draft.step === 'join') { if (preview) setNotice('Pré-visualização concluída'); else void live.acceptInvite(); return }
     if (!preview && draft.step === 'code') { void live.verify(code); return }
     if (!preview && draft.step === 'workspace') { live.save(false, true); return }
     if (!preview && draft.step === 'profile' && !live.canSaveProfile) return
@@ -151,7 +171,7 @@ export default function Onboarding({ preview = false, session = null, onReady, o
     if (draft.step === 'profile') go(live.canInvite ? 'invites' : 'updates')
     if (draft.step === 'invites') {
       const addresses = draft.invitations.split(/[,;\n]+/).map(v => v.trim()).filter(Boolean)
-      if (addresses.some(value => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))) { toast('Endereço de convite inválido'); return }
+      if (addresses.some(value => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))) { toast('Endereço de convite inválido', 'invitations'); return }
       if (!preview) live.invite(addresses)
       go('updates')
     }
@@ -164,6 +184,32 @@ export default function Onboarding({ preview = false, session = null, onReady, o
     ? flows[draft.returning ? 'returning' : 'email']
     : flows[draft.returning || draft.provider === 'google' ? 'google' : 'email']
   const progress = flow.indexOf(draft.step)
+  const [settled, setSettled] = useState<Step[]>([])
+  const previousStep = useRef(draft.step)
+  useEffect(() => {
+    const left = previousStep.current
+    previousStep.current = draft.step
+    if (flow.indexOf(draft.step) > flow.indexOf(left)) setSettled(list => list.includes(left) ? list : [...list, left])
+  }, [draft.step, flow])
+  useEffect(() => { setSettled([]) }, [draft.email])
+  // A screen already answered does not have to be answered twice: a step ahead is reachable when
+  // every screen before it is either behind us or already carries its value. The code and the
+  // password never reach the draft, so they count only while their value is still typed.
+  const filled: Record<Step, boolean> = {
+    start: true, join: false,
+    code: code.length === 6,
+    password: password.length >= 8,
+    email: !!draft.email.trim(),
+    workspace: !!draft.name.trim() && (preview || live.canSaveProfile),
+    profile: !!draft.profile.trim(),
+    invites: true, updates: true,
+  }
+  // Leaving a screen forwards means it was accepted, so it stays settled: coming back and clearing
+  // the field never re-locks the road ahead, and nothing here waits on a save still in flight.
+  const answered = (step: Step) => settled.includes(step) || filled[step]
+  const reachable = (i: number) => i !== progress
+    && (preview || !['email', 'code', 'password'].includes(flow[i]))
+    && flow.slice(0, i).every((step, j) => j < progress || answered(step))
   // The mark anchors the stage: it holds its place while each step's panel grows below it.
   const brand = preview ? <a className="ob-brand" href="/onboarding-preview" onClick={e => { e.preventDefault(); go('start') }} aria-label="Fontes, início"><img src="/mark.png" width="36" height="36" alt=""/></a> : <span className="ob-brand"><img src="/mark.png" width="36" height="36" alt="Fontes"/></span>
   const invitationFailures = live.invitationErrors.length > 0 && <div role="status">{live.invitationErrors.map(item => <div key={item.token}><p>{item.email}: {item.error}</p><button type="button" onClick={() => live.retryInvitation(item.token)}>Reenviar</button><button type="button" onClick={() => live.retryInvitation(item.token, true)}>Remover convite</button></div>)}</div>
@@ -172,46 +218,63 @@ export default function Onboarding({ preview = false, session = null, onReady, o
     {live.failed && <button type="button" onClick={live.retry}>Tentar novamente</button>}{invitationFailures}
   </div> : null
   if (!screenShown.current) return <OnboardingLayout pending />
-  return <OnboardingLayout brand={brand} footer={preview && <aside className="ob-preview-bar" aria-label="Controlos da pré-visualização"><span>Pré-visualização</span><nav aria-label="Ecrãs">{steps.map((step, i) => <button key={step} aria-current={draft.step === step ? 'step' : undefined} onClick={() => go(step)}>{labels[i]}</button>)}</nav><button className="ob-reset" onClick={() => { setDraft(fresh); setCode(''); setNotice(''); setError(null) }}>Reiniciar</button></aside>}>
-      <StepPanel key={draft.step} step={draft.step}>
-        <header><h1 id="ob-title" tabIndex={-1}>{titles[draft.step]}</h1>{descriptions[draft.step] && <p>{descriptions[draft.step]}</p>}</header>
+  return <OnboardingLayout brand={brand} progress={(!draft.returning || !authenticating) && progress >= 0 && <nav className="ob-progress" aria-label={`Passo ${progress + 1} de ${flow.length}`}>{flow.map((step, i) => <button key={step} type="button" className={i === progress ? 'current' : i < progress ? 'past' : ''} aria-label={labels[steps.indexOf(step)]} aria-current={i === progress ? 'step' : undefined} disabled={!reachable(i)} onClick={() => go(step)}/>)}</nav>} footer={preview && <aside className="ob-preview-bar" aria-label="Controlos da pré-visualização"><span>Pré-visualização</span><nav aria-label="Ecrãs">{steps.map((step, i) => <button key={step} aria-current={draft.step === step ? 'step' : undefined} onClick={() => go(step)}>{labels[i]}</button>)}</nav><button className="ob-reset" onClick={() => { setDraft(fresh); setCode(''); setNotice(''); setError(null); setFieldError(null) }}>Reiniciar</button></aside>}>
+      <StepPanel step={draft.step}>
+        <header className="ob-step-heading"><h1 id="ob-title" tabIndex={-1}>{titles[draft.step]}</h1>{descriptions[draft.step] && <p>{descriptions[draft.step]}</p>}</header>
+        <div className="ob-step-content" key={draft.step}>
         {draft.step === 'start' ? <div className="ob-start-actions">
           <button className="ob-button ob-provider" disabled={live.busy || live.restoring} onClick={() => { patch({ provider: 'google' }); if (!preview) { void live.google(); return }; patch({ email: 'mateus@gmail.com', profile: 'Mateus', returning: false }); go('workspace') }}><Google/>Continuar com Google</button>
           <div className="ob-divider"><span>ou</span></div>
           <button className="ob-button ob-provider" disabled={live.busy || live.restoring} onClick={() => { patch({ provider: 'email' }); if (!preview) { void live.changeEmail(); return }; patch({ returning: false }); go('email') }}><Icon kind="email"/>Continuar com email</button>
-          <p className="ob-account">Conta já criada? <button className="ob-link" disabled={live.busy || live.restoring} onClick={() => { patch({ returning: true, provider: 'email' }); go('email') }}>Login</button></p>
-        </div> : <form onSubmit={submit} noValidate onInput={event => { const field = event.target as HTMLInputElement; field.removeAttribute('aria-invalid') }}>
-          {draft.step === 'email' && <>{draft.returning && <><button type="button" className="ob-button ob-provider" disabled={live.busy || live.restoring} onClick={() => { if (!preview) { void live.google(); return }; setNotice('Pré-visualização concluída') }}><Google/>Continuar com Google</button><div className="ob-divider"><span>ou</span></div></>}<Field label="Endereço de email"><input aria-label="Endereço de email" type="email" autoComplete="email" placeholder="Endereço de email" required maxLength={254} value={draft.email} onChange={e => patch({ email: e.target.value })}/></Field>{draft.returning && <PasswordField existing value={password} onChange={setPassword}/>}<button disabled={live.busy || live.restoring} className="ob-button ob-primary ob-wide">{draft.returning ? 'Iniciar sessão' : 'Continuar com email'}</button>{draft.returning && <><a className="ob-subtle ob-centered" href={recoveryURL()}>Recuperar acesso</a><button className="ob-subtle ob-centered" type="button" disabled={live.busy || live.restoring} onClick={event => { const input = event.currentTarget.form?.querySelector<HTMLInputElement>('input[type=email]'); if (input && !input.checkValidity()) { input.setAttribute('aria-invalid', 'true'); input.focus(); toast('Endereço de email inválido'); return }; setPassword(''); void live.start() }}>Continuar com código de email</button></>}<button className="ob-subtle ob-centered" type="button" onClick={() => go('start')}>Voltar ao início</button></>}
-          {draft.step === 'code' && <><Field label="Código de confirmação"><input className="ob-code" aria-label="Código de confirmação" inputMode="numeric" autoComplete="one-time-code" placeholder="Introduzir código" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}/></Field><button disabled={live.busy || live.restoring} className="ob-button ob-primary ob-wide">Continuar com código</button><button type="button" className="ob-subtle ob-resend" disabled={live.busy || live.restoring} onClick={() => preview ? setNotice('Novo código enviado, quaisquer seis dígitos servem nesta pré-visualização') : void live.start()}>Reenviar código</button><button type="button" className="ob-subtle ob-centered" onClick={() => go('start')}>Voltar ao início</button></>}
-          {draft.step === 'password' && <><PasswordField value={password} onChange={setPassword}/><button disabled={!preview && live.savingPassword} className="ob-button ob-primary ob-wide">Guardar palavra-passe</button><button className="ob-subtle" type="button" onClick={() => void live.changeEmail()}>Utilizar um email diferente</button></>}
-          {draft.step === 'join' && <><p>{live.invitation ? `Convite para ${live.invitation.name}. Acesso como membro.` : 'Convite por confirmar.'}</p><p>Conta: {email}</p><button disabled={!live.invitation || live.busy} className="ob-button ob-primary ob-wide">Aceitar convite</button><button type="button" className="ob-subtle" onClick={() => void live.changeEmail()}>Utilizar um email diferente</button><button type="button" className="ob-subtle" onClick={() => void live.dismissInvite()}>Continuar sem convite</button></>}
-          {draft.step === 'workspace' && <><Field label="Nome"><input placeholder="Nome do ambiente de trabalho" autoComplete="organization" required maxLength={80} value={draft.name} onChange={e => patch({ name: e.target.value, slug: !draft.slugEdited ? slug(e.target.value) : draft.slug })}/></Field><Field label="URL"><div className="ob-url"><span>fontes.app/</span><input aria-label="URL do ambiente" placeholder="nome-da-equipa" pattern="[a-z0-9][a-z0-9\-]{2,47}" title="URL entre 3 e 48 letras minúsculas, números ou hífenes" required value={draft.slug} onChange={e => patch({ slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''), slugEdited: true })}/></div></Field>{availability === 'taken' && <p className="ob-field-error" role="status">Este URL já está em uso.</p>}<button className="ob-button ob-primary ob-wide" disabled={!preview && !live.canCreateWorkspace}>Criar ambiente</button><div className="ob-account-note"><p>Ambiente para <span>{email}</span></p><button type="button" className="ob-subtle" onClick={() => { if (!preview) { void live.changeEmail(); return }; patch({ returning: false, provider: 'email' }); go('email') }}>Utilizar um email diferente</button></div></>}
-          {draft.step === 'profile' && <><div className="ob-field"><span>Imagem e nome</span><div className="ob-profile-input"><div className="ob-photo-slot"><button type="button" className="ob-photo" aria-label="Carregar imagem de perfil" onClick={() => file.current?.click()}>{draft.image ? <img className="ob-avatar" src={draft.image} alt=""/> : <Avatar seed={draft.email || 'fontes'}/>}<span className="ob-photo-hint" aria-hidden="true"><Icon kind="camera"/></span></button>{draft.image && <button type="button" className="ob-photo-clear" aria-label="Remover imagem" onClick={() => { imageGeneration.current++; setImagePending(false); patch({ image: '' }) }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>}</div><input aria-label="Nome do perfil" placeholder="Nome de perfil" autoComplete="name" required maxLength={80} value={draft.profile} onChange={e => patch({ profile: e.target.value })}/></div><input ref={file} type="file" accept="image/*" hidden onChange={pickImage}/></div><button disabled={!preview && !live.canSaveProfile} className="ob-button ob-primary ob-wide">Continuar</button>{live.canEditWorkspace && <button type="button" className="ob-subtle ob-centered" onClick={() => go('workspace')}>Voltar</button>}</>}
-          {draft.step === 'invites' && <><div className="ob-copy-row"><button className="ob-copy" type="button" onClick={() => go('updates')}>Saltar<Icon kind="arrow"/></button><button className="ob-copy" type="button" onClick={() => preview ? setNotice('Link de convite disponível com o ambiente ligado à API') : void live.copyInvite()}><Icon kind="link"/>Copiar link</button></div><Field label="Convites"><textarea aria-label="Emails dos membros" placeholder={'nome@equipa.pt\noutro@equipa.pt'} rows={3} value={draft.invitations} onChange={e => patch({ invitations: e.target.value })}/></Field><button className="ob-button ob-primary ob-wide">{draft.invitations.trim() ? 'Enviar convite por email' : 'Continuar'}</button></>}
+          <p className="ob-account">Conta criada? <button className="ob-link" disabled={live.busy || live.restoring} onClick={() => { patch({ returning: true, provider: 'email' }); go('email') }}>Entrar</button></p>
+        </div> : <form onSubmit={submit} noValidate onInput={clearFieldError}>
+          {draft.step === 'email' && <><Field label="Endereço de email" name="email" error={fieldMessage('email')}><input {...fieldProps('email')} aria-label="Endereço de email" type="email" autoComplete="email" placeholder="Endereço de email" required maxLength={254} value={draft.email} onChange={e => patch({ email: e.target.value })}/></Field>{draft.returning && <PasswordField existing name="oldPassword" aside={<a className="ob-subtle ob-password-recovery" href={recoveryURL()}>Recuperar acesso<Icon kind="arrow"/></a>} error={fieldMessage('oldPassword')} value={password} onChange={setPassword}/>}<button disabled={live.busy || live.restoring} className="ob-button ob-primary ob-wide">{draft.returning ? 'Iniciar sessão' : 'Continuar com email'}</button>{draft.returning && <><div className="ob-divider"><span>ou</span></div><button type="button" className="ob-button ob-provider" disabled={live.busy || live.restoring} onClick={() => { if (!preview) { void live.google(); return }; setNotice('Pré-visualização concluída') }}><Google/>Continuar com Google</button></>}<p className="ob-account">{draft.returning ? 'Sem acesso?' : 'Conta criada?'} <button type="button" className="ob-link" disabled={live.busy || live.restoring} onClick={() => { patch({ returning: !draft.returning, provider: 'email' }); go('email') }}>{draft.returning ? 'Criar conta' : 'Entrar'}</button></p></>}
+          {draft.step === 'code' && <><div className="ob-code-field"><div className="ob-code-head"><label htmlFor="ob-code-input">Código temporário</label><button type="button" className="ob-subtle ob-code-resend" disabled={live.busy || live.restoring} onClick={() => preview ? setNotice('Novo código enviado') : void live.start()}>Reenviar código<Icon kind="arrow"/></button></div><div className="ob-field"><input {...fieldProps('code')} id="ob-code-input" className="ob-code" inputMode="numeric" autoComplete="one-time-code" placeholder="Introduzir código" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}/><FieldError id="ob-code-error" message={fieldMessage('code')} hint="O email pode ter sido entregue na pasta de spam." hintId="ob-code-hint"/></div></div><button disabled={live.busy || live.restoring} className="ob-button ob-primary ob-wide">Continuar com código</button><div className="ob-account-note"><p>Código para <span>{email}</span></p><button type="button" className="ob-subtle" onClick={() => { if (!preview) { void live.changeEmail(); return }; patch({ returning: false, provider: 'email' }); go('email') }}>Utilizar um email diferente</button></div></>}
+          {draft.step === 'password' && <><PasswordField meter name="password" error={fieldMessage('password')} value={password} onChange={setPassword}/><button disabled={password.length < 8 || (!preview && live.savingPassword)} className="ob-button ob-primary ob-wide">Guardar palavra-passe</button><button className="ob-subtle" type="button" onClick={() => void live.changeEmail()}>Utilizar um email diferente</button></>}
+          {draft.step === 'join' && <div className="ob-start-actions">
+            {invitation ? <div className="ob-invite-tile"><svg className="ob-invite-check" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.6 2.6L16 9.4"/></svg></div> : <p className="ob-account">Convite por confirmar.</p>}
+            <button disabled={!invitation || live.busy} className="ob-button ob-primary ob-wide">Aceitar convite</button>
+            <div className="ob-divider"><span>ou</span></div>
+            <button type="button" className="ob-button ob-provider" onClick={() => preview ? go('workspace') : void live.dismissInvite()}>Continuar sem convite</button>
+          </div>}
+          {draft.step === 'workspace' && <><Field label="Nome" name="name" error={fieldMessage('name')}><input {...fieldProps('name')} aria-label="Nome" placeholder="Nome do ambiente de trabalho" autoComplete="organization" required maxLength={80} value={draft.name} onChange={e => patch({ name: e.target.value, slug: slug(e.target.value) })}/></Field><button className="ob-button ob-primary ob-wide" disabled={!preview && !live.canCreateWorkspace}>Criar ambiente</button><div className="ob-account-note"><p>Ambiente para <span>{email}</span></p><button type="button" className="ob-subtle" onClick={() => { if (!preview) { void live.changeEmail(); return }; patch({ returning: false, provider: 'email' }); go('email') }}>Utilizar um email diferente</button></div></>}
+          {draft.step === 'profile' && <><div className="ob-field"><span>Imagem e nome</span><div className="ob-profile-input"><div className="ob-photo-slot"><button type="button" className="ob-photo" aria-label="Carregar imagem de perfil" onClick={() => file.current?.click()}>{draft.image ? <img className="ob-avatar" src={draft.image} alt=""/> : <Avatar seed={draft.email || 'fontes'}/>}<span className="ob-photo-hint" aria-hidden="true"><Icon kind="camera"/></span></button>{draft.image && <button type="button" className="ob-photo-clear" aria-label="Remover imagem" onClick={() => { imageGeneration.current++; setImagePending(false); patch({ image: '' }) }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>}</div><input {...fieldProps('profile')} aria-label="Nome do perfil" placeholder="Nome de perfil" autoComplete="name" required maxLength={80} value={draft.profile} onChange={e => patch({ profile: e.target.value })}/></div><FieldError id="ob-profile-error" message={fieldMessage('profile')}/><input ref={file} type="file" accept="image/*" hidden onChange={pickImage}/></div><button disabled={!preview && !live.canSaveProfile} className="ob-button ob-primary ob-wide">Continuar</button><div className="ob-account-note"><p>Ambiente para <span>{email}</span></p><button type="button" className="ob-subtle" onClick={() => { if (!preview) { void live.changeEmail(); return }; patch({ returning: false, provider: 'email' }); go('email') }}>Utilizar um email diferente</button></div></>}
+          {draft.step === 'invites' && <>
+            <div className="ob-invite-card">
+              <button className="ob-copy ob-invite-link" type="button" onClick={() => preview ? setNotice('Link de convite disponível com o ambiente ligado à API') : void live.copyInvite()}><Icon kind="link"/>Copiar link</button>
+              <label className="ob-field"><textarea {...fieldProps('invitations')} aria-label="Emails dos membros" placeholder={'nome@equipa.pt\noutro@equipa.pt'} rows={2} value={draft.invitations} onChange={e => patch({ invitations: e.target.value })}/><FieldError id="ob-invitations-error" message={fieldMessage('invitations')} hint="Vários emails separados por vírgulas." hintId="ob-invitations-hint"/></label>
+              <button className="ob-button ob-primary ob-wide">{draft.invitations.trim() ? 'Enviar convite por email' : 'Continuar'}</button>
+              <button type="button" className="ob-subtle ob-centered ob-skip" onClick={() => go('updates')}>Saltar<Icon kind="arrow"/></button>
+            </div>
+          </>}
+
           {draft.step === 'updates' && <><div className="ob-preferences">{([{ key: 'changelog', title: 'Novidades da Fontes', text: 'Email semanal com novas funcionalidades e atualizações.' }, { key: 'daily', title: 'Resumos diários', text: 'Receber resumos diários curados pela equipa da Fontes.' }] as const).map(item => <label className="ob-preference" key={item.key}><span><strong>{item.title}</strong><small>{item.text}</small></span><input type="checkbox" role="switch" checked={draft[item.key]} onChange={e => patch({ [item.key]: e.target.checked })}/></label>)}</div><div className="ob-actions"><button className="ob-button ob-primary" disabled={finishing && !live.failed}>Começar<Icon kind="arrow"/></button></div></>}
-          {!draft.returning && progress >= 0 && <div className="ob-progress" aria-label={`Passo ${progress + 1} de ${flow.length}`}>{Array.from({ length: flow.length }, (_, i) => <span key={i} className={i === progress ? 'current' : i < progress ? 'past' : ''}/>)}</div>}
           {draft.step === 'invites' && live.inviteLink && <input aria-label="Link de convite" readOnly value={live.inviteLink} onFocus={e => e.target.select()} />}
           {invitationFailures}
-          {(draft.step === 'invites' || draft.step === 'updates') && <button type="button" className="ob-subtle ob-centered" onClick={() => go(draft.step === 'updates' && live.canInvite ? 'invites' : 'profile')}>Voltar</button>}
-          {notice && <p className="ob-notice" role="status">{notice}</p>}
+          {draft.step === 'invites' && <><div className="ob-account-note"><p>Ambiente para <span>{email}</span></p><button type="button" className="ob-subtle" onClick={() => { if (!preview) { void live.changeEmail(); return }; patch({ returning: false, provider: 'email' }); go('email') }}>Utilizar um email diferente</button></div></>}
+          {draft.step === 'updates' && <button type="button" className="ob-subtle ob-centered" onClick={() => go(live.canInvite ? 'invites' : 'profile')}>Voltar</button>}
         </form>}
-        {!preview && notice && draft.step === 'start' && <p className="ob-notice" role="status">{notice}</p>}
         {!preview && live.failed && <div className="ob-actions"><button className="ob-subtle" onClick={live.retry}>Tentar novamente</button><button className="ob-subtle" onClick={() => void live.changeEmail()}>Utilizar um email diferente</button></div>}
-        {!preview && live.issue && live.issue !== draft.step && <form className="ob-correction" aria-label="Correção da configuração" onSubmit={event => {
+        {!preview && live.issue && live.issue !== draft.step && <form className="ob-correction" aria-label="Correção da configuração" noValidate onInput={clearFieldError} onSubmit={event => {
           event.preventDefault()
+          if (!validate(event.currentTarget)) return
           if (live.issue === 'code') void live.verify(code)
           else if (live.issue === 'password') { live.setPassword(password); setPassword('') }
           else live.save(false, live.issue === 'workspace')
         }}>
           <h2>{live.issue === 'code' ? 'Confirmar email' : live.issue === 'password' ? 'Confirmar palavra-passe' : 'Corrigir configuração'}</h2>
-          {live.issue === 'code' && <><input aria-label="Código de confirmação" placeholder="Código de seis dígitos" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={event => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}/><button type="button" className="ob-subtle" disabled={live.busy || live.restoring} onClick={() => void live.start()}>Reenviar código</button></>}
-          {live.issue === 'password' && <PasswordField value={password} onChange={setPassword}/>}
-          {live.issue === 'workspace' && <><Field label="Nome"><input aria-label="Nome" required maxLength={80} value={draft.name} onChange={event => patch({ name: event.target.value })}/></Field><Field label="URL"><input aria-label="URL do ambiente" required pattern="[a-z0-9][a-z0-9\-]{2,47}" maxLength={48} value={draft.slug} onChange={event => patch({ slug: event.target.value, slugEdited: true })}/></Field></>}
-          {live.issue === 'profile' && <input aria-label="Nome do perfil a corrigir" required maxLength={80} value={draft.profile} onChange={event => patch({ profile: event.target.value })}/>}
+          {live.issue === 'code' && <><Field label="Código de confirmação" name="code" error={fieldMessage('code')}><input {...fieldProps('code')} aria-label="Código de confirmação" placeholder="Código de seis dígitos" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={event => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}/></Field><button type="button" className="ob-subtle" disabled={live.busy || live.restoring} onClick={() => void live.start()}>Reenviar código</button></>}
+          {live.issue === 'password' && <PasswordField name="password" error={fieldMessage('password')} value={password} onChange={setPassword}/>}
+          {live.issue === 'workspace' && <Field label="Nome" name="name" error={fieldMessage('name')}><input {...fieldProps('name')} aria-label="Nome" required maxLength={80} value={draft.name} onChange={event => patch({ name: event.target.value, slug: slug(event.target.value) })}/></Field>}
+          {live.issue === 'profile' && <Field label="Nome de perfil" name="profile" error={fieldMessage('profile')}><input {...fieldProps('profile')} aria-label="Nome do perfil a corrigir" required maxLength={80} value={draft.profile} onChange={event => patch({ profile: event.target.value })}/></Field>}
           <button className="ob-button ob-primary ob-wide" disabled={live.busy || (live.issue === 'password' && live.savingPassword)}>Confirmar correção</button>
         </form>}
         {live.googleActive && <p className="ob-notice" role="status">Início de sessão em curso na janela Google. <button type="button" className="ob-link" onClick={live.cancelGoogle}>Cancelar</button></p>}
-        {error && <p className="ob-field-error" role="alert">{error.text}</p>}
+        </div>
       </StepPanel>
+      {(error || notice) && <div className="ob-toasts">
+        {error && <Toast key={`error-${error.n}`} message={error.text} error onDismiss={() => setError(null)}/>}
+        {notice && <Toast key={notice} message={notice} onDismiss={() => setNotice('')}/>}
+      </div>}
   </OnboardingLayout>
 }

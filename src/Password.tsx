@@ -1,17 +1,37 @@
 import OnboardingLayout from './OnboardingLayout'
-import { useId, useState, type FormEvent } from 'react'
+import { FieldError, Icon, Toast } from './OnboardingFeedback'
+import { useId, useState, type FormEvent, type ReactNode } from 'react'
 import { authClient } from './auth'
 import './Onboarding.css'
 
-export function PasswordField({ value, onChange, existing = false }: { value: string; onChange: (value: string) => void; existing?: boolean }) {
+// Continuous, so every keystroke moves the bar. The first third is the eight character
+// minimum the input itself enforces: a full first bar is a password the form accepts.
+function passwordStrength(value: string) {
+  if (value.length < 8) return value.length / 8 / 3
+  const classes = [/[a-z]/, /[A-Z]/, /\d/, /[^a-zA-Z\d]/].filter(pattern => pattern.test(value)).length
+  const beyond = Math.min(1, (value.length - 8) / 8) * 0.4 + (classes - 1) / 3 * 0.6
+  return 1 / 3 + beyond * 2 / 3
+}
+
+export function PasswordField({ value, onChange, existing = false, name = existing ? 'oldPassword' : 'password', error, label = 'Palavra-passe', aside, meter = false }: { value: string; onChange: (value: string) => void; existing?: boolean; name?: string; error?: string; label?: string; aside?: ReactNode; meter?: boolean }) {
   const [visible, setVisible] = useState(false)
   const id = useId()
-  return <div className="ob-field ob-password-field"><label htmlFor={id}>{existing ? 'Palavra-passe atual' : 'Palavra-passe'}</label>
+  const strength = passwordStrength(value)
+  const level = Math.floor(strength * 3)
+  return <div className="ob-field ob-password-field"><div className="ob-password-head"><label htmlFor={id}>{label}</label>{aside}</div>
     <div className="ob-password-control">
-      <input id={id} type={visible ? 'text' : 'password'} autoComplete={existing ? 'current-password' : 'new-password'} required minLength={existing ? 1 : 8} maxLength={128} value={value} onChange={e => onChange(e.target.value)} aria-describedby={!existing ? id + '-hint' : undefined}/>
+      <input name={name} aria-invalid={error ? true : undefined} id={id} type={visible ? 'text' : 'password'} autoComplete={existing ? 'current-password' : 'new-password'} required minLength={existing ? 1 : 8} maxLength={128} value={value} onChange={e => onChange(e.target.value)} aria-describedby={[!existing && !error && id + '-hint', error && `ob-${name}-error`].filter(Boolean).join(' ') || undefined}/>
       <button className="ob-subtle" type="button" aria-label={visible ? 'Ocultar palavra-passe' : 'Mostrar palavra-passe'} aria-pressed={visible} onClick={() => setVisible(v => !v)}>{visible ? 'Ocultar' : 'Mostrar'}</button>
     </div>
-    {!existing && <small id={id + '-hint'}>Entre 8 e 128 caracteres.</small>}
+    {meter && <div className="ob-strength" data-strength={level} role="meter" aria-label="Segurança da palavra-passe" aria-valuemin={0} aria-valuemax={3} aria-valuenow={level}>
+      {/* An emptied bar is delayed from the right and a filling one from the left, so a
+          cleared field drains one bar at a time instead of all three at once. */}
+      {[0, 1, 2].map(part => {
+        const fill = Math.min(1, Math.max(0, strength * 3 - part))
+        return <span key={part}><i style={{ transform: `scaleX(${fill})`, transitionDelay: `${(fill > 0 ? part : 2 - part) * 70}ms` }}/></span>
+      })}
+    </div>}
+    <FieldError id={`ob-${name}-error`} message={error} hint={!existing ? 'Entre 8 e 128 caracteres.' : undefined} hintId={id + '-hint'}/>
   </div>
 }
 
@@ -25,9 +45,19 @@ export default function PasswordRecovery({ change = false }: { change?: boolean 
   const [done, setDone] = useState(false)
   const [error, setError] = useState(() => new URL(location.href).searchParams.has('error') ? 'Link inválido ou expirado. É necessário um novo pedido.' : '')
   const [notice, setNotice] = useState('')
+  const [fieldError, setFieldError] = useState<{ name: string; text: string } | null>(null)
+  const fieldMessage = (name: string) => fieldError?.name === name ? fieldError.text : undefined
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (busy) return
+    const invalid = e.currentTarget.querySelector<HTMLInputElement>(':invalid')
+    if (invalid) {
+      const messages: Record<string, string> = { email: 'Endereço de email inválido', oldPassword: 'Palavra-passe em falta', password: 'A palavra-passe deve ter entre 8 e 128 caracteres.' }
+      setFieldError({ name: invalid.name, text: messages[invalid.name] || 'Campo por preencher' })
+      invalid.focus({ preventScroll: true })
+      return
+    }
+    setFieldError(null)
     setBusy(true); setError('')
     try {
       if (change) {
@@ -49,16 +79,32 @@ export default function PasswordRecovery({ change = false }: { change?: boolean 
     finally { setBusy(false); setPassword(''); setOldPassword('') }
   }
   const login = new URL(location.href); login.pathname = '/login'; login.searchParams.delete('token'); login.searchParams.delete('error')
+  async function signInAfterReset() {
+    if (busy) return
+    setBusy(true); setError('')
+    try {
+      // Resetting another account does not revoke the current browser session.
+      // Confirm sign-out before visiting the ordinary authenticated login gate.
+      const result = await authClient.signOut()
+      if (result.error) throw new Error()
+      location.assign(login.pathname + login.search)
+    } catch {
+      setError('Não foi possível terminar a sessão atual. Nova tentativa disponível.')
+      setBusy(false)
+    }
+  }
   return <OnboardingLayout><section className="ob-panel ob-recovery">
     <header><h1>{change ? 'Alterar palavra-passe' : token ? 'Definir nova palavra-passe' : 'Recuperar acesso'}</h1></header>
-    {change && !isPending && !session ? <a href={login.pathname + login.search}>Iniciar sessão</a> : !done && <form onSubmit={submit}>
-      {change && <PasswordField existing value={oldPassword} onChange={setOldPassword} />}
-      {token || change ? <PasswordField value={password} onChange={setPassword} /> : <label className="ob-field ob-visible-label"><span>Email</span><input type="email" autoComplete="email" maxLength={254} required value={email} onChange={e => setEmail(e.target.value)} /></label>}
+    {change && !isPending && !session ? <a href={login.pathname + login.search}>Iniciar sessão</a> : !done && <form onSubmit={submit} noValidate onInput={event => { if ((event.target as HTMLInputElement).name === fieldError?.name) setFieldError(null) }}>
+      {change && <PasswordField existing error={fieldMessage('oldPassword')} value={oldPassword} onChange={setOldPassword} />}
+      {token || change ? <PasswordField label={change ? 'Nova palavra-passe' : 'Palavra-passe'} error={fieldMessage('password')} value={password} onChange={setPassword} /> : <label className="ob-field ob-visible-label"><span>Email</span><input name="email" aria-label="Email" aria-invalid={fieldMessage('email') ? true : undefined} aria-describedby={fieldMessage('email') ? 'ob-email-error' : undefined} type="email" autoComplete="email" maxLength={254} required value={email} onChange={e => setEmail(e.target.value)} /><FieldError id="ob-email-error" message={fieldMessage('email')}/></label>}
       <button className="ob-button ob-primary ob-wide" disabled={busy || (change && isPending)}>{token || change ? 'Guardar palavra-passe' : 'Enviar link de recuperação'}</button>
     </form>}
-    {notice && <p role="status">{notice}</p>}{error && <p role="alert">{error}</p>}
+    {notice && <p role="status">{notice}</p>}
     {token && <button className="ob-subtle" onClick={() => { setToken(''); setError(''); const url = new URL(location.href); url.searchParams.delete('token'); history.replaceState(null, '', url) }}>Solicitar novo link</button>}
-    {change && <a href="/reset-password">Recuperar acesso</a>}
-    <p><a href={done && change ? '/' : login.pathname + login.search}>{done && change ? 'Voltar ao ambiente' : 'Iniciar sessão'}</a></p>
-  </section></OnboardingLayout>
+    {change && <a className="ob-subtle ob-password-recovery" href="/reset-password">Recuperar acesso<Icon kind="arrow"/></a>}
+    <p>{done && !change
+      ? <button type="button" className="ob-subtle" disabled={busy} onClick={() => void signInAfterReset()}>Iniciar sessão</button>
+      : <a href={done && change ? '/' : login.pathname + login.search}>{done && change ? 'Voltar ao ambiente' : 'Iniciar sessão'}</a>}</p>
+  </section>{error && <div className="ob-toasts"><Toast message={error} error onDismiss={() => setError('')}/></div>}</OnboardingLayout>
 }

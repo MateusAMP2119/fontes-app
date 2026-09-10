@@ -40,6 +40,6 @@ Email submission opens the code form immediately with an accurate sending state.
 
 Workspace submission opens the profile form immediately. Creation continues in the background, but profile submission remains disabled until the workspace is confirmed. Late responses never navigate away from the current form.
 
-While the workspace URL is being edited, a verified session can check its exact availability after a 350 ms typing pause. Results are cached for 30 seconds within the current hook, scoped by account and workspace. Outdated requests are cancelled and stale results ignored. This check is advisory: the final write still enforces uniqueness. It does not create or reserve a workspace, and there is no email-account lookup while typing.
+The workspace URL is never asked for. It is derived from the workspace name, and the write enforces uniqueness: a conflict is retried up to three times with a fresh random suffix before the correction form asks for another name.
 
 Valid profile and preference edits are coalesced after a 500 ms typing pause and saved in the background. Saving, saved and failed states remain visible. Passwords and OTPs never enter this process, and background saving never marks onboarding complete.

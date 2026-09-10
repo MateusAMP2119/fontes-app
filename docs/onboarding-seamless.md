@@ -10,7 +10,7 @@ The published onboarding keeps every forward onboarding form usable while earlie
 | Registo com email | Collect the registration email | Email registration |
 | Confirmar email | Verify access to the email address | Email registration |
 | Definir palavra-passe | Create a reusable password | New email accounts |
-| Novo ambiente de trabalho | Set the workspace name and URL | Workspace owners |
+| Novo ambiente de trabalho | Set the workspace name, the URL is generated from it | Workspace owners |
 | Personalizar perfil | Set the visible name and optional image | Name required, image optional |
 | Convidar membros | Create a link or invite recipients | Optional |
 | Preferências de email | Choose optional email subscriptions and finish | Both subscriptions default off |
@@ -39,7 +39,7 @@ The latest screen-presentation build contains asset `index-Bcyi8BkQ.js`, SHA-256
 | Requirement | Evidence |
 | --- | --- |
 | Full email signup and ordered saving | Browser tests complete the full flow, including reaching the final screen before stalled verification resolves |
-| Failure recovery without automatic backward navigation | Invalid/late codes, failed password, expired authentication, manual URL collision and final cross-tab conflict tests |
+| Failure recovery without automatic backward navigation | Invalid/late codes, failed password, expired authentication, generated URL collision and final cross-tab conflict tests |
 | No lost final edits | Preference changes during final confirmation, queued profile/preferences/invites, conflict and reload tests |
 | Tab isolation and bounded request count | Two-tab draft preservation with at most six configuration fetches during the test, replacing the reproduced request storm |
 | Optional invitations do not block completion | An unresolved invitation stays in flight while confirmed setup opens the app |

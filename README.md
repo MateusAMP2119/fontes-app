@@ -197,3 +197,15 @@ Start the updated `fontes-api` with `npm run dev` (localhost:8788), then run
 API OAuth proxy for Google. Production builds retain the production API URL.
 The API OAuth proxy must be deployed before using local Google sign-in.
 For UI-only testing without emails or authentication, use `/onboarding-preview`.
+
+## Local onboarding preview
+
+Run `npm run dev` from this repository and open `/onboarding-preview` on the
+URL printed by Vite. This route is enabled only in development; `npm run preview`
+serves the production build and does not expose the onboarding preview controls.
+The live onboarding and development preview share the background grid asset at
+`public/onboarding-grid.svg`.
+
+Before starting a local server, check `git status --short --branch` and synchronize
+with GitHub after preserving any uncommitted work. Separate clones have independent
+working files and can otherwise show different onboarding versions.
