@@ -46,7 +46,6 @@ export function useOnboardingSync(props: Props) {
   const [savingPassword, setSavingPassword] = useState(false)
   const [sendingCode, setSendingCode] = useState(false)
   const [bootstrap, setBootstrap] = useState<Bootstrap | null>(null)
-  const [invitation, setInvitation] = useState<{ name: string; role: string; invitedBy?: string } | null>(null)
   const [invitationErrors, setInvitationErrors] = useState<Invitation[]>([])
   const [inviteLink, setInviteLink] = useState('')
   const slugRetries = useRef(0)
@@ -226,7 +225,7 @@ export function useOnboardingSync(props: Props) {
         pendingPassword.current = null; setSavingPassword(false)
         record.current = { draft: { ...fresh }, revision: 0, invitations: [] }
         setBootstrap(null); setLoading(false); setFailed(false); setIssue(null); setWorkspaceBusy(false); setSyncStatus('idle')
-        setInvitation(null); setInvitationErrors([]); setInviteLink('')
+        setInvitationErrors([]); setInviteLink('')
         current.current.setDraft({ ...fresh }); current.current.setNotice(''); current.current.setError('')
         try { sessionStorage.removeItem(prefix + 'pending') } catch { /* optional storage */ }
       }
@@ -261,8 +260,18 @@ export function useOnboardingSync(props: Props) {
     const load = async () => {
       setLoading(true)
       try {
-        const result = await onboardingRequest<Bootstrap>()
+        let result = await onboardingRequest<Bootstrap>()
         if (epoch !== generation.current) return
+        const invite = new URL(location.href).searchParams.get('invite')
+        if (invite && !result.passwordRequired) {
+          result = await onboardingRequest<Bootstrap>('/join', { token: invite })
+          if (epoch !== generation.current) return
+          const url = new URL(location.href); url.searchParams.delete('invite'); history.replaceState(null, '', url)
+          record.current = { draft: { ...fresh, step: 'profile', email: session.user.email, name: result.organization?.name || '', slug: result.organization?.slug || '', profile: result.profile.name, image: result.profile.image || '', changelog: result.changelog, daily: result.daily }, revision: result.revision, invitations: [] }
+          restored = false
+          completionRequested.current = false
+          persist()
+        }
         const previous = state.current
         const sameRevision = restored && record.current.revision === result.revision
         receive(result)
@@ -302,18 +311,12 @@ export function useOnboardingSync(props: Props) {
         updateInvitations()
         if (result.passwordRequired || result.accessLost) current.current.onBlocked?.()
         if (result.accessLost) throw new SyncError(403, 'O acesso ao ambiente deixou de estar disponível.')
-        if (token && !result.passwordRequired) {
-          setInvitation(null)
-          const detail = await onboardingRequest<{ name: string; role: string; invitedBy?: string }>('/invitation', { token })
-          if (epoch !== generation.current) return
-          setInvitation(detail)
-        } else {
-          openIfReady()
-          if (!result.passwordRequired) void drain()
-        }
+        openIfReady()
+        if (!result.passwordRequired) void drain()
       } catch (error) {
         if (epoch !== generation.current) return
         setFailed(true)
+        if (new URL(location.href).searchParams.has('invite')) current.current.setDraft(d => ({ ...d, step: 'join' }))
         if (!state.current || (error instanceof SyncError && [401, 403].includes(error.status))) current.current.onBlocked?.()
         current.current.setError(error instanceof SyncError ? error.message : 'Ambiente indisponível. Nova tentativa em instantes.')
         if (transient(error)) timer.current = setTimeout(() => { void load() }, error instanceof SyncError && error.retryAfter ? error.retryAfter : 5000)
@@ -505,16 +508,7 @@ export function useOnboardingSync(props: Props) {
     } finally { passwordRunning.current = false; setSavingPassword(false) }
   }
   async function acceptInvite() {
-    if (authRunning.current || !invitation) return
-    authRunning.current = true; setBusy(true)
-    try {
-      const result = await onboardingRequest<Bootstrap>('/join', { token: new URL(location.href).searchParams.get('invite') })
-      const url = new URL(location.href); url.searchParams.delete('invite'); history.replaceState(null, '', url)
-      record.current = { draft: { ...fresh, email: current.current.draft.email, name: result.organization?.name || '', slug: result.organization?.slug || '', profile: result.profile.name, image: result.profile.image || '', changelog: result.changelog, daily: result.daily }, revision: result.revision, invitations: [] }
-      persist()
-      await reload.current()
-    } catch (e) { current.current.setError(e instanceof SyncError ? e.message : 'Não foi possível aceitar o convite.') }
-    finally { authRunning.current = false; setBusy(false) }
+    if (!loading) { current.current.setError(''); await reload.current() }
   }
   async function dismissInvite() {
     const url = new URL(location.href); url.searchParams.delete('invite'); history.replaceState(null, '', url)
@@ -536,7 +530,7 @@ export function useOnboardingSync(props: Props) {
     generation.current++; owner.current = null; state.current = null; previousUser.current = undefined
     clearTimeout(timer.current)
     record.current = { draft: { ...fresh, step: 'email' }, revision: 0, invitations: [] }
-    setBootstrap(null); setWorkspaceBusy(false); setSyncStatus('idle'); setFailed(false); setIssue(null); setLoading(false); setInvitation(null); setInvitationErrors([]); setInviteLink('')
+    setBootstrap(null); setWorkspaceBusy(false); setSyncStatus('idle'); setFailed(false); setIssue(null); setLoading(false); setInvitationErrors([]); setInviteLink('')
     current.current.setDraft(record.current.draft)
     persist()
   }
@@ -565,6 +559,6 @@ export function useOnboardingSync(props: Props) {
   }
   return { googleActive, cancelGoogle: () => { googleAbort.current?.abort(); googlePrepared.current?.resolve() }, busy, failed, issue, loading, savingPassword, restoring: !props.preview && !!props.session && !bootstrap && !failed, workspaceBusy, syncStatus, sendingCode, organizationId: bootstrap?.organization?.id, canSaveProfile: !!record.current.pending || (!!bootstrap?.organization && !bootstrap.passwordRequired), canCreateWorkspace: !!record.current.pending || pendingPassword.current !== null || savingPassword || (!!bootstrap && !loading && !bootstrap.passwordRequired && !bootstrap.accessLost),
     canEditWorkspace: !!record.current.pending?.workspace || bootstrap?.canEditWorkspace !== false, canInvite: !!record.current.pending?.workspace || bootstrap?.canInvite !== false,
-    invitation, invitationErrors, inviteLink, start, verify, login, google, setPassword, acceptInvite, dismissInvite, save, invite, copyInvite, changeEmail, retryInvitation,
+    invitationErrors, inviteLink, start, verify, login, google, setPassword, acceptInvite, dismissInvite, save, invite, copyInvite, changeEmail, retryInvitation,
     retry: () => { if (record.current.pending && state.current && !state.current.passwordRequired) void drain(); else void reload.current() } }
 }

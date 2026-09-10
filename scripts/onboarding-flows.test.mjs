@@ -65,14 +65,37 @@ test('new email account requires password; confirmed setup opens while final pre
  await p.locator('input[autocomplete="current-password"]').fill('test-secret-password');await f.button('Iniciar sessão').click();await p.locator('.make-shell').waitFor()
  assert.equal(f.writes.length,confirmedWrites,'confirmed completion restores without another setup save')
 })
-test('invitation has explicit acceptance, skips owner setup and owner-only back/invites',async t=>{
+test('invitation automatically joins and skips owner setup and owner-only back/invites',async t=>{
  const f=await fixture(t),p=f.page;await p.goto(origin+'/?invite='+'ab'.repeat(32))
- await p.getByText('Convite para participar no ambiente de Equipa convidada.',{exact:false}).waitFor();assert.equal(f.joins,0)
- await f.button('Aceitar convite').click();await p.locator('.ob-profile').waitFor()
+ await p.locator('.ob-profile').waitFor()
+ assert.equal(await p.locator('.ob-join').count(),0)
  assert.equal(await f.button('Voltar').count(),0);assert.equal(await p.locator('.ob-workspace').count(),0)
  assert.equal(await f.button('Ambiente').isDisabled(),true);assert.equal(await f.button('Convites').isDisabled(),true)
  await f.button('Continuar').click();await p.locator('.ob-updates').waitFor();await f.button('Começar').click();await p.locator('.make-shell').waitFor()
  assert.equal(f.joins,1);assert.ok(!p.url().includes('invite='))
+})
+test('invitation waits for a required password before joining', async t => {
+ const f = await fixture(t, { state: { ...blank(), passwordRequired:true } }), p = f.page
+ await p.goto(origin+'/?invite='+'ab'.repeat(32))
+ await p.locator('.ob-password').waitFor()
+ assert.equal(f.joins, 0)
+ await p.locator('input[autocomplete="new-password"]').fill('invite-password-456')
+ await f.button('Guardar palavra-passe').click()
+ await p.locator('.ob-profile').waitFor()
+ assert.equal(f.joins, 1)
+ assert.equal(await p.locator('.ob-join').count(), 0)
+})
+test('invalid invitation keeps its token and allows retry without opening the app', async t => {
+ const f = await fixture(t), p = f.page
+ await p.route('**/api/onboarding/join', route => route.fulfill({status:400,json:{message:'Convite inválido.'}}))
+ await p.goto(origin+'/?invite='+'ab'.repeat(32))
+ await p.getByText('Convite inválido.', {exact:true}).waitFor()
+ assert.ok(p.url().includes('invite='))
+ assert.equal(await p.locator('.make-shell').count(), 0)
+ await p.unroute('**/api/onboarding/join')
+ await f.button('Tentar ligação novamente').click()
+ await p.locator('.ob-profile').waitFor()
+ assert.equal(f.joins, 1)
 })
 test('an invited member reload repairs an empty workspace snapshot without losing profile edits', async t => {
  const state = { ...workspace(), project:null, canInvite:false, canEditWorkspace:false }
@@ -758,9 +781,9 @@ for (const invited of [false, true]) test(`recovery requires fresh sign-in inste
  await p.locator('input[autocomplete="current-password"]').fill('changed-password-456')
  await f.button('Iniciar sessão').click()
  if (invited) {
-  await p.locator('.ob-join').waitFor()
-  assert.equal(new URL(p.url()).searchParams.get('invite'), token)
-  assert.equal(f.joins, 0, 'recovery does not implicitly accept an invitation')
+  await p.locator('.ob-profile').waitFor()
+  assert.equal(new URL(p.url()).searchParams.has('invite'), false)
+  assert.equal(f.joins, 1, 'invitation joins only after fresh sign-in')
  } else {
   await p.locator('.make-shell').waitFor()
   assert.equal(p.url(), origin + destination)

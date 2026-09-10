@@ -12,7 +12,7 @@ import { useOnboardingSync } from './useOnboardingSync'
 import type { Bootstrap } from './onboardingSync'
 
 const key = 'fontes:onboarding-ui-preview:v1'
-const labels = ['Início', 'Email', 'Código', 'Palavra-passe', 'Aceitar convite', 'Ambiente', 'Perfil', 'Convites', 'Atualizações']
+const labels = ['Início', 'Email', 'Código', 'Palavra-passe', 'Ligação ao ambiente', 'Ambiente', 'Perfil', 'Convites', 'Atualizações']
 // Each entry path counts only the screens it actually shows: Google skips the email hand-off,
 // and a returning profile just confirms its identity.
 const flows: Record<'email' | 'google' | 'returning', Step[]> = { email: ['email', 'code', 'password', 'workspace', 'profile', 'invites', 'updates'], google: ['workspace', 'profile', 'invites', 'updates'], returning: ['email', 'code'] }
@@ -104,16 +104,13 @@ export default function Onboarding({ preview = false, session = null, onReady, o
   const go = (step: Step) => { if ((live.busy || live.restoring) && ['start', 'email', 'code'].includes(draft.step)) return; patch({ step }); setNotice(''); setError(null); setFieldError(null) }
   useEffect(() => { if (preview) { try { localStorage.setItem(key, JSON.stringify(draft)) } catch { /* In-memory fallback. */ } } }, [draft, preview])
   const email = draft.email || 'email@email.com'
-  const invitation = live.invitation || (preview ? { name: 'Equipa Fontes', role: 'member', invitedBy: 'mateus@fonteslabs.com' } : null)
-  const titles: Record<Step, string> = { start: 'Criar conta', email: draft.returning ? 'Iniciar sessão' : 'Registar email', code: 'Confirmar email', password: 'Definir palavra-passe', join: 'Convite recebido', workspace: 'Novo ambiente de trabalho', profile: 'Personalizar perfil', invites: 'Convidar membros', updates: 'Preferências de email' }
+
+  const titles: Record<Step, string> = { start: 'Criar conta', email: draft.returning ? 'Iniciar sessão' : 'Registar email', code: 'Confirmar email', password: 'Definir palavra-passe', join: 'Ligação ao ambiente', workspace: 'Novo ambiente de trabalho', profile: 'Personalizar perfil', invites: 'Convidar membros', updates: 'Preferências de email' }
   const descriptions: Partial<Record<Step, ReactNode>> = {
     start: 'Configurações de acessos antes da criação de um ambiente de trabalho.',
     email: draft.returning ? 'Acesso com Google, palavra-passe ou código de email.' : 'Criar uma nova conta através email e código de confirmação.',
     code: <>{live.sendingCode ? 'Envio de código em curso para ' : 'Foi enviado um código temporário para '}<strong>{email}</strong>.</>,
     password: 'A palavra-passe permite voltar a iniciar sessão com este email.',
-    join: invitation?.invitedBy
-      ? <><strong>{invitation.invitedBy}</strong> enviou um convite para participar no ambiente de <strong>{invitation.name}</strong>.</>
-      : invitation ? <>Convite para participar no ambiente de <strong>{invitation.name}</strong>.</> : 'Convite por confirmar.',
     workspace: 'Ambientes de trabalho estão desenhados para colaboração dentro de equipas.',
     profile: 'Nomes e imagens podem ser visíveis a outros utilizadores.',
     invites: 'Novos convites podem ser feitos a qualquer altura.',
@@ -237,8 +234,7 @@ export default function Onboarding({ preview = false, session = null, onReady, o
           {draft.step === 'code' && <><div className="ob-code-field"><div className="ob-code-head"><label htmlFor="ob-code-input">Código temporário</label><button type="button" className="ob-subtle ob-code-resend" disabled={live.busy || live.restoring} onClick={() => preview ? setNotice('Novo código enviado') : void live.start()}>Reenviar código<Icon kind="arrow"/></button></div><div className="ob-field"><input {...fieldProps('code')} id="ob-code-input" className="ob-code" inputMode="numeric" autoComplete="one-time-code" placeholder="Introduzir código" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}/><FieldError id="ob-code-error" message={fieldMessage('code')} hint="O email pode ter sido entregue na pasta de spam." hintId="ob-code-hint"/></div></div><button disabled={live.busy || live.restoring} className="ob-button ob-primary ob-wide">Continuar com código</button><div className="ob-account-note"><p>Código para <span>{email}</span></p><button type="button" className="ob-subtle" onClick={() => { if (!preview) { void live.changeEmail(); return }; patch({ returning: false, provider: 'email' }); go('email') }}>Utilizar um email diferente</button></div></>}
           {draft.step === 'password' && <><PasswordField meter name="password" error={fieldMessage('password')} value={password} onChange={setPassword}/><button disabled={password.length < 8 || (!preview && live.savingPassword)} className="ob-button ob-primary ob-wide">Guardar palavra-passe</button><button className="ob-subtle" type="button" onClick={() => void live.changeEmail()}>Utilizar um email diferente</button></>}
           {draft.step === 'join' && <div className="ob-start-actions">
-            {invitation ? <div className="ob-invite-tile"><svg className="ob-invite-check" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 2.6 2.6L16 9.4"/></svg></div> : <p className="ob-account">Convite por confirmar.</p>}
-            <button disabled={!invitation || live.busy} className="ob-button ob-primary ob-wide">Aceitar convite</button>
+            <button disabled={live.loading} className="ob-button ob-primary ob-wide">Tentar ligação novamente</button>
             <div className="ob-divider"><span>ou</span></div>
             <button type="button" className="ob-button ob-provider" onClick={() => preview ? go('workspace') : void live.dismissInvite()}>Continuar sem convite</button>
           </div>}
