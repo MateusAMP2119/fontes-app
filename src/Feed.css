@@ -53,6 +53,10 @@
   text-wrap: balance;
 }
 
+.m-story-summary {
+  display: none;
+}
+
 /* the row is one link: the anchor's box stretches over .m-story (position: relative) */
 .m-story h3 a {
   color: inherit;

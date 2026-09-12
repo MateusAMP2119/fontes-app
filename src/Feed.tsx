@@ -79,6 +79,7 @@ function Row({ story, index }: { story: Story; index: number }) {
           {story.title}
         </a>
       </h3>
+      {story.description?.trim() && <p className="m-story-summary">{story.description}</p>}
       <div className="m-front-stack">
         {story.thumb || story.image ? (
           <img

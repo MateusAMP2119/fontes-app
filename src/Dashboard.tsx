@@ -1,5 +1,5 @@
 import { useEffect, useState, type MouseEvent, type ReactNode } from 'react'
-import { Home, Settings, Sun, Moon, Monitor, ChevronRight, LogOut, UserRound, Folder, Palette, Share2 } from 'lucide-react'
+import { Settings, Sun, Moon, Monitor, ChevronRight, LogOut, Share2 } from 'lucide-react'
 import { Button } from './components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './components/ui/card'
@@ -8,13 +8,14 @@ import { authClient, type AuthSession } from './auth'
 import type { Project } from './projects'
 import { navigate } from './navigate'
 import MakeApp from './MakeApp'
+import { DashboardIcon } from './DashboardIcon'
 import './Dashboard.css'
 
 type Theme = 'light' | 'dark' | 'system'
 const sections = [
-  { path: '/settings', label: 'Conta', icon: UserRound },
-  { path: '/settings/project', label: 'Projeto', icon: Folder },
-  { path: '/settings/appearance', label: 'Aparência', icon: Palette, Share2 },
+  { path: '/settings', label: 'Conta' },
+  { path: '/settings/project', label: 'Projeto' },
+  { path: '/settings/appearance', label: 'Aparência' },
 ]
 
 function follow(event: MouseEvent<HTMLAnchorElement>) {
@@ -27,7 +28,7 @@ function Detail({ label, children }: { label: string; children: ReactNode }) {
   return <div className="dashboard-detail"><dt>{label}</dt><dd>{children}</dd></div>
 }
 
-export default function Dashboard({ path, session, project }: { path: string; session: AuthSession | null; project: Project | null }) {
+export default function Dashboard({ path, session, project, basePath = '' }: { path: string; session: AuthSession | null; project: Project | null; basePath?: string }) {
   const settings = path === '/settings' || path.startsWith('/settings/')
   const section = sections.find(item => item.path === path) ?? sections[0]
   const [theme, setTheme] = useState<Theme>(() => {
@@ -75,37 +76,39 @@ export default function Dashboard({ path, session, project }: { path: string; se
   return <div className="dashboard" data-theme={resolved}>
     <a className="dashboard-skip" href="#dashboard-content">Saltar para o conteúdo</a>
     <header className="dashboard-header">
+      <div className="dashboard-team">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="dashboard-brand" aria-label="Abrir menu da conta">
-            <img src="/mark.png" width={24} height={24} alt="Fontes" />
+            <img src="/mark.png" width={20} height={20} alt="Fontes" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={8} className="dashboard-menu" data-theme={resolved}>
           <DropdownMenuLabel>{project?.name ?? 'Fontes'}<span className="dashboard-menu-email">{session?.user.email ?? 'Área de trabalho'}</span></DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => { void share() }}><Share2 />{copied ? 'Ligação copiada' : 'Partilhar ligação'}</DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => navigate('/settings')}><Settings />Definições da conta</DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => navigate(`${basePath}/settings`)}><Settings />Definições da conta</DropdownMenuItem>
           {session && <DropdownMenuItem disabled={signingOut} onSelect={() => { void signOut() }}><LogOut />{signingOut ? 'A terminar sessão…' : 'Terminar sessão'}</DropdownMenuItem>}
         </DropdownMenuContent>
       </DropdownMenu>
+      <div className="dashboard-divider" aria-hidden="true" />
+      </div>
       <nav className="dashboard-breadcrumb" aria-label="Localização">
-        <span>{settings ? 'Settings' : 'Home'}</span>
-        {settings && <><ChevronRight size={12} /><span aria-current="page">{section.label}</span></>}
+        {settings ? <a href={`${basePath}/settings`} onClick={follow}>Settings</a> : <span aria-current="page">Home</span>}
+        {settings && <><span className="dashboard-breadcrumb-separator" aria-hidden="true">/</span><span aria-current="page">{section.label}</span></>}
       </nav>
-      <span className="dashboard-project">{project?.name ?? 'Fontes'}</span>
     </header>
     <aside className="dashboard-rail" aria-label="Navegação principal">
       <nav>
         <Button asChild variant="ghost" className="dashboard-nav" data-active={!settings}>
-          <a href="/" onClick={follow} aria-current={!settings ? 'page' : undefined}><Home /><span>Home</span></a>
+          <a href={`${basePath}/`} onClick={follow} aria-current={!settings ? 'page' : undefined}><span className="dashboard-nav-icon"><DashboardIcon name="home" selected={!settings} /></span><span>Home</span></a>
         </Button>
         <Button asChild variant="ghost" className="dashboard-nav" data-active={settings}>
-          <a href="/settings" onClick={follow} aria-current={settings ? 'page' : undefined}><Settings /><span>Settings</span></a>
+          <a href={`${basePath}/settings`} onClick={follow} aria-current={settings ? 'page' : undefined}><span className="dashboard-nav-icon"><DashboardIcon name="settings" selected={settings} /></span><span>Settings</span></a>
         </Button>
       </nav>
       <Button variant="ghost" size="icon" className="dashboard-theme-toggle" aria-label={resolved === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'} title={resolved === 'dark' ? 'Ativar tema claro' : 'Ativar tema escuro'} onClick={() => changeTheme(resolved === 'dark' ? 'light' : 'dark')}>
-        {resolved === 'dark' ? <Sun /> : <Moon />}
+        <DashboardIcon name={resolved === 'dark' ? 'moon' : 'sun'} />
       </Button>
     </aside>
     <main id="dashboard-content" className="dashboard-panel" tabIndex={-1}>
@@ -115,7 +118,7 @@ export default function Dashboard({ path, session, project }: { path: string; se
         <nav className="dashboard-settings-nav" aria-label="Definições">
           <p>Área de trabalho</p>
           {sections.map(item => <Button key={item.path} asChild variant="ghost" className="dashboard-settings-link" data-active={item.path === section.path}>
-            <a href={item.path} onClick={follow} aria-current={item.path === section.path ? 'page' : undefined}><item.icon />{item.label}</a>
+            <a href={`${basePath}${item.path}`} onClick={follow} aria-current={item.path === section.path ? 'page' : undefined}>{item.label}</a>
           </Button>)}
         </nav>
         <section className="dashboard-settings-content" aria-labelledby="settings-heading">

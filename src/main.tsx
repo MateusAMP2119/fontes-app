@@ -52,6 +52,7 @@ function Gate({ path }: { path: string }) {
 
 function App() {
   const path = usePath()
+  if (import.meta.env.DEV && (path === '/dashboard-preview' || path.startsWith('/dashboard-preview/'))) return <Dashboard path={path.slice('/dashboard-preview'.length) || '/'} basePath="/dashboard-preview" session={null} project={null} />
   if (path === '/reset-password' || path === '/account/password') return <PasswordRecovery change={path === '/account/password'} />
   if (import.meta.env.DEV && path === '/onboarding-preview') return <Onboarding preview />
   if (!AUTH_ENABLED) return <Routes path={path} session={null} project={null} />
