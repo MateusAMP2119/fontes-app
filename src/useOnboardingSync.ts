@@ -495,11 +495,13 @@ export function useOnboardingSync(props: Props) {
     const epoch = generation.current
     const newPassword = pendingPassword.current
     pendingPassword.current = null
-    // Existing accounts do not need their password replaced after OTP login.
+    // Accounts with a login method do not need initial password setup.
     if (!state.current.passwordRequired) { setSavingPassword(false); void drain(); return }
     passwordRunning.current = true
     try {
-      const result = await onboardingRequest<Bootstrap>('/password', { newPassword })
+      const saved = await authClient.$fetch('/set-password', { method: 'POST', body: { currentPassword: '', newPassword } })
+      if (saved.error) throw new SyncError(saved.error.status, saved.error.message || 'Não foi possível guardar a palavra-passe.')
+      const result = { ...state.current, passwordRequired: false, hasPassword: true }
       if (epoch !== generation.current || pageHidden.current) return
       receive(result)
       setIssue(value => value === 'password' ? null : value)
