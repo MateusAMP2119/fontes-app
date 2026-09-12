@@ -61,8 +61,9 @@ export default function PasswordRecovery({ change = false }: { change?: boolean 
     setBusy(true); setError('')
     try {
       if (change) {
-        const result = await authClient.$fetch('/set-password', { method: 'POST', body: { password: oldPassword, 'new-password': password, revokeOtherSessions: true } })
+        const result = await authClient.$fetch('/set-password', { method: 'POST', body: { password: oldPassword, 'new-password': password } })
         if (result.error) throw new Error('Não foi possível alterar a palavra-passe. A recuperação de acesso está disponível.')
+        authClient.$store.notify('$sessionSignal')
         setDone(true); setNotice('Palavra-passe atualizada. As outras sessões foram terminadas.')
       } else if (token) {
         const result = await authClient.resetPassword({ newPassword: password, token })

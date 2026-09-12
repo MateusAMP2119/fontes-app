@@ -168,7 +168,7 @@ test('returning email uses password; reset and password change never persist cre
  await p.goto(origin+'/reset-password?token=test-reset-token');await p.locator('input[autocomplete="new-password"]').fill('new-secret-password');await f.button('Guardar palavra-passe').click();await p.getByText('Palavra-passe atualizada. Início de sessão disponível.').waitFor()
  assert.ok(!p.url().includes('token='))
  await p.goto(origin+'/account/password');await p.locator('input[autocomplete="current-password"]').fill('new-secret-password');await p.locator('input[autocomplete="new-password"]').fill('changed-secret-password');await f.button('Guardar palavra-passe').click();await p.getByText('Palavra-passe atualizada. As outras sessões foram terminadas.').waitFor()
- assert.ok(f.calls.some(c=>c.path.endsWith('/set-password')&&c.body.revokeOtherSessions===true))
+ assert.ok(f.calls.some(c=>c.path.endsWith('/set-password')&&!('revokeOtherSessions' in c.body)))
  assert.ok(!(await p.evaluate(()=>JSON.stringify(localStorage)+JSON.stringify(sessionStorage))).includes('secret'))
 })
 test('existing workspace resumes profile and account switch clears avatar',async t=>{
