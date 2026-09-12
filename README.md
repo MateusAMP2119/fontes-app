@@ -194,8 +194,8 @@ Release the matching fontes-api onboarding migration/API before this frontend.
 
 Start the updated `fontes-api` with `npm run dev` (localhost:8788), then run
 `npm run dev:auth` here (localhost:5173). This uses same-site cookies and the
-API OAuth proxy for Google. Production builds retain the production API URL.
-The API OAuth proxy must be deployed before using local Google sign-in.
+API for email registration and password login. Google sign-in is unavailable
+locally. Production builds retain the production API URL.
 For UI-only testing without emails or authentication, use `/onboarding-preview`.
 
 ## Local onboarding preview

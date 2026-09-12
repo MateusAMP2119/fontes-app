@@ -15,3 +15,6 @@ export const authClient = createAuthClient({
 export const AUTH_ENABLED = true
 
 export type AuthSession = typeof authClient.$Infer.Session
+
+/** Google sign-in requires the production API and an HTTPS frontend. */
+export const GOOGLE_SIGN_IN_ENABLED = API === 'https://api.fonteslabs.com' && location.protocol === 'https:' && !['localhost', '127.0.0.1', '[::1]'].includes(location.hostname)

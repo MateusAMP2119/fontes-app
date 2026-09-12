@@ -1,9 +1,10 @@
-import { authClient, type AuthSession } from './auth'
+import { authClient, GOOGLE_SIGN_IN_ENABLED, type AuthSession } from './auth'
 
 export class GoogleSignInError extends Error {}
 
 /** Keep the original document and destination mounted throughout OAuth. */
 export async function googleSignIn(prepare: (session: AuthSession) => Promise<void>, signal: AbortSignal) {
+  if (!GOOGLE_SIGN_IN_ENABLED) throw new GoogleSignInError('O início de sessão com Google não está disponível neste ambiente.')
   const attempt = crypto.randomUUID()
   const callback = new URL('/google-auth.html', location.origin)
   callback.searchParams.set('attempt', attempt)
