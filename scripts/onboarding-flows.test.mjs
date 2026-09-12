@@ -19,7 +19,7 @@ async function fixture(t, options={}) {
   if(path.endsWith('/send-verification-otp'))return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:{success:true}})
   if(path.endsWith('/sign-in/email-otp')||path.endsWith('/sign-in/email')){f.authenticated=true;return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:{user,token:'test'}})}
   if(path.endsWith('/sign-out')){f.authenticated=false;return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:{success:true}})}
-  if(path==='/api/auth/set-password' && b.currentPassword===''){assert.equal(f.authenticated,true);assert.equal(b.currentPassword,'');assert.ok(b.newPassword.length>=8);f.state.passwordRequired=false;return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:f.state})}
+  if(path==='/api/auth/set-password' && b.password===''){assert.equal(f.authenticated,true);assert.equal(b.password,'');assert.ok(b['new-password'].length>=8);f.state.passwordRequired=false;return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:f.state})}
   if(path==='/api/onboarding/invitation')return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:{name:'Equipa convidada',role:'member'}})
   if(path==='/api/onboarding/join'){f.joins++;f.state={...workspace(),project:null,canInvite:false,canEditWorkspace:false};return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:f.state})}
   if(path==='/api/onboarding/invite'){

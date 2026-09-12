@@ -499,7 +499,7 @@ export function useOnboardingSync(props: Props) {
     if (!state.current.passwordRequired) { setSavingPassword(false); void drain(); return }
     passwordRunning.current = true
     try {
-      const saved = await authClient.$fetch('/set-password', { method: 'POST', body: { currentPassword: '', newPassword } })
+      const saved = await authClient.$fetch('/set-password', { method: 'POST', body: { password: '', 'new-password': newPassword } })
       if (saved.error) throw new SyncError(saved.error.status, saved.error.message || 'Não foi possível guardar a palavra-passe.')
       const result = { ...state.current, passwordRequired: false, hasPassword: true }
       if (epoch !== generation.current || pageHidden.current) return
