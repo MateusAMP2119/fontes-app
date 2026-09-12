@@ -37,12 +37,15 @@
   background: var(--canvas);
 }
 
+@layer base {
 *,
 *::before,
 *::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
 }
 
 html,
@@ -62,11 +65,14 @@ input {
   color: inherit;
 }
 
+@layer base {
 button {
   appearance: none;
   border: none;
   background: none;
   cursor: default;
+}
+
 }
 
 /* iOS Safari paints a grey flash over tapped buttons and links; it reads as a glitch on the tab switch */

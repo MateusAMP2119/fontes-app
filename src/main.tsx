@@ -6,7 +6,8 @@ import { StrictMode, useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { flushSync } from 'react-dom'
 import './index.css'
-import MakeApp from './MakeApp.tsx'
+import Dashboard from './Dashboard'
+import './shadcn.css'
 import Article from './Article.tsx'
 import Onboarding from './Onboarding.tsx'
 import { authClient, AUTH_ENABLED, type AuthSession } from './auth'
@@ -31,7 +32,7 @@ function usePath() {
 function Routes({ path, session, project }: { path: string; session: AuthSession | null; project: Project | null }) {
   const item = path.match(/^\/(eventos|historias)\/(.+)$/)
   if (item) return <Article kind={item[1] === 'eventos' ? 'events' : 'stories'} itemKey={decodeURIComponent(item[2])} />
-  return <MakeApp session={session} project={project} />
+  return <Dashboard path={path} session={session} project={project} />
 }
 
 /** Session confirmation remains authoritative; screen navigation is local. */

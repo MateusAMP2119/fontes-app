@@ -228,6 +228,7 @@ export function mountQuery(card: HTMLElement, onMode?: (mode: ModeKey) => void):
     ([entry]) => {
       visible = Boolean(entry?.isIntersecting)
       if (visible) {
+        onResize()
         if (!focused && !input.value) restartTyping(250)
         startFrames()
       } else {

@@ -1,9 +1,12 @@
 import { defineConfig } from 'vite'
+import tailwindcss from '@tailwindcss/vite'
+import { fileURLToPath, URL } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
-  plugins: [react(), VitePWA({
+  resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
+  plugins: [react(), tailwindcss(), VitePWA({
     // Activate updates with tabs open; the next reload uses the new app.
     registerType: 'autoUpdate',
     injectRegister: 'script',
