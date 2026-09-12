@@ -401,6 +401,12 @@ export function useOnboardingSync(props: Props) {
     try {
       const result = await action()
       if (result.error) {
+        if (typeof result.error === 'object' && 'code' in result.error && result.error.code === 'REGISTRATION_ACCOUNT_EXISTS') {
+          current.current.setDraft(d => ({ ...d, step: 'email', returning: true }))
+          setIssue('email')
+          current.current.setError('Email já registado. Início de sessão com palavra-passe ou Google; recuperação de acesso disponível.')
+          return false
+        }
         const status = typeof result.error === 'object' && 'status' in result.error ? Number(result.error.status) : 0
         const unavailable = status >= 500 || status === 429
         current.current.setError(unavailable ? 'Não foi possível concluir o pedido. Nova tentativa disponível.' : message, unavailable ? undefined : field)
@@ -417,7 +423,7 @@ export function useOnboardingSync(props: Props) {
     setSendingCode(true)
     const sent = await authenticate(() => authClient.emailOtp.sendVerificationOtp({ email, type: 'sign-in' }), 'Não foi possível enviar o código. Nova tentativa disponível.')
     setSendingCode(false)
-    if (!sent) setIssue('code')
+    if (!sent) setIssue(value => value === 'email' ? value : 'code')
   }
   async function verify(code: string) {
     if (authRunning.current) return
@@ -425,16 +431,19 @@ export function useOnboardingSync(props: Props) {
     if (current.current.draft.step === 'code' && !current.current.draft.returning && !new URL(location.href).searchParams.has('invite')) current.current.setDraft(d => ({ ...d, step: 'password' }))
     const verified = await authenticate(() => authClient.signIn.emailOtp({ email, otp: code }), 'Código inválido ou expirado. Nova tentativa disponível.', 'code')
     if (!verified) {
-      setIssue('code')
+      setIssue(value => value === 'email' ? value : 'code')
     } else {
-      const renewing = requiresVerification.current
-      requiresVerification.current = false
       setIssue(value => value === 'code' ? null : value)
-      if (renewing) await reload.current()
     }
   }
   async function login(password: string) {
-    return authenticate(() => authClient.signIn.email({ email: current.current.draft.email.trim().toLowerCase(), password }), 'Email ou palavra-passe inválidos. A recuperação de acesso está disponível.', 'oldPassword')
+    const success = await authenticate(() => authClient.signIn.email({ email: current.current.draft.email.trim().toLowerCase(), password }), 'Email ou palavra-passe inválidos. A recuperação de acesso está disponível.', 'oldPassword')
+    if (success && requiresVerification.current) {
+      requiresVerification.current = false
+      setIssue(null)
+      await reload.current()
+    }
+    return success
   }
   // Resolve only after React has committed the authenticated destination or a
   // recoverable error. Closing the Google window then cannot expose an empty page.
@@ -458,6 +467,8 @@ export function useOnboardingSync(props: Props) {
     persist(true)
     try {
       await googleSignIn(session => new Promise<void>((resolve, reject) => {
+        requiresVerification.current = false
+        setIssue(null)
         const timeout = setTimeout(() => { googlePrepared.current = null; reject(new Error('Setup confirmation timed out')) }, 25000)
         googlePrepared.current = { sessionId: session.session.id, userId: session.user.id, resolve: () => { clearTimeout(timeout); resolve() } }
         setGoogleSession(session.session.id)
@@ -517,8 +528,10 @@ export function useOnboardingSync(props: Props) {
   function renewAuthentication() {
     requiresVerification.current = true
     current.current.onBlocked?.()
-    setIssue('code')
-    current.current.setError('A sessão expirou. É necessário um novo código de email para confirmar a configuração. O rascunho foi preservado.')
+    pendingPassword.current = null; setSavingPassword(false)
+    current.current.setDraft(d => ({ ...d, step: 'email', returning: true }))
+    setIssue('email')
+    current.current.setError('A sessão expirou. Início de sessão com palavra-passe ou Google; recuperação de acesso disponível. O rascunho foi preservado.')
   }
   async function changeEmail() {
     if (authRunning.current || passwordRunning.current) { current.current.setError('Autenticação em curso.'); return }

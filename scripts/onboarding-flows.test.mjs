@@ -832,3 +832,39 @@ for (const failure of ['http', 'network']) test(`recovery preserves success and 
  assert.equal(f.authenticated, false)
  assert.equal(f.calls.filter(c => c.path.endsWith('/reset-password')).length, 1)
 })
+
+test('registration rejection returns to password login with recovery available', async t => {
+ for (const phase of ['send','verify']) {
+  await t.test(phase, async t => {
+   const f=await fixture(t,{authenticated:false}),p=f.page
+   await p.route(phase==='send'?'**/email-otp/send-verification-otp':'**/sign-in/email-otp',route=>route.fulfill({status:400,headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:{code:'REGISTRATION_ACCOUNT_EXISTS',message:'Email já registado.'}}))
+   await p.goto(origin)
+   await f.button('Continuar com email').click()
+   await f.input('Endereço de email').fill(user.email)
+   await f.button('Continuar com email').click()
+   if (phase==='verify') {
+    await f.input(/^Código (?:temporário|de confirmação)$/).fill('123456')
+    await f.button('Continuar com código').click()
+   }
+   await p.locator('input[autocomplete="current-password"]').waitFor()
+   await f.button('Iniciar sessão').waitFor()
+   await p.getByRole('link',{name:'Recuperar acesso'}).waitFor()
+   assert.equal(await f.input('Endereço de email').inputValue(),user.email)
+   assert.equal(await p.locator('input[autocomplete="one-time-code"]').count(),0)
+  })
+ }
+})
+
+test('expired onboarding session returns to password login without offering another code', async t => {
+ const f=await fixture(t),p=f.page
+ await p.route('**/api/onboarding',route=>route.request().method()==='POST'
+  ?route.fulfill({status:401,headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:{message:'Sessão expirada.'}})
+  :route.fallback())
+ await p.goto(origin)
+ await f.input('Nome').fill('Ambiente preservado')
+ await f.button('Criar ambiente').click()
+ await p.locator('input[autocomplete="current-password"]').waitFor()
+ await p.getByRole('link',{name:'Recuperar acesso'}).waitFor()
+ assert.equal(await p.locator('input[autocomplete="one-time-code"]').count(),0)
+ assert.equal(f.calls.filter(call=>call.path.endsWith('/send-verification-otp')).length,0)
+})
