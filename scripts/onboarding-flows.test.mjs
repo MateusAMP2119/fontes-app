@@ -231,6 +231,22 @@ test('password recovery retains the content destination and rejects external ret
  assert.equal(p.url(),origin+'/')
 })
 
+test('resending a code preserves the email description and shows a concise failure chip',async t=>{
+ const f=await fixture(t,{authenticated:false}),p=f.page
+ await p.goto(origin);await f.button('Continuar com email').click();await f.input('Endereço de email').fill(user.email);await f.button('Continuar com email').click()
+ const description=p.getByText(`Foi enviado um código temporário para ${user.email}.`,{exact:true})
+ await description.waitFor()
+ let release
+ await p.route('**/email-otp/send-verification-otp',async route=>{await new Promise(r=>{release=r});await route.fulfill({status:429,json:{message:'Too many requests'}})})
+ await f.button('Reenviar código').click()
+ await assertEventually(()=>!!release)
+ assert.equal(await description.isVisible(),true,'pending resend preserves the original description')
+ release()
+ await p.locator('.ob-toast').waitFor()
+ assert.equal(await p.locator('.ob-toast').textContent(),'Não foi possível concluir o pedido.')
+ assert.equal(await description.isVisible(),true,'failed resend preserves the original description')
+})
+
 test('email and workspace forms appear before stalled requests finish',async t=>{
  const f=await fixture(t,{authenticated:false,state:{...blank(),passwordRequired:true}}),p=f.page
  let releaseEmail,releaseVerify,releaseWorkspace,releasePassword
@@ -238,7 +254,7 @@ test('email and workspace forms appear before stalled requests finish',async t=>
  await p.route('**/sign-in/email-otp',async route=>{await new Promise(r=>{releaseVerify=r});await route.fallback()})
  await p.goto(origin);await f.button('Continuar com email').click();await f.input('Endereço de email').fill(user.email)
  assert.equal(f.calls.filter(c=>c.path.includes('email')&&!c.path.includes('get-session')).length,0,'typing email never searches accounts or sends email')
- await f.button('Continuar com email').click();await p.locator('section.ob-code').waitFor();await p.getByText('Envio de código em curso para',{exact:false}).waitFor()
+ await f.button('Continuar com email').click();await p.locator('section.ob-code').waitFor();await p.getByText(`Foi enviado um código temporário para ${user.email}.`,{exact:true}).waitFor()
  await f.input(/^Código (?:temporário|de confirmação)$/).fill('123456');assert.equal(await p.locator('.ob-code button[type="submit"], .ob-code button.ob-primary').isDisabled(),true)
  releaseEmail();await f.button('Continuar com código').click();await p.locator('.ob-password').waitFor()
  assert.equal(await p.locator('.ob-workspace').count(),0);assert.equal(await f.button('Guardar palavra-passe').isDisabled(),true,'empty passwords cannot submit');assert.equal(f.writes.length,0)
@@ -909,4 +925,29 @@ test('invitation review pauses old workspace saves and failed acceptance keeps t
  await p.locator('.ob-profile').waitFor()
  assert.equal(f.joins,1)
  assert.ok(f.writes.every(write=>write.name!=='Old workspace'))
+})
+
+test('wrong-account invitation displays the authenticated email and switches account without losing the token', async t => {
+ const identity={...user,email:'sender@example.com'}
+ const f=await fixture(t,{user:identity,state:{...workspace(),completed:true}}),p=f.page
+ await p.route('**/api/onboarding/invitation',route=> identity.email==='sender@example.com'
+  ? route.fulfill({status:403,json:{message:'A conta com sessão iniciada não corresponde ao email do convite.',code:'INVITATION_ACCOUNT_MISMATCH',recipientEmail:'recipient@example.com'}})
+  : route.fallback())
+ const url=origin+'/?invite='+'ab'.repeat(32)
+ await p.goto(url)
+ await p.getByText('A conta com sessão iniciada não corresponde ao email do convite.',{exact:true}).waitFor()
+ assert.ok((await p.locator('.ob-join').innerText()).includes('sender@example.com'))
+ assert.ok(!(await p.locator('.ob-join').innerText()).includes('email@email.com'))
+ assert.equal(await f.button('Utilizar um email diferente').count(),1)
+ assert.equal(f.joins,0)
+ await f.button('Continuar com email do convite').click()
+ await f.input('Endereço de email').waitFor()
+ assert.equal(p.url(),url)
+ assert.equal(await f.input('Endereço de email').inputValue(),'recipient@example.com')
+ identity.email='recipient@example.com';f.state=blank()
+ await f.input('Endereço de email').fill(identity.email);await f.button('Continuar com email').click()
+ await f.input(/^Código (?:temporário|de confirmação)$/).fill('123456');await f.button('Continuar com código').click()
+ await f.button('Aceitar convite').waitFor();assert.equal(f.joins,0)
+ await f.button('Aceitar convite').click();await p.locator('.ob-profile').waitFor()
+ assert.equal(f.joins,1)
 })

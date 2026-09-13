@@ -103,13 +103,13 @@ export default function Onboarding({ preview = false, session = null, onReady, o
   const patch = (value: Partial<Draft>) => setDraft(current => ({ ...current, ...value }))
   const go = (step: Step) => { if ((live.busy || live.restoring) && ['start', 'email', 'code'].includes(draft.step)) return; patch({ step }); setNotice(''); setError(null); setFieldError(null) }
   useEffect(() => { if (preview) { try { localStorage.setItem(key, JSON.stringify(draft)) } catch { /* In-memory fallback. */ } } }, [draft, preview])
-  const email = draft.email || 'email@email.com'
+  const email = session?.user.email || draft.email || (preview ? 'email@email.com' : '')
 
   const titles: Record<Step, string> = { start: 'Criar conta', email: draft.returning ? 'Iniciar sessão' : 'Registar email', code: 'Confirmar email', password: 'Definir palavra-passe', join: 'Ligação ao ambiente', workspace: 'Novo ambiente de trabalho', profile: 'Personalizar perfil', invites: 'Convidar membros', updates: 'Preferências de email' }
   const descriptions: Partial<Record<Step, ReactNode>> = {
     start: 'Configurações de acessos antes da criação de um ambiente de trabalho.',
     email: draft.returning ? (GOOGLE_SIGN_IN_ENABLED ? 'Acesso com Google ou palavra-passe.' : 'Acesso com palavra-passe.') : 'Criar uma nova conta através email e código de confirmação.',
-    code: <>{live.sendingCode ? 'Envio de código em curso para ' : 'Foi enviado um código temporário para '}<strong>{email}</strong>.</>,
+    code: <>Foi enviado um código temporário para <strong>{draft.email || (preview ? 'email@email.com' : '')}</strong>.</>,
     password: 'A palavra-passe permite voltar a iniciar sessão com este email.',
     workspace: 'Ambientes de trabalho estão desenhados para colaboração dentro de equipas.',
     profile: 'Nomes e imagens podem ser visíveis a outros utilizadores.',
@@ -238,7 +238,8 @@ export default function Onboarding({ preview = false, session = null, onReady, o
           {draft.step === 'join' && <div className="ob-start-actions">
             <p>Conta: <strong>{email}</strong></p>
             {live.invitation && <p>Ambiente de trabalho: <strong>{live.invitation.name}</strong>. Acesso como membro.</p>}
-            <button disabled={live.loading} className="ob-button ob-primary ob-wide">{live.invitation ? 'Aceitar convite' : 'Tentar ligação novamente'}</button>
+            {live.invitationFailure && <p role="status">{live.invitationFailure.message}</p>}
+            {live.invitationFailure?.code === 'INVITATION_ACCOUNT_MISMATCH' ? <button type="button" disabled={live.loading || live.busy} className="ob-button ob-primary ob-wide" onClick={() => void live.changeEmail(live.invitationFailure?.recipientEmail)}>Continuar com email do convite</button> : <button disabled={live.loading} className="ob-button ob-primary ob-wide">{live.invitation ? 'Aceitar convite' : 'Tentar ligação novamente'}</button>}
             <button type="button" className="ob-subtle" disabled={live.loading} onClick={() => void live.changeEmail()}>Utilizar um email diferente</button>
             <div className="ob-divider"><span>ou</span></div>
             <button type="button" className="ob-button ob-provider" disabled={live.loading} onClick={() => preview ? go('workspace') : void live.dismissInvite()}>Continuar sem convite</button>
@@ -260,7 +261,7 @@ export default function Onboarding({ preview = false, session = null, onReady, o
           {draft.step === 'invites' && <><div className="ob-account-note"><p>Ambiente para <span>{email}</span></p><button type="button" className="ob-subtle" onClick={() => { if (!preview) { void live.changeEmail(); return }; patch({ returning: false, provider: 'email' }); go('email') }}>Utilizar um email diferente</button></div></>}
           {draft.step === 'updates' && <><div className="ob-account-note"><p>Ambiente para <span>{email}</span></p><button type="button" className="ob-subtle" onClick={() => { if (!preview) { void live.changeEmail(); return }; patch({ returning: false, provider: 'email' }); go('email') }}>Utilizar um email diferente</button></div></>}
         </form>}
-        {!preview && live.failed && <div className="ob-actions"><button className="ob-subtle" onClick={live.retry}>Tentar novamente</button><button className="ob-subtle" onClick={() => void live.changeEmail()}>Utilizar um email diferente</button></div>}
+        {!preview && live.failed && draft.step !== 'join' && <div className="ob-actions"><button className="ob-subtle" onClick={live.retry}>Tentar novamente</button><button className="ob-subtle" onClick={() => void live.changeEmail()}>Utilizar um email diferente</button></div>}
         {!preview && live.issue && live.issue !== draft.step && <form className="ob-correction" aria-label="Correção da configuração" noValidate onInput={clearFieldError} onSubmit={event => {
           event.preventDefault()
           if (!validate(event.currentTarget)) return

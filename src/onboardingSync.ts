@@ -7,6 +7,8 @@ export class SyncError extends Error {
   step?: string
   retryAfter?: number
   conflict?: boolean
+  code?: string
+  recipientEmail?: string
   constructor(status: number, message: string, step?: string) { super(message); this.status = status; this.step = step }
 }
 export async function onboardingRequest<T>(path = '', body?: unknown, signal?: AbortSignal): Promise<T> {
@@ -15,6 +17,8 @@ export async function onboardingRequest<T>(path = '', body?: unknown, signal?: A
   if (!response.ok) {
     const error = new SyncError(response.status, result.message || 'Não foi possível concluir o pedido.', result.step)
     error.conflict = result.conflict === true
+    error.code = typeof result.code === 'string' ? result.code : undefined
+    error.recipientEmail = typeof result.recipientEmail === 'string' ? result.recipientEmail : undefined
     const retry = response.headers.get('retry-after')
     if (retry) error.retryAfter = Math.max(1000, Number.isFinite(Number(retry)) ? Number(retry) * 1000 : Date.parse(retry) - Date.now())
     throw error
