@@ -7,7 +7,7 @@ import { fresh, saved, steps, type Draft, type Step } from './onboardingDraft'
 type Setup = { organizationId?: string; operationId: string; revision: number; name: string; slug: string; profileName: string; profileImage?: string; completed: boolean; automaticSlug?: boolean; workspace?: boolean; changelog: boolean; daily: boolean }
 type Invitation = { organizationId?: string; awaitingWorkspace?: boolean; token: string; email: string; status?: 'sent' | 'failed'; error?: string }
 type Record = { needsConfirmation?: boolean; completionRequested?: boolean; draft: Draft; revision: number; pending?: Setup; invitations: Invitation[]; link?: string }
-type Props = { imagePending?: boolean; preview: boolean; session: AuthSession | null; draft: Draft; setDraft: Dispatch<SetStateAction<Draft>>; setNotice: (message: string) => void; setError: (message: string, field?: string) => void; onReady?: (state: Bootstrap) => void; onBlocked?: () => void }
+type Props = { imagePending?: boolean; session: AuthSession | null; draft: Draft; setDraft: Dispatch<SetStateAction<Draft>>; setNotice: (message: string) => void; setError: (message: string, field?: string) => void; onReady?: (state: Bootstrap) => void; onBlocked?: () => void }
 const prefix = 'fontes:onboarding:v1:'
 const transient = (e: unknown) => !(e instanceof SyncError) || e.status >= 500 || e.status === 429
 
@@ -55,7 +55,7 @@ export function useOnboardingSync(props: Props) {
   const directRegistration = invitationEntry?.step === 'password' && invitationEntry.email !== props.session?.user.email
   useEffect(() => {
     const token = new URL(location.href).searchParams.get('invite')
-    if (props.preview || !token) { setInvitationEntry(null); return }
+    if (!token) { setInvitationEntry(null); return }
     let cancelled = false
     const load = () => onboardingRequest<{ email: string | null; step: 'email' | 'password' }>('/invitation/registration', { token }).then(entry => {
       if (cancelled) return
@@ -72,7 +72,7 @@ export function useOnboardingSync(props: Props) {
     invitationReload.current = load
     void load()
     return () => { cancelled = true }
-  }, [props.preview])
+  }, [])
   const slugRetries = useRef(0)
 
   useEffect(() => {
@@ -136,7 +136,7 @@ export function useOnboardingSync(props: Props) {
     timer.current = setTimeout(() => { void drain() }, delay)
   }
   async function drain() {
-    if (new URL(location.href).searchParams.has('invite') || record.current.needsConfirmation || requiresVerification.current || running.current || !owner.current || !state.current || state.current.passwordRequired || props.preview) return
+    if (new URL(location.href).searchParams.has('invite') || record.current.needsConfirmation || requiresVerification.current || running.current || !owner.current || !state.current || state.current.passwordRequired) return
     const epoch = generation.current
     running.current = true
     setFailed(false)
@@ -236,13 +236,11 @@ export function useOnboardingSync(props: Props) {
   }
 
   useEffect(() => {
-    if (props.preview) return
     record.current.draft = props.draft
     persist(true)
-  }, [props.draft, props.preview])
+  }, [props.draft])
 
   useEffect(() => {
-    if (props.preview) return
     if (!props.session) signedOutSession.current = null
     if (props.session && props.session.session.id === signedOutSession.current) return
     if (new URL(location.href).searchParams.has('invite') && (invitationEntry === undefined || directRegistration)) return
@@ -382,7 +380,7 @@ export function useOnboardingSync(props: Props) {
     addEventListener('online', online)
     addEventListener('storage', storage)
     return () => { generation.current++; owner.current = null; state.current = null; clearTimeout(timer.current); removeEventListener('online', online); removeEventListener('storage', storage) }
-  }, [props.session?.user.id, props.session?.session.id, props.preview, invitationEntry, directRegistration])
+  }, [props.session?.user.id, props.session?.session.id, invitationEntry, directRegistration])
 
   function save(completed = false, workspace = false) {
     const queuedCredential = pendingPassword.current !== null || passwordRunning.current
@@ -417,7 +415,7 @@ export function useOnboardingSync(props: Props) {
 
   // Coalesce valid edits after typing pauses. Credentials never enter this effect.
   useEffect(() => {
-    if (props.preview || !['profile', 'updates'].includes(props.draft.step) || !bootstrap?.organization || workspaceBusy || bootstrap.passwordRequired) return
+    if (!['profile', 'updates'].includes(props.draft.step) || !bootstrap?.organization || workspaceBusy || bootstrap.passwordRequired) return
     const d = props.draft
     if (!d.profile.trim() || d.profile.length > 80 || !d.name.trim() || !/^[a-z0-9][a-z0-9-]{2,47}$/.test(d.slug)) return
     const server = state.current
@@ -431,7 +429,7 @@ export function useOnboardingSync(props: Props) {
       save()
     }, 500)
     return () => clearTimeout(timeout)
-  }, [props.preview, props.draft.step, props.draft.profile, props.draft.image, props.draft.name, props.draft.slug, props.draft.changelog, props.draft.daily, bootstrap?.organization?.id, bootstrap?.passwordRequired, workspaceBusy])
+  }, [props.draft.step, props.draft.profile, props.draft.image, props.draft.name, props.draft.slug, props.draft.changelog, props.draft.daily, bootstrap?.organization?.id, bootstrap?.passwordRequired, workspaceBusy])
 
   function invite(addresses: string[]) {
     if (!record.current.pending?.workspace && (state.current?.canInvite === false || !state.current?.organization)) return
@@ -655,7 +653,7 @@ export function useOnboardingSync(props: Props) {
     else record.current.invitations = record.current.invitations.map(i => i.token === token ? { token: i.token, email: i.email, organizationId: i.organizationId, ...(!i.organizationId ? { status: 'failed' as const, error: i.error } : {}) } : i)
     updateInvitations(); void drain()
   }
-  return { googleActive, cancelGoogle: () => { googleAbort.current?.abort(); googlePrepared.current?.resolve() }, busy, failed, issue, loading, savingPassword, restoring: !props.preview && ((new URL(location.href).searchParams.has('invite') && invitationEntry === undefined) || (!!props.session && !directRegistration && !bootstrap && !failed)), workspaceBusy, syncStatus, sendingCode, organizationId: bootstrap?.organization?.id, canSaveProfile: !!record.current.pending || (!!bootstrap?.organization && !bootstrap.passwordRequired), canCreateWorkspace: !!record.current.pending || pendingPassword.current !== null || savingPassword || (!!bootstrap && !loading && !bootstrap.passwordRequired && !bootstrap.accessLost),
+  return { googleActive, cancelGoogle: () => { googleAbort.current?.abort(); googlePrepared.current?.resolve() }, busy, failed, issue, loading, savingPassword, restoring: ((new URL(location.href).searchParams.has('invite') && invitationEntry === undefined) || (!!props.session && !directRegistration && !bootstrap && !failed)), workspaceBusy, syncStatus, sendingCode, organizationId: bootstrap?.organization?.id, canSaveProfile: !!record.current.pending || (!!bootstrap?.organization && !bootstrap.passwordRequired), canCreateWorkspace: !!record.current.pending || pendingPassword.current !== null || savingPassword || (!!bootstrap && !loading && !bootstrap.passwordRequired && !bootstrap.accessLost),
     canEditWorkspace: !!record.current.pending?.workspace || bootstrap?.canEditWorkspace !== false, canInvite: !new URL(location.href).searchParams.has('invite') && (!!record.current.pending?.workspace || bootstrap?.canInvite !== false),
     directRegistration, invitationErrors, inviteLink, invitationFailure, start, verify, login, google, setPassword, acceptInvite, dismissInvite, save, invite, copyInvite, changeEmail, retryInvitation,
     retry: () => { if (record.current.pending && state.current && !state.current.passwordRequired) void drain(); else void reload.current() } }

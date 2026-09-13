@@ -10,9 +10,9 @@ import Dashboard from './Dashboard'
 import './shadcn.css'
 import Article from './Article.tsx'
 import Onboarding from './Onboarding.tsx'
-import { authClient, AUTH_ENABLED, type AuthSession } from './auth'
+import { authClient, type AuthSession } from './auth'
 import { type Project } from './projects'
-import { onboardingRequest, type Bootstrap } from './onboardingSync'
+import { type Bootstrap } from './onboardingSync'
 
 function usePath() {
   const [path, setPath] = useState(location.pathname)
@@ -50,27 +50,9 @@ function Gate({ path }: { path: string }) {
   </>
 }
 
-function DashboardPreview({ path }: { path: string }) {
-  const { data: session } = authClient.useSession()
-  const [workspace, setWorkspace] = useState<{ userId: string; state: Bootstrap } | null>(null)
-  useEffect(() => {
-    if (!session) { setWorkspace(null); return }
-    const controller = new AbortController()
-    onboardingRequest<Bootstrap>('', undefined, controller.signal)
-      .then(state => { if (!controller.signal.aborted) setWorkspace({ userId: session.user.id, state }) })
-      .catch(() => { if (!controller.signal.aborted) setWorkspace(null) })
-    return () => controller.abort()
-  }, [session?.user.id])
-  const state = workspace?.userId === session?.user.id ? workspace?.state : null
-  return <Dashboard path={path.slice('/dashboard-preview'.length) || '/'} basePath="/dashboard-preview" session={session} project={state?.project ?? null} organization={state?.organization ?? null} onWorkspaceChange={state => { if (session) setWorkspace({ userId: session.user.id, state }) }} />
-}
-
 function App() {
   const path = usePath()
-  if (import.meta.env.DEV && (path === '/dashboard-preview' || path.startsWith('/dashboard-preview/'))) return <DashboardPreview path={path} />
   if (path === '/reset-password' || path === '/account/password') return <PasswordRecovery change={path === '/account/password'} />
-  if (import.meta.env.DEV && path === '/onboarding-preview') return <Onboarding preview />
-  if (!AUTH_ENABLED) return <Routes path={path} session={null} project={null} />
   return <Gate path={path} />
 }
 
