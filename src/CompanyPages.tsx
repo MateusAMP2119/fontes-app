@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ArrowDown, ArrowUp, Check, ChevronDown, Copy, FileText, Plus, Rss, Settings2, Trash2, X } from 'lucide-react'
 import type { AuthSession } from './auth'
 import type { Project } from './projects'
-import Feed from './Feed'
+import { NewsStage } from './MakeApp'
 import './CompanyPages.css'
 
 type Page = { id: string; title: string; description: string; group: string; topics: string[]; feedName?: string }
@@ -197,12 +197,11 @@ function PagesEditor({ active, storageKey, session, company, organization, onWor
             <button className="cp-add-page" onClick={add}><Plus size={14} />Novo feed</button>
           </aside>
           <article className="cp-canvas">
-            {page ? <>
+            {page ? <NewsStage key={page.id} session={session} queries={page.topics}>
               <div className="cp-page-heading"><div className="cp-eyebrow"><FileText size={13} />{page.group || 'Páginas'}</div><h1>{page.title || 'Sem título'}</h1>{page.description && <p>{page.description}</p>}</div>
               <div className="cp-feed-heading"><span><Rss size={14} />{page.topics.length ? 'Feed personalizado' : 'Últimas notícias'}</span><span className="cp-live"><i />Em atualização</span></div>
               {page.topics.length > 0 && <div className="cp-feed-topics">{page.topics.map(t => <span key={t}>{t}</span>)}</div>}
-              <div className="make-shell"><Feed key={page.id} session={session} queries={page.topics} /></div>
-            </> : <div className="cp-empty"><FileText size={32} /><h1>Páginas da empresa</h1><p>Um espaço para organizar notícias, temas e perspetivas.</p><button onClick={add}><Plus size={14} />Criar página</button></div>}
+            </NewsStage> : <div className="cp-empty"><FileText size={32} /><h1>Páginas da empresa</h1><p>Um espaço para organizar notícias, temas e perspetivas.</p><button onClick={add}><Plus size={14} />Criar página</button></div>}
           </article>
         </div>
       </div>

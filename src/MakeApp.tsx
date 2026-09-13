@@ -1,5 +1,5 @@
 import { NEWS_API as API } from './api'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { type AuthSession } from './auth'
 import Feed from './Feed'
 import Briefing from './Briefing'
@@ -241,41 +241,50 @@ export default function MakeApp({ session }: { session: AuthSession | null }) {
   </>
 
   return (
-    <div className="make-shell">
+    <NewsStage session={session} queries={chips}>
       <dialog ref={dialogRef} className="news-search-dialog" aria-label="Pesquisar notícias"
         onCancel={event => { event.preventDefault(); setModal(false); setOpen(false) }}
         onClose={() => { setModal(false); setOpen(false) }}
         onClick={event => { if (event.target === event.currentTarget) { setModal(false); setOpen(false) } }}>
         <div className="news-search-dialog-content">{modal && renderSearch(true)}</div>
       </dialog>
-      <div className="make-stage">
-        <section className="make-hero" aria-labelledby="make-heading">
+      <section className="make-hero">
         <AgentSetup />
         <div className="make-search" ref={searchRef} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false) }}>
           {renderSearch(false)}
-              {chips.length > 0 && (
-                <div className="m-chips" role="list" aria-label="Pesquisas guardadas">
-                  {chips.map((chip) => (
-                    <span className="m-chip" role="listitem" key={chip}>
-                      <span>{chip}</span>
-                      <button
-                        type="button"
-                        aria-label={`Remover ${chip}`}
-                        onClick={() => setChips(chips.filter((other) => other !== chip))}
-                      >
-                        <X aria-hidden="true" size={12} />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
+          {chips.length > 0 && (
+            <div className="m-chips" role="list" aria-label="Pesquisas guardadas">
+              {chips.map((chip) => (
+                <span className="m-chip" role="listitem" key={chip}>
+                  <span>{chip}</span>
+                  <button
+                    type="button"
+                    aria-label={`Remover ${chip}`}
+                    onClick={() => setChips(chips.filter((other) => other !== chip))}
+                  >
+                    <X aria-hidden="true" size={12} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         <Briefing session={session} />
         <Rankings session={session} />
-        </section>
-        <Feed session={session} queries={chips} />
-      </div>
+      </section>
+    </NewsStage>
+  )
+}
 
+/** Home's layout: whatever header the tab wants, then the feed. Shared so every
+ *  tab renders the feed at the same width and with the same container queries. */
+export function NewsStage({ session, queries, children }: { session: AuthSession | null; queries: string[]; children?: ReactNode }) {
+  return (
+    <div className="make-shell">
+      <div className="make-stage">
+        {children}
+        <Feed session={session} queries={queries} />
+      </div>
     </div>
   )
 }

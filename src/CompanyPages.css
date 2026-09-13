@@ -20,8 +20,6 @@
 .cp .cp-page-link[aria-current="page"] { background: var(--tertiary); color: var(--foreground); }
 .cp .cp-add-page { color: var(--muted-foreground); }
 .cp-canvas { overflow: auto; min-width: 0; padding: 44px 0 0; }
-/* The heading block lines up with the feed: same cap and gutter as .dashboard .make-feed. */
-.cp-page-heading, .cp-feed-heading, .cp-feed-topics { width: min(1020px, 100%); margin-inline: auto; padding-inline: 20px; box-sizing: border-box; }
 .cp-eyebrow { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted-foreground); margin-bottom: 16px; }
 .cp-page-heading h1 { font-size: 28px; font-weight: 600; line-height: 1.25; letter-spacing: -.6px; margin: 0 0 14px; overflow-wrap: anywhere; }
 .cp-page-heading p { font-size: 14px; line-height: 1.65; color: var(--muted-foreground); white-space: pre-wrap; overflow-wrap: anywhere; }
