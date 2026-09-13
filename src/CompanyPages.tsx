@@ -191,7 +191,6 @@ function PagesEditor({ active, storageKey, session, company, organization, onWor
     {removed && <div className="cp-notice" role="status">Página removida. <button onClick={() => { setPages(current => { const next = [...current]; next.splice(removed.index, 0, removed.page); return next }); setActiveId(removed.page.id); setRemoved(null); setSaved(false) }}>Anular</button><button aria-label="Fechar aviso" onClick={() => setRemoved(null)}><X size={13} /></button></div>}
     <div className="cp-workbench" data-inspector={inspector}>
       <div className="cp-document">
-        <header className="cp-site-header"><span className="cp-company-mark">{company.slice(0, 1).toUpperCase()}</span><strong>{company}</strong><span className="cp-private">Páginas internas</span></header>
         <div className="cp-document-body">
           <aside className="cp-tree" aria-label="Navegação das páginas">
             <label className="cp-search"><Search size={14} /><input aria-label="Pesquisar páginas" placeholder="Pesquisar" value={search} onChange={e => setSearch(e.target.value)} /></label>
