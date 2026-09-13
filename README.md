@@ -82,15 +82,22 @@ migrates a legacy v1 payload, and drops items whose type no longer exists.
 it defaults to `https://fontes-api.bymarreco.com`. These are public build-time values, not secrets.
 Set overrides in `.env.local` or Cloudflare's build variables and rebuild.
 
-`npm run dev` starts only Vite at `http://localhost:5173`. Browser requests go
-directly to the external API, including credentials for auth and projects.
-The API owns database schemas, migrations, OAuth credentials and email delivery.
-Auth callbacks return to the frontend origin.
+Local authentication uses two services on the same hostname:
 
-The external API must allow the frontend origin through its trusted-origin and
-credentialed CORS configuration, including OPTIONS preflight responses. Local
-HTTP development also requires an API cookie setup that supports cross-site
-sessions; production sibling domains under HTTPS avoid that same-site mismatch.
+```sh
+# In fontes-api (uses the existing remote development bindings):
+npm run dev
+# In fontes-app:
+npm run dev
+```
+
+Open `http://127.0.0.1:5173`. `.env.development` points authentication and
+projects at `http://127.0.0.1:8788`; production builds retain the production API.
+The API must remain running while using the local app. Use `127.0.0.1` for both
+services so session cookies remain same-site. Mixing `localhost` and `127.0.0.1`,
+or calling the production API from local HTTP, prevents the cookie flow.
+The development API allows the matching local frontend origin without adding
+that origin to production's allowlist. Google sign-in is unavailable locally; use email registration and password login.
 
 The news service at `https://fontes-api.bymarreco.com` serves `/stories`,
 `/stories/:id`, `/events` and `/events/:id`. It allows public cross-origin reads;
@@ -192,8 +199,8 @@ Release the matching fontes-api onboarding migration/API before this frontend.
 
 ## Local authentication
 
-Start the updated `fontes-api` with `npm run dev` (localhost:8788), then run
-`npm run dev:auth` here (localhost:5173). This uses same-site cookies and the
+Start the updated `fontes-api` with `npm run dev` (127.0.0.1:8788), then run
+`npm run dev:auth` here (127.0.0.1:5173). This uses same-site cookies and the
 API for email registration and password login. Google sign-in is unavailable
 locally. Production builds retain the production API URL.
 For UI-only testing without emails or authentication, use `/onboarding-preview`.

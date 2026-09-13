@@ -1,5 +1,6 @@
+import type { Bootstrap } from './onboardingSync'
 import { useEffect, useState, type MouseEvent, type ReactNode } from 'react'
-import { Settings, Sun, Moon, Monitor, ChevronRight, LogOut, Share2 } from 'lucide-react'
+import { Settings, Sun, Moon, Monitor, ChevronRight, LogOut, Share2, Files } from 'lucide-react'
 import { Button } from './components/ui/button'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './components/ui/card'
@@ -8,6 +9,7 @@ import { authClient, type AuthSession } from './auth'
 import type { Project } from './projects'
 import { navigate } from './navigate'
 import MakeApp from './MakeApp'
+import CompanyPages from './CompanyPages'
 import { DashboardIcon } from './DashboardIcon'
 import './Dashboard.css'
 
@@ -28,7 +30,10 @@ function Detail({ label, children }: { label: string; children: ReactNode }) {
   return <div className="dashboard-detail"><dt>{label}</dt><dd>{children}</dd></div>
 }
 
-export default function Dashboard({ path, session, project, basePath = '' }: { path: string; session: AuthSession | null; project: Project | null; basePath?: string }) {
+export default function Dashboard({ path, session, project, organization = null, onWorkspaceChange, basePath = '' }: { path: string; session: AuthSession | null; project: Project | null; organization?: Bootstrap['organization']; onWorkspaceChange?: (state: Bootstrap) => void; basePath?: string }) {
+  const pages = path === '/pages' || path.startsWith('/pages/')
+  const [pagesOpened, setPagesOpened] = useState(pages)
+  useEffect(() => { if (pages) setPagesOpened(true) }, [pages])
   const settings = path === '/settings' || path.startsWith('/settings/')
   const section = sections.find(item => item.path === path) ?? sections[0]
   const [theme, setTheme] = useState<Theme>(() => {
@@ -94,14 +99,19 @@ export default function Dashboard({ path, session, project, basePath = '' }: { p
       <div className="dashboard-divider" aria-hidden="true" />
       </div>
       <nav className="dashboard-breadcrumb" aria-label="Localização">
-        {settings ? <a href={`${basePath}/settings`} onClick={follow}>Settings</a> : <span aria-current="page">Home</span>}
+        {settings ? <a href={`${basePath}/settings`} onClick={follow}>Settings</a> : <span aria-current="page">{pages ? 'Páginas' : 'Home'}</span>}
         {settings && <><span className="dashboard-breadcrumb-separator" aria-hidden="true">/</span><span aria-current="page">{section.label}</span></>}
+        {(pages || pagesOpened) && <span id="company-feed-breadcrumb" hidden={!pages} />}
       </nav>
+      {(pages || pagesOpened) && <div id="company-page-actions" hidden={!pages} />}
     </header>
     <aside className="dashboard-rail" aria-label="Navegação principal">
       <nav>
-        <Button asChild variant="ghost" className="dashboard-nav" data-active={!settings}>
-          <a href={`${basePath}/`} onClick={follow} aria-current={!settings ? 'page' : undefined}><span className="dashboard-nav-icon"><DashboardIcon name="home" selected={!settings} /></span><span>Home</span></a>
+        <Button asChild variant="ghost" className="dashboard-nav" data-active={!settings && !pages}>
+          <a href={`${basePath}/`} onClick={follow} aria-current={!settings && !pages ? 'page' : undefined}><span className="dashboard-nav-icon"><DashboardIcon name="home" selected={!settings && !pages} /></span><span>Home</span></a>
+        </Button>
+        <Button asChild variant="ghost" className="dashboard-nav" data-active={pages}>
+          <a href={`${basePath}/pages`} onClick={follow} aria-current={pages ? 'page' : undefined}><span className="dashboard-nav-icon"><Files size={16} /></span><span>Páginas</span></a>
         </Button>
         <Button asChild variant="ghost" className="dashboard-nav" data-active={settings}>
           <a href={`${basePath}/settings`} onClick={follow} aria-current={settings ? 'page' : undefined}><span className="dashboard-nav-icon"><DashboardIcon name="settings" selected={settings} /></span><span>Settings</span></a>
@@ -111,9 +121,10 @@ export default function Dashboard({ path, session, project, basePath = '' }: { p
         <DashboardIcon name={resolved === 'dark' ? 'moon' : 'sun'} />
       </Button>
     </aside>
-    <main id="dashboard-content" className="dashboard-panel" tabIndex={-1}>
+    <main id="dashboard-content" className={`dashboard-panel${pages ? ' dashboard-panel-pages' : ''}`} tabIndex={-1}>
       {error && <p className="dashboard-error" role="alert">{error}</p>}
-      <div hidden={settings}><MakeApp session={session} /></div>
+      <div hidden={settings || pages}><MakeApp session={session} /></div>
+      {(pages || pagesOpened) && <div hidden={!pages} style={{ height: '100%' }}><CompanyPages theme={resolved} session={session} project={project} organization={organization} onWorkspaceChange={onWorkspaceChange} /></div>}
       {settings && <div className="dashboard-settings">
         <nav className="dashboard-settings-nav" aria-label="Definições">
           <p>Área de trabalho</p>

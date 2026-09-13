@@ -116,10 +116,9 @@
 .dashboard .make-hero h1 { font-size: 24px; line-height: 36px; font-weight: 700; letter-spacing: 0; }
 .dashboard .m-sheet { box-shadow: none; }
 .dashboard .m-story h3 { color: var(--foreground); }
-.dashboard .make-feed { container: dashboard-feed / inline-size; margin-top: 32px; width: min(1020px, 100%); padding: 0 20px 64px; }
+.dashboard .make-feed { container: dashboard-feed / inline-size; margin-top: 16px; width: min(1020px, 100%); padding: 0 20px 64px; }
 .dashboard .feed-list { grid-template-columns: minmax(0, 1fr); gap: 4px; }
-.dashboard .m-story { border-radius: 8px; background: color-mix(in srgb, var(--background), var(--secondary)); padding: 12px; }
-.dashboard .m-story:hover { background: var(--secondary); }
+.dashboard .m-story { border-radius: 8px; padding: 12px; }
 .dashboard .m-story h3 { font-size: 16px; line-height: 22px; }
 @media (max-width: 760px) {
   .dashboard { padding-right: 8px; padding-bottom: 8px; }
@@ -184,4 +183,9 @@
 .dashboard-breadcrumb > a:hover { color: var(--foreground); background: var(--secondary); }
 
 .dashboard .make-search { width: min(980px, 100%); }
+/* Match the feed content edges, including each story's 12px padding. */
+.dashboard .home-briefing, .dashboard .home-rankings { width: min(956px, calc(100% - 16px)); }
+@media (max-width: 760px) {
+  .dashboard .home-briefing, .dashboard .home-rankings { width: calc(100% - 8px); }
+}
 .dashboard .make-search .m-sheet { margin: 8px 0 0; padding: 6px; border: 0.5px solid var(--border); border-radius: 8px; background: var(--secondary); }

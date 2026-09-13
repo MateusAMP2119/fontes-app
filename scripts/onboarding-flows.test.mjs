@@ -65,8 +65,13 @@ test('new email account requires password; confirmed setup opens while final pre
  await p.locator('input[autocomplete="current-password"]').fill('test-secret-password');await f.button('Iniciar sessão').click();await p.locator('.make-shell').waitFor()
  assert.equal(f.writes.length,confirmedWrites,'confirmed completion restores without another setup save')
 })
-test('invitation automatically joins and skips owner setup and owner-only back/invites',async t=>{
+test('invitation requires acceptance and skips owner setup and owner-only back/invites',async t=>{
  const f=await fixture(t),p=f.page;await p.goto(origin+'/?invite='+'ab'.repeat(32))
+ await f.button('Aceitar convite').waitFor()
+ assert.equal(f.joins,0)
+ await p.getByText('Equipa convidada',{exact:true}).waitFor()
+ await p.reload();await f.button('Aceitar convite').waitFor();assert.equal(f.joins,0)
+ await f.button('Aceitar convite').click()
  await p.locator('.ob-profile').waitFor()
  assert.equal(await p.locator('.ob-join').count(),0)
  assert.equal(await f.button('Voltar').count(),0);assert.equal(await p.locator('.ob-workspace').count(),0)
@@ -81,19 +86,22 @@ test('invitation waits for a required password before joining', async t => {
  assert.equal(f.joins, 0)
  await p.locator('input[autocomplete="new-password"]').fill('invite-password-456')
  await f.button('Guardar palavra-passe').click()
+ await f.button('Aceitar convite').waitFor();assert.equal(f.joins,0)
+ await f.button('Aceitar convite').click()
  await p.locator('.ob-profile').waitFor()
  assert.equal(f.joins, 1)
  assert.equal(await p.locator('.ob-join').count(), 0)
 })
 test('invalid invitation keeps its token and allows retry without opening the app', async t => {
  const f = await fixture(t), p = f.page
- await p.route('**/api/onboarding/join', route => route.fulfill({status:400,json:{message:'Convite inválido.'}}))
+ await p.route('**/api/onboarding/invitation', route => route.fulfill({status:400,json:{message:'Convite inválido.'}}))
  await p.goto(origin+'/?invite='+'ab'.repeat(32))
  await p.getByText('Convite inválido.', {exact:true}).waitFor()
  assert.ok(p.url().includes('invite='))
  assert.equal(await p.locator('.make-shell').count(), 0)
- await p.unroute('**/api/onboarding/join')
+ await p.unroute('**/api/onboarding/invitation')
  await f.button('Tentar ligação novamente').click()
+ await f.button('Aceitar convite').click()
  await p.locator('.ob-profile').waitFor()
  assert.equal(f.joins, 1)
 })
@@ -801,6 +809,8 @@ for (const invited of [false, true]) test(`recovery requires fresh sign-in inste
  await p.locator('input[autocomplete="current-password"]').fill('changed-password-456')
  await f.button('Iniciar sessão').click()
  if (invited) {
+  await f.button('Aceitar convite').waitFor();assert.equal(f.joins,0)
+  await f.button('Aceitar convite').click()
   await p.locator('.ob-profile').waitFor()
   assert.equal(new URL(p.url()).searchParams.has('invite'), false)
   assert.equal(f.joins, 1, 'invitation joins only after fresh sign-in')
@@ -867,4 +877,36 @@ test('expired onboarding session returns to password login without offering anot
  await p.getByRole('link',{name:'Recuperar acesso'}).waitFor()
  assert.equal(await p.locator('input[autocomplete="one-time-code"]').count(),0)
  assert.equal(f.calls.filter(call=>call.path.endsWith('/send-verification-otp')).length,0)
+})
+
+test('completed accounts can dismiss an invitation without joining or changing workspace', async t => {
+ const f = await fixture(t, {state:{...workspace(),completed:true}}), p=f.page
+ await p.goto(origin+'/?invite='+'ab'.repeat(32))
+ await f.button('Aceitar convite').waitFor()
+ assert.equal(f.joins,0);assert.equal(await p.locator('.make-shell').count(),0)
+ await f.button('Continuar sem convite').click()
+ await p.locator('.make-shell').waitFor()
+ assert.equal(f.joins,0);assert.equal(f.writes.length,0)
+})
+
+test('invitation review pauses old workspace saves and failed acceptance keeps the review open', async t => {
+ const f=await fixture(t,{state:workspace()}),p=f.page
+ await p.addInitScript(({user})=>{
+  localStorage.setItem('fontes:onboarding:v1:'+user.id,JSON.stringify({
+   draft:{step:'profile',email:user.email,name:'Old workspace',slug:'old-workspace',profile:'Unsaved name',image:'',invitations:'',changelog:false,daily:false,returning:false,provider:'email'},
+   revision:0,invitations:[],pending:{operationId:'old-workspace-save',revision:1,organizationId:'org',name:'Old workspace',slug:'old-workspace',profileName:'Unsaved name',completed:false,changelog:false,daily:false}
+  }))
+ },{user})
+ await p.route('**/api/onboarding/join',route=>route.fulfill({status:403,json:{message:'O convite expirou ou pertence a outro email.'}}))
+ await p.goto(origin+'/?invite='+'ab'.repeat(32))
+ await f.button('Aceitar convite').waitFor()
+ assert.equal(f.writes.length,0)
+ await f.button('Aceitar convite').click()
+ await p.getByText('O convite expirou ou pertence a outro email.',{exact:true}).waitFor()
+ assert.equal(await p.locator('.make-shell').count(),0);assert.equal(f.writes.length,0)
+ await p.unroute('**/api/onboarding/join')
+ await f.button('Aceitar convite').click()
+ await p.locator('.ob-profile').waitFor()
+ assert.equal(f.joins,1)
+ assert.ok(f.writes.every(write=>write.name!=='Old workspace'))
 })

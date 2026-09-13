@@ -1,5 +1,5 @@
 import { NEWS_API as API } from './api'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { AuthSession } from './auth'
 import { Sparkline } from './components/Sparkline'
 import { navigate } from './navigate'
@@ -225,9 +225,31 @@ function Skeleton() {
   )
 }
 
+type FeedSnapshot = { stories: Story[]; status: 'more' | 'end'; expires: number }
+const feedSnapshots = new Map<string, FeedSnapshot>()
+const storyRequests = new Map<string, { expires: number; promise: Promise<Story[]> }>()
+const FEED_CACHE_MS = 5 * 60 * 1000
+function snapshot(key: string) {
+  const saved = feedSnapshots.get(key)
+  return saved && saved.expires > Date.now() ? saved : undefined
+}
+function readStories(url: string): Promise<Story[]> {
+  const cached = storyRequests.get(url)
+  if (cached && cached.expires > Date.now()) return cached.promise
+  const promise = fetch(url).then(response => {
+    if (!response.ok) throw new Error(`${response.status}`)
+    return response.json() as Promise<Story[]>
+  }).catch(error => { storyRequests.delete(url); throw error })
+  if (storyRequests.size >= 100) storyRequests.delete(storyRequests.keys().next().value!)
+  storyRequests.set(url, { expires: Date.now() + FEED_CACHE_MS, promise })
+  return promise
+}
+
 export default function Feed({ session: _session, queries = [] }: { session: AuthSession | null; queries?: string[] }) {
-  const [stories, setStories] = useState<Story[]>([])
-  const [status, setStatus] = useState<'loading' | 'more' | 'end' | 'error'>('loading')
+  const queryKey = JSON.stringify([...new Set(queries.map(q => q.trim()).filter(Boolean))].sort())
+  const stableQueries = useMemo<string[]>(() => JSON.parse(queryKey), [queryKey])
+  const [stories, setStories] = useState<Story[]>(() => snapshot(queryKey)?.stories ?? [])
+  const [status, setStatus] = useState<'loading' | 'more' | 'end' | 'error'>(() => snapshot(queryKey)?.status ?? 'loading')
   const sentinelRef = useRef<HTMLDivElement>(null)
   // Bumped per query so a slow page for the old one is dropped, not shown.
   const generation = useRef(0)
@@ -236,7 +258,6 @@ export default function Feed({ session: _session, queries = [] }: { session: Aut
   const nextPage = useRef<Promise<Story[]> | null>(null)
   const nextOffset = useRef(0)
   // Signed-in callers get the API's higher rate allowance.
-  const token = undefined
 
   const fetchPage = useCallback(
     async (offset: number): Promise<Story[]> => {
@@ -245,15 +266,10 @@ export default function Feed({ session: _session, queries = [] }: { session: Aut
       // answers, newest first; the engine matches whole words, so
       // "vice-presidente" must go up as two.
       // ponytail: one page of 100 per term, no paging; page when a term passes that.
-      const read = async (url: string): Promise<Story[]> => {
-        const response = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
-        if (!response.ok) throw new Error(`${response.status}`)
-        return response.json()
-      }
       let page: Story[]
-      if (queries.length) {
+      if (stableQueries.length) {
         const answers = await Promise.all(
-          queries.map((term) => read(`${API}/stories?limit=100&q=${encodeURIComponent(term.replace(/[^\p{L}\p{N}]+/gu, ' '))}`)),
+          stableQueries.map((term) => readStories(`${API}/stories?limit=100&q=${encodeURIComponent(term.replace(/[^\p{L}\p{N}]+/gu, ' '))}`)),
         )
         const seen = new Set<number>()
         page = answers
@@ -261,12 +277,12 @@ export default function Feed({ session: _session, queries = [] }: { session: Aut
           .filter((story) => !seen.has(story.id) && seen.add(story.id))
           .sort((a, b) => Date.parse(b.latest_at) - Date.parse(a.latest_at))
       } else {
-        page = await read(`${API}/stories?limit=${PAGE}&offset=${offset}`)
+        page = await readStories(`${API}/stories?limit=${PAGE}&offset=${offset}`)
       }
       warm(page)
       return page
     },
-    [token, queries],
+    [stableQueries],
   )
 
   const prefetch = useCallback(
@@ -288,24 +304,39 @@ export default function Feed({ session: _session, queries = [] }: { session: Aut
     try {
       const page = await pending
       if (mine !== generation.current) return
-      setStories((previous) => (nextOffset.current ? [...previous, ...page] : page))
-      if (page.length < PAGE || queries.length) {
+      const offset = nextOffset.current
+      const nextStatus = page.length < PAGE || stableQueries.length ? 'end' : 'more'
+      setStories(previous => {
+        const next = offset ? [...previous, ...page] : page
+        if (feedSnapshots.size >= 30 && !feedSnapshots.has(queryKey)) feedSnapshots.delete(feedSnapshots.keys().next().value!)
+        feedSnapshots.set(queryKey, { stories: next, status: nextStatus, expires: Date.now() + FEED_CACHE_MS })
+        return next
+      })
+      if (page.length < PAGE || stableQueries.length) {
         setStatus('end')
         return
       }
       prefetch(nextOffset.current + page.length)
       setStatus('more')
     } catch {
-      setStatus('error')
+      if (mine === generation.current) setStatus('error')
     }
-  }, [prefetch, queries.length])
+  }, [prefetch, stableQueries.length, queryKey])
 
   useEffect(() => {
     generation.current += 1
-    setStories([])
-    prefetch(0)
-    void advance()
-  }, [prefetch, advance])
+    const cached = snapshot(queryKey)
+    if (cached) {
+      setStories(cached.stories)
+      setStatus(cached.status)
+      if (cached.status === 'more') prefetch(cached.stories.length)
+    } else {
+      setStories([])
+      prefetch(0)
+      void advance()
+    }
+    return () => { generation.current += 1 }
+  }, [queryKey, prefetch, advance])
 
   // Infinite scroll: the buffered page goes in well before the tail is reached.
   useEffect(() => {

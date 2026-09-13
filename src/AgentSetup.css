@@ -1,0 +1,57 @@
+/* Measured from the main Cloudflare dashboard. Capture: docs/cloudflare-agent-pill-reference/. */
+@font-face { font-family: "AgentInter"; src: url("/fonts/agent-inter-latin.woff2") format("woff2"); font-style: normal; font-weight: 100 900; font-display: swap; }
+.agent-setup { position: relative; margin-bottom: 20px; max-width: 100%; }
+.dashboard .agent-setup-trigger {
+  --agent-card: oklch(1 0 0);
+  --agent-text: oklch(.21 0 0);
+  --agent-border: oklch(.92 0 0);
+  --agent-hover: oklch(.967 0 0);
+  --agent-border-hover: oklch(.87 0 0);
+  --agent-ring: oklch(.145 0 0 / .35);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+  flex-shrink: 0;
+  width: max-content;
+  height: 36px;
+  padding: 2px 12px 3px;
+  border: 0;
+  border-radius: 9999px;
+  background: var(--agent-card);
+  color: var(--agent-text);
+  font-family: "AgentInter", Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 21px;
+  letter-spacing: normal;
+  white-space: nowrap;
+  box-shadow: 0 0 0 1px var(--agent-border), 0 1px 2px rgb(0 0 0 / .05);
+  cursor: pointer;
+  user-select: none;
+  transition: color .15s cubic-bezier(.4, 0, .2, 1), background-color .15s cubic-bezier(.4, 0, .2, 1), border-color .15s cubic-bezier(.4, 0, .2, 1);
+}
+.dashboard[data-theme="dark"] .agent-setup-trigger {
+  --agent-card: oklch(.17 0 0);
+  --agent-text: oklch(.97 0 0);
+  --agent-border: oklch(.32 0 0);
+  --agent-hover: oklch(.269 0 0);
+  --agent-border-hover: oklch(.371 0 0);
+  --agent-ring: oklch(.9 0 0 / .35);
+}
+.dashboard .agent-setup-trigger:hover { background: var(--agent-hover); box-shadow: 0 0 0 1px var(--agent-border-hover), 0 1px 2px rgb(0 0 0 / .05); }
+.dashboard .agent-setup-trigger:focus-visible { outline: 2px solid var(--agent-ring); outline-offset: 2px; }
+.agent-setup-label { display: contents; }
+.agent-setup-logos { display: flex; flex-shrink: 0; align-items: center; justify-content: flex-start; height: 20px; gap: 4px; }
+.agent-setup-logos > span, .agent-setup-logos img { width: 20px; height: 20px; }
+.agent-setup-logos img { display: block; }
+.agent-setup-logos .agent-logo-dark { display: none; }
+.dashboard[data-theme="dark"] .agent-logo-light { display: none; }
+.dashboard[data-theme="dark"] .agent-logo-dark { display: block; }
+.agent-setup-feedback { position: absolute; z-index: 3; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); width: max-content; max-width: min(300px, calc(100vw - 80px)); padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--popover); color: var(--foreground); box-shadow: 0 1px 2px rgb(0 0 0 / .05); font-size: 12px; line-height: 18px; text-align: center; pointer-events: none; opacity: 0; transition: opacity .15s ease; }
+.agent-setup-feedback[data-visible="true"] { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .agent-setup-feedback { transition: none; } }
+.agent-setup-fallback { width: min(500px, 100%); margin-top: 16px; color: var(--foreground); font-size: 12px; }
+.agent-setup-fallback textarea { display: block; width: 100%; height: 160px; margin-top: 8px; padding: 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--secondary); color: var(--foreground); font: 11px/1.6 ui-monospace, monospace; user-select: text; }
+
+@media (max-width: 390px) { .dashboard .agent-setup-trigger { font-size: 12px; padding-inline: 10px; gap: 5px; } }

@@ -59,3 +59,11 @@ stepper also disables workspace and invitation shortcuts unavailable to that mem
 The browser API fixture now rejects blank workspace identity like the real API.
 Regression coverage includes fresh acceptance and reloading a previously rejected
 completion snapshot without losing the member's edits.
+
+## Workspace invitation verification, 13 September 2026
+
+Opening an invitation now calls `POST /api/onboarding/invitation` to validate the token and show the workspace and signed-in email. Only explicit acceptance calls `/join`. Refresh and password setup preserve the review step. Switching account preserves the invitation; dismissal resumes the existing account. Pending workspace saves and outgoing invitations pause while an incoming invitation is being reviewed.
+
+Deploy fontes-api before fontes-app because the client requires the invitation review endpoint. No database migration is required. Regression coverage includes sender link confirmation/manual copy, per-recipient failures, required passwords, explicit acceptance, retries, existing accounts, stale workspace drafts, expired tokens and inviter revocation. Email transport is stubbed in tests; production inbox delivery is not verified by these tests.
+
+Validation for this change: 19 API onboarding tests passed using the real controller SQL with SQLite and a stubbed email transport. Nine focused invitation browser scenarios passed in both Chromium and WebKit. Both projects passed TypeScript checks and production builds. The broader browser suite is not green: Google scenarios expect a sign-in control disabled on localhost, and session-expiry scenarios expect an older inline recovery form. Representative Google and session-expiry failures also reproduce with the pre-change onboarding components. These authentication checks remain separate follow-up work. No production deployment or live invitation email was performed.
