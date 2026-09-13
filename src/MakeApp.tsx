@@ -251,8 +251,6 @@ export default function MakeApp({ session }: { session: AuthSession | null }) {
       <div className="make-stage">
         <section className="make-hero" aria-labelledby="make-heading">
         <AgentSetup />
-        <h1 id="make-heading">Explorar as notícias</h1>
-
         <div className="make-search" ref={searchRef} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false) }}>
           {renderSearch(false)}
               {chips.length > 0 && (

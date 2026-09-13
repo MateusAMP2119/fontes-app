@@ -518,7 +518,7 @@ export function useOnboardingSync(props: Props) {
         setGoogleSession(session.session.id)
       }), controller.signal)
     } catch (error) {
-      if (!controller.signal.aborted) current.current.setError(error instanceof GoogleSignInError ? error.message : 'Não foi possível concluir o início de sessão com Google.')
+      if (!controller.signal.aborted) current.current.setError(error instanceof GoogleSignInError ? error.message : 'Não foi possível iníciar sessão com a Google.')
     } finally {
       googleAbort.current = null
       setGoogleActive(false)
