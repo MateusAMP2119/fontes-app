@@ -1,10 +1,11 @@
 import { defineConfig } from 'vite'
+import { readFileSync } from 'node:fs'
 import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath, URL } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   plugins: [react(), tailwindcss(), VitePWA({
     // Activate updates with tabs open; the next reload uses the new app.
@@ -38,5 +39,13 @@ export default defineConfig({
       cleanupOutdatedCaches: true,
     },
   })],
-  server: { port: 5173, strictPort: true },
-})
+  preview: { host: '127.0.0.1', port: 5173, strictPort: true },
+  server: {
+    host: '127.0.0.1', port: 5173, strictPort: true,
+    origin: 'https://local.fonteslabs.com:5173',
+    https: command === 'serve' ? {
+      key: readFileSync(new URL('./.certs/local.fonteslabs.com-key.pem', import.meta.url)),
+      cert: readFileSync(new URL('./.certs/local.fonteslabs.com.pem', import.meta.url)),
+    } : undefined,
+  },
+}))

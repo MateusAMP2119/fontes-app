@@ -24,8 +24,7 @@ Este documento é um ponto de partida; os ficheiros do repositório são a refer
 
 ## Serviços e dados
 Autenticação, projetos e notícias dependem de APIs externas.
-VITE_API_URL configura a API de autenticação e projetos.
-VITE_NEWS_API_URL configura a API de notícias.
+As origens das APIs de produção são fixas em src/api.ts, tanto localmente como na aplicação publicada.
 As visualizações do canvas incluem dados simulados.
 O contexto não inclui credenciais, cookies ou dados pessoais, nem concede acesso às APIs ou ao repositório.
 

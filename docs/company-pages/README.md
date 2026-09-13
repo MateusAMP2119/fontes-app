@@ -1,6 +1,6 @@
 # Company pages, first version
 
-Route: `/pages`. Development preview: `/dashboard-preview/pages`.
+Route: `/pages`, with the same authenticated flow locally and in production.
 
 The existing dashboard shell is preserved. The new editor supports page creation, grouping, ordering within groups, duplication, removal with undo, editable titles and descriptions, topic filters, and a reading preview. Feeds use the existing stories API and match any configured topic. Save stores all pages in browser storage, keyed by user and project. This is a local prototype: there is no shared company persistence, access-control model for pages, or public publishing.
 

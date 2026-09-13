@@ -19,7 +19,7 @@ Dashboard visualization fixtures remain mocked.
 
 ```sh
 npm install
-npm run dev       # http://localhost:5173
+npm run dev       # https://local.fonteslabs.com:5173
 npm run build
 npm run preview
 npm run lint
@@ -77,27 +77,24 @@ migrates a legacy v1 payload, and drops items whose type no longer exists.
   `motion.div` that animates `scale`, and client rects are post-transform.
 ## API configuration
 
-`VITE_API_URL` selects the auth and projects API origin (default:
-`https://api.fonteslabs.com`). `VITE_NEWS_API_URL` can select a separate news API;
-it defaults to `https://fontes-api.bymarreco.com`. These are public build-time values, not secrets.
-Set overrides in `.env.local` or Cloudflare's build variables and rebuild.
+Both local and deployed frontends use `https://api.fonteslabs.com` for
+accounts and workspaces, and `https://fontes-api.bymarreco.com` for news.
+There are no API environment overrides or simulated application routes.
 
-Local authentication uses two services on the same hostname:
+The local frontend runs at `https://local.fonteslabs.com:5173`, bound only to
+loopback. HTTPS and the shared `fonteslabs.com` site preserve the production
+session-cookie and Google sign-in behavior in Safari. No local API is required.
+Local actions use production accounts and data.
+
+One-time setup on each Mac:
 
 ```sh
-# In fontes-api (uses the existing remote development bindings):
-npm run dev
-# In fontes-app:
-npm run dev
+npm run setup:local
 ```
 
-Open `http://127.0.0.1:5173`. `.env.development` points authentication and
-projects at `http://127.0.0.1:8788`; production builds retain the production API.
-The API must remain running while using the local app. Use `127.0.0.1` for both
-services so session cookies remain same-site. Mixing `localhost` and `127.0.0.1`,
-or calling the production API from local HTTP, prevents the cookie flow.
-The development API allows the matching local frontend origin without adding
-that origin to production's allowlist. Google sign-in is unavailable locally; use email registration and password login.
+Then run `npm run dev` and open `https://local.fonteslabs.com:5173`.
+Certificates are private to the machine and ignored by Git. Cloudflare builds
+do not need them. The production API trusts that exact HTTPS frontend origin.
 
 The news service at `https://fontes-api.bymarreco.com` serves `/stories`,
 `/stories/:id`, `/events` and `/events/:id`. It allows public cross-origin reads;
@@ -172,11 +169,9 @@ acceptance is explicit, and failed invitation deliveries can be retried or remov
 individually. See [onboarding reliability](docs/onboarding-reliability.md) for the
 full behavior, tests and API-first release order.
 
-Development-only `/onboarding-preview` renders the same screens with simulated
-actions and a screen picker. It makes no API requests. Run the Vite dev server,
-then `node scripts/auth-regression.test.mjs` and
-`node scripts/onboarding-preview.test.mjs` to verify the real mocked-network flow
-and preview. No test sends email or creates a remote account.
+Onboarding regression tests intercept API calls outside the application code.
+Run `scripts/onboarding-flows.test.mjs` against a test server with `TEST_ORIGIN`.
+These tests do not send email or create remote accounts.
 
 The profile screen's mark comes from DiceBear's nine face-only styles, `adventurerNeutral`,
 `avataaarsNeutral`, `bigEarsNeutral`, `botttsNeutral`, `croodlesNeutral`, `loreleiNeutral`,
@@ -196,22 +191,6 @@ badge, shown on hover, clears it back to the generated mark. The picker's own in
 outside the row, because inside a `<label>` every click in the row forwards to it.
 
 Release the matching fontes-api onboarding migration/API before this frontend.
-
-## Local authentication
-
-Start the updated `fontes-api` with `npm run dev` (127.0.0.1:8788), then run
-`npm run dev:auth` here (127.0.0.1:5173). This uses same-site cookies and the
-API for email registration and password login. Google sign-in is unavailable
-locally. Production builds retain the production API URL.
-For UI-only testing without emails or authentication, use `/onboarding-preview`.
-
-## Local onboarding preview
-
-Run `npm run dev` from this repository and open `/onboarding-preview` on the
-URL printed by Vite. This route is enabled only in development; `npm run preview`
-serves the production build and does not expose the onboarding preview controls.
-The live onboarding and development preview share the background grid asset at
-`public/onboarding-grid.svg`.
 
 Before starting a local server, check `git status --short --branch` and synchronize
 with GitHub after preserving any uncommitted work. Separate clones have independent

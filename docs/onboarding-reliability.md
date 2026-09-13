@@ -18,13 +18,10 @@ Automated validation does not send real email or complete real Google authorizat
 
 ## Verification
 
-With Vite on port 5183:
+With the HTTPS local frontend running:
 
 ```sh
-TEST_ORIGIN=http://127.0.0.1:5183 node --test scripts/auth-regression.test.mjs scripts/onboarding-background.test.mjs scripts/onboarding-flows.test.mjs
-ONBOARDING_TEST_URL=http://127.0.0.1:5183/onboarding-preview node scripts/onboarding-progress.test.mjs
-ONBOARDING_TEST_URL=http://127.0.0.1:5183/onboarding-preview node scripts/onboarding-mobile.test.mjs
-ONBOARDING_TEST_URL=http://127.0.0.1:5183/onboarding-preview node scripts/onboarding-preview.test.mjs
+TEST_ORIGIN=https://local.fonteslabs.com:5173 node --test scripts/auth-regression.test.mjs scripts/onboarding-background.test.mjs scripts/onboarding-flows.test.mjs
 npm run build
 npm run lint
 ```
