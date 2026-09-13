@@ -298,9 +298,18 @@ export function useOnboardingSync(props: Props) {
           result = await onboardingRequest<Bootstrap>('/join', { token: invite })
           if (epoch !== generation.current) return
           const url = new URL(location.href); url.searchParams.delete('invite'); history.replaceState(null, '', url)
-          record.current = { draft: { ...fresh, step: 'profile', email: session.user.email, name: result.organization?.name || '', slug: result.organization?.slug || '', profile: result.profile.name, image: result.profile.image || '', changelog: result.changelog, daily: result.daily }, revision: result.revision, invitations: [] }
-          restored = false
-          completionRequested.current = false
+          const draft = current.current.draft
+          // Only recipient edits queued before membership may cross this boundary.
+          // Pending changes to an existing workspace still belong to that workspace.
+          const pending = draft.email === session.user.email && record.current.pending && !record.current.pending.organizationId && !record.current.pending.workspace ? record.current.pending : undefined
+          const joined = { ...fresh, step: 'profile' as Step, email: session.user.email, name: result.organization?.name || '', slug: result.organization?.slug || '', profile: result.profile.name, image: result.profile.image || '', changelog: result.changelog, daily: result.daily }
+          if (pending) {
+            Object.assign(joined, { step: draft.step, profile: draft.profile || pending.profileName, image: draft.image, changelog: draft.changelog, daily: draft.daily })
+            Object.assign(pending, { organizationId: result.organization?.id, name: joined.name, slug: joined.slug, profileName: joined.profile, profileImage: joined.image, changelog: joined.changelog, daily: joined.daily, revision: 0 })
+          }
+          record.current = { draft: joined, pending, revision: result.revision, invitations: [] }
+          restored = !!pending
+          completionRequested.current = !!pending?.completed
           persist()
         }
         const previous = state.current
@@ -324,7 +333,7 @@ export function useOnboardingSync(props: Props) {
         if (!result.passwordRequired && !token && result.organization && ['profile', 'invites', 'updates'].includes(d.step)) step = d.step
         // Background responses repair prerequisites in place; they never rewind a draft.
         const drafting = ['workspace', 'profile', 'invites', 'updates'].includes(d.step)
-        if (!token && drafting) step = d.step
+        if (drafting && (!token || (pending && !pending.organizationId && !pending.workspace))) step = d.step
         if (result.passwordRequired && drafting && pendingPassword.current === null && !passwordRunning.current) {
           setIssue('password')
           current.current.setError('A palavra-passe ainda não está confirmada. É possível defini-la aqui sem perder a configuração.')
@@ -532,21 +541,29 @@ export function useOnboardingSync(props: Props) {
         await changeEmail(invitationEntry?.email || undefined)
         current.current.setDraft(d => ({ ...d, step: 'email', returning: true }))
       }
+      if (!(error instanceof SyncError && error.code === 'INVITATION_ACCOUNT_EXISTS')) setIssue('password')
       current.current.setError(error instanceof SyncError ? error.message : 'Não foi possível criar a conta. Nova tentativa disponível.')
     } finally { passwordRunning.current = false; setSavingPassword(false) }
   }
   function setPassword(newPassword: string) {
-    if (directRegistration) { void registerInvitation(newPassword); return }
-
     if (pendingPassword.current !== null || passwordRunning.current) return
     pendingPassword.current = newPassword
     setSavingPassword(true)
     setIssue(value => value === 'password' ? null : value)
     current.current.setError('')
-    if (current.current.draft.step === 'password' && !new URL(location.href).searchParams.has('invite')) current.current.setDraft(d => ({ ...d, step: 'workspace' }))
+    if (current.current.draft.step === 'password') {
+      const invited = new URL(location.href).searchParams.has('invite')
+      current.current.setDraft(d => ({ ...d, step: invited ? 'profile' : 'workspace' }))
+      if (invited) save()
+    }
     void flushPassword()
   }
   async function flushPassword() {
+    if (directRegistration && pendingPassword.current !== null && !passwordRunning.current && !authRunning.current && !pageHidden.current) {
+      const password = pendingPassword.current; pendingPassword.current = null
+      await registerInvitation(password)
+      return
+    }
     if (requiresVerification.current || pendingPassword.current === null || passwordRunning.current || authRunning.current || !owner.current || !state.current || pageHidden.current) return
     const epoch = generation.current
     const newPassword = pendingPassword.current
@@ -639,7 +656,7 @@ export function useOnboardingSync(props: Props) {
     updateInvitations(); void drain()
   }
   return { googleActive, cancelGoogle: () => { googleAbort.current?.abort(); googlePrepared.current?.resolve() }, busy, failed, issue, loading, savingPassword, restoring: !props.preview && ((new URL(location.href).searchParams.has('invite') && invitationEntry === undefined) || (!!props.session && !directRegistration && !bootstrap && !failed)), workspaceBusy, syncStatus, sendingCode, organizationId: bootstrap?.organization?.id, canSaveProfile: !!record.current.pending || (!!bootstrap?.organization && !bootstrap.passwordRequired), canCreateWorkspace: !!record.current.pending || pendingPassword.current !== null || savingPassword || (!!bootstrap && !loading && !bootstrap.passwordRequired && !bootstrap.accessLost),
-    canEditWorkspace: !!record.current.pending?.workspace || bootstrap?.canEditWorkspace !== false, canInvite: !!record.current.pending?.workspace || bootstrap?.canInvite !== false,
+    canEditWorkspace: !!record.current.pending?.workspace || bootstrap?.canEditWorkspace !== false, canInvite: !new URL(location.href).searchParams.has('invite') && (!!record.current.pending?.workspace || bootstrap?.canInvite !== false),
     directRegistration, invitationErrors, inviteLink, invitationFailure, start, verify, login, google, setPassword, acceptInvite, dismissInvite, save, invite, copyInvite, changeEmail, retryInvitation,
     retry: () => { if (record.current.pending && state.current && !state.current.passwordRequired) void drain(); else void reload.current() } }
 }

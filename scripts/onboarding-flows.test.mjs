@@ -132,7 +132,7 @@ test('invitation waits for a required password before joining', async t => {
  await p.locator('input[autocomplete="new-password"]').fill('invite-password-456')
  await f.button('Guardar palavra-passe').click()
  await p.locator('.ob-profile').waitFor()
- assert.equal(f.joins, 1)
+ await assertEventually(()=>f.joins===1)
  assert.equal(await p.locator('.ob-join').count(), 0)
 })
 test('invalid invitation keeps its token and allows retry without opening the app', async t => {
@@ -1026,7 +1026,7 @@ for (const authenticated of [false,true]) test(`new invitation starts at passwor
  assert.equal(await p.locator('.ob-progress').getAttribute('aria-label'),'Passo 2 de 3')
  assert.equal(await p.locator('.ob-progress').getByRole('button',{name:'Ambiente',exact:true}).count(),0)
  assert.equal(f.calls.filter(c=>c.path.includes('email-otp')).length,0)
- assert.equal(f.joins,1)
+ await assertEventually(()=>f.joins===1)
  const storage=await p.evaluate(()=>JSON.stringify(localStorage)+JSON.stringify(sessionStorage));assert.ok(!storage.includes('new-recipient-password'))
 })
 
@@ -1086,4 +1086,55 @@ for (const provider of ['email','google']) test(`new ${provider} account without
  await f.button('Criar ambiente').click();await p.locator('.ob-profile').waitFor()
  assert.equal(await p.locator('.ob-progress button').count(),total)
  assert.equal(await p.locator('.ob-progress').isVisible(),true)
+})
+
+
+for (const registration of [true,false]) test(`invited profile and preferences remain usable while password saves (${registration?'new registration':'authenticated account'})`, async t => {
+ const f=await fixture(t,{authenticated:!registration,state:{...blank(),passwordRequired:true}}),p=f.page
+ let release
+ if(registration) await p.route('**/api/onboarding/invitation/registration',async route=>{
+  if(!route.request().postDataJSON().password)return route.fulfill({json:{email:user.email,step:'password'}})
+  await new Promise(resolve=>{release=resolve});f.authenticated=true;f.state.passwordRequired=false
+  return route.fulfill({json:{user}})
+ })
+ else await p.route('**/api/auth/set-password',async route=>{await new Promise(resolve=>{release=resolve});return route.fallback()})
+ await p.goto(origin+'/?invite='+'bc'.repeat(32))
+ await p.getByRole('heading',{name:'Definir palavra-passe',exact:true}).waitFor()
+ await p.locator('input[autocomplete="new-password"]').fill('background-invite-password');await f.button('Guardar palavra-passe').click()
+ await p.locator('.ob-profile').waitFor()
+ assert.equal(f.joins,0);assert.equal(f.writes.length,0)
+ await f.input('Nome do perfil').fill('Perfil durante gravação')
+ await f.button('Continuar').click();await p.locator('.ob-updates').waitFor()
+ await f.button('Começar').click()
+ assert.equal(await p.locator('.make-shell').count(),0)
+ assert.equal(f.writes.length,0)
+ assert.ok(!await p.evaluate(()=>JSON.stringify(localStorage)+JSON.stringify(sessionStorage)).then(s=>s.includes('background-invite-password')))
+ await assertEventually(()=>!!release);release()
+ await p.locator('.make-shell').waitFor()
+ await assertEventually(()=>f.state.completed)
+ assert.equal(f.state.profile.name,'Perfil durante gravação')
+ assert.equal(f.joins,1)
+ assert.ok(f.writes.every(w=>w.profileName==='Perfil durante gravação'))
+})
+
+
+test('failed invitation password save keeps profile edits and supports correction', async t => {
+ const f=await fixture(t,{authenticated:false}),p=f.page
+ let attempts=0
+ await p.route('**/api/onboarding/invitation/registration',route=>{
+  if(!route.request().postDataJSON().password)return route.fulfill({json:{email:user.email,step:'password'}})
+  if(++attempts===1)return route.fulfill({status:503,json:{message:'Registo temporariamente indisponível.'}})
+  f.authenticated=true;return route.fulfill({json:{user}})
+ })
+ await p.goto(origin+'/?invite='+'bc'.repeat(32))
+ await p.getByRole('heading',{name:'Definir palavra-passe',exact:true}).waitFor()
+ await p.locator('input[autocomplete="new-password"]').fill('first-invite-password');await f.button('Guardar palavra-passe').click()
+ await p.locator('.ob-profile').waitFor();await f.input('Nome do perfil').fill('Perfil preservado')
+ const correction=p.getByRole('form',{name:'Correção da configuração'})
+ await correction.locator('input[autocomplete="new-password"]').fill('retry-invite-password')
+ await f.button('Confirmar correção').click()
+ await assertEventually(()=>f.joins===1)
+ assert.equal(await f.input('Nome do perfil').inputValue(),'Perfil preservado')
+ await f.button('Continuar').click();await f.button('Começar').click();await p.locator('.make-shell').waitFor()
+ assert.equal(f.state.profile.name,'Perfil preservado');assert.equal(attempts,2)
 })
