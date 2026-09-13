@@ -24,10 +24,12 @@ function restore(): Draft {
   return fresh
 }
 function restorePending(session: AuthSession | null): Draft {
-  const initial = { ...fresh, step: location.pathname === '/login' ? 'email' : 'start', returning: location.pathname === '/login' } as Draft
+  const invited = new URL(location.href).searchParams.has('invite')
+  const initial = { ...fresh, step: invited ? 'password' : location.pathname === '/login' ? 'email' : 'start', returning: !invited && location.pathname === '/login' } as Draft
   try {
     const value = saved(JSON.parse(sessionStorage.getItem('fontes:onboarding:v1:pending') || 'null')?.draft)
     if (location.pathname === '/login') return { ...initial, provider: value?.provider || 'email' }
+    if (invited && (!value || value.step === 'start')) return initial
     if (value) return { ...value, step: !session && !['start', 'email', 'code'].includes(value.step) ? 'code' : value.step }
   } catch { /* No saved draft. */ }
   return initial
@@ -103,7 +105,7 @@ export default function Onboarding({ preview = false, session = null, onReady, o
   const patch = (value: Partial<Draft>) => setDraft(current => ({ ...current, ...value }))
   const go = (step: Step) => { if ((live.busy || live.restoring) && ['start', 'email', 'code'].includes(draft.step)) return; patch({ step }); setNotice(''); setError(null); setFieldError(null) }
   useEffect(() => { if (preview) { try { localStorage.setItem(key, JSON.stringify(draft)) } catch { /* In-memory fallback. */ } } }, [draft, preview])
-  const email = session?.user.email || draft.email || (preview ? 'email@email.com' : '')
+  const email = (live.directRegistration ? draft.email : session?.user.email) || draft.email || (preview ? 'email@email.com' : '')
 
   const titles: Record<Step, string> = { start: 'Criar conta', email: draft.returning ? 'Iniciar sessão' : 'Registar email', code: 'Confirmar email', password: 'Definir palavra-passe', join: 'Ligação ao ambiente', workspace: 'Novo ambiente de trabalho', profile: 'Personalizar perfil', invites: 'Convidar membros', updates: 'Preferências de email' }
   const descriptions: Partial<Record<Step, ReactNode>> = {
@@ -180,7 +182,10 @@ export default function Onboarding({ preview = false, session = null, onReady, o
   // Restored/OAuth flows may return to email, and an existing identity can still
   // need setup. Count the screens in the current phase, not a stale entry path.
   const authenticating = draft.step === 'email' || draft.step === 'code'
-  const flow = authenticating
+  const invitedFlow = !preview && (new URL(location.href).searchParams.has('invite') || !live.canEditWorkspace)
+  const flow: Step[] = invitedFlow ? (authenticating
+    ? (draft.returning ? ['email', 'join', 'profile', 'updates'] : ['email', 'code', 'password', 'join', 'profile', 'updates'])
+    : (draft.returning || draft.provider === 'google' ? ['join', 'profile', 'updates'] : ['password', 'join', 'profile', 'updates'])) : authenticating
     ? flows[draft.returning ? 'returning' : 'email']
     : flows[draft.returning || draft.provider === 'google' ? 'google' : 'email']
   const progress = flow.indexOf(draft.step)

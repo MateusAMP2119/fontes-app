@@ -20,6 +20,7 @@ async function fixture(t, options={}) {
   if(path.endsWith('/sign-in/email-otp')||path.endsWith('/sign-in/email')){f.authenticated=true;return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:{user,token:'test'}})}
   if(path.endsWith('/sign-out')){f.authenticated=false;return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:{success:true}})}
   if(path==='/api/auth/set-password' && b.password===''){assert.equal(f.authenticated,true);assert.equal(b.password,'');assert.ok(b['new-password'].length>=8);f.state.passwordRequired=false;return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:f.state})}
+  if(path==='/api/onboarding/invitation/registration')return route.fulfill({json:{email:null,step:'email'}})
   if(path==='/api/onboarding/invitation')return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:{name:'Equipa convidada',role:'member'}})
   if(path==='/api/onboarding/join'){f.joins++;f.state={...workspace(),project:null,canInvite:false,canEditWorkspace:false};return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:f.state})}
   if(path==='/api/onboarding/invite'){
@@ -41,6 +42,25 @@ async function fixture(t, options={}) {
  f.input=name=>page.getByRole('textbox',{name,exact:true})
  return f
 }
+test('stepper returns to a restored setup screen after navigating back', async t => {
+ const f = await fixture(t, { state: workspace() }), p = f.page
+ await p.goto(origin)
+ await p.locator('.ob-profile').waitFor()
+ const dot = name => p.locator('.ob-progress').getByRole('button', { name, exact:true })
+ await dot('Ambiente').click()
+ await p.locator('.ob-workspace').waitFor()
+ assert.equal(await dot('Perfil').isDisabled(), false, 'restored authentication stays completed after going back')
+ await dot('Perfil').click()
+ await p.locator('.ob-profile').waitFor()
+ await dot('Atualizações').click()
+ await p.locator('.ob-updates').waitFor()
+ await dot('Perfil').click()
+ await f.input('Nome do perfil').fill('')
+ assert.equal(await dot('Atualizações').isDisabled(), false, 'a visited screen remains reachable after clearing an earlier field')
+ await dot('Atualizações').click()
+ await p.locator('.ob-updates').waitFor()
+ assert.equal(f.calls.filter(call => call.path.endsWith('/sign-in/email-otp') || call.path.endsWith('/set-password')).length, 0)
+})
 test('new email account requires password; confirmed setup opens while final preferences retry across reload',async t=>{
  const f=await fixture(t,{authenticated:false,state:{...blank(),passwordRequired:true}}),p=f.page
  await p.goto(origin)
@@ -210,6 +230,15 @@ test('conflicting revisions preserve the local draft without silently replaying 
  await p.getByRole('form',{name:'Correção da configuração'}).waitFor()
  assert.equal(f.state.profile.name,'Other tab')
 })
+test('copy invite shows only a confirmation chip after copying',async t=>{
+ const f=await fixture(t,{state:workspace()}),p=f.page
+ await p.addInitScript(()=>Object.defineProperty(navigator,'clipboard',{value:{writeText:async text=>{window.copiedInvite=text}}}))
+ await p.goto(origin);await f.button('Continuar').click();await f.button('Copiar link').click()
+ await p.locator('.ob-toast').filter({hasText:'Código para ambiente copiado'}).waitFor()
+ assert.match(await p.evaluate(()=>window.copiedInvite),/\?invite=[a-f0-9]{64}$/)
+ assert.equal(await f.input('Link de convite').count(),0)
+})
+
 test('copy invite waits for server confirmation and provides manual copy fallback',async t=>{
  const f=await fixture(t,{state:workspace()}),p=f.page
  let release
@@ -927,7 +956,7 @@ test('invitation review pauses old workspace saves and failed acceptance keeps t
  assert.ok(f.writes.every(write=>write.name!=='Old workspace'))
 })
 
-test('wrong-account invitation displays the authenticated email and switches account without losing the token', async t => {
+test('existing recipient invitation opens sign-in automatically without losing the token', async t => {
  const identity={...user,email:'sender@example.com'}
  const f=await fixture(t,{user:identity,state:{...workspace(),completed:true}}),p=f.page
  await p.route('**/api/onboarding/invitation',route=> identity.email==='sender@example.com'
@@ -935,19 +964,68 @@ test('wrong-account invitation displays the authenticated email and switches acc
   : route.fallback())
  const url=origin+'/?invite='+'ab'.repeat(32)
  await p.goto(url)
- await p.getByText('A conta com sessão iniciada não corresponde ao email do convite.',{exact:true}).waitFor()
- assert.ok((await p.locator('.ob-join').innerText()).includes('sender@example.com'))
- assert.ok(!(await p.locator('.ob-join').innerText()).includes('email@email.com'))
- assert.equal(await f.button('Utilizar um email diferente').count(),1)
- assert.equal(f.joins,0)
- await f.button('Continuar com email do convite').click()
  await f.input('Endereço de email').waitFor()
  assert.equal(p.url(),url)
  assert.equal(await f.input('Endereço de email').inputValue(),'recipient@example.com')
+ assert.equal(await p.locator('.ob-join').count(),0)
+ assert.equal(f.joins,0)
+ await p.getByRole('heading',{name:'Iniciar sessão',exact:true}).waitFor()
  identity.email='recipient@example.com';f.state=blank()
- await f.input('Endereço de email').fill(identity.email);await f.button('Continuar com email').click()
- await f.input(/^Código (?:temporário|de confirmação)$/).fill('123456');await f.button('Continuar com código').click()
+ await f.input('Endereço de email').fill(identity.email);await p.locator('input[autocomplete="current-password"]').fill('existing-password-123');await f.button('Iniciar sessão').click()
  await f.button('Aceitar convite').waitFor();assert.equal(f.joins,0)
  await f.button('Aceitar convite').click();await p.locator('.ob-profile').waitFor()
  assert.equal(f.joins,1)
+})
+
+test('signed-out invitation opens email registration directly', async t => {
+ const f=await fixture(t,{authenticated:false}),p=f.page
+ const url=origin+'/?invite='+'ab'.repeat(32)
+ await p.goto(url)
+ await p.getByRole('heading',{name:'Registar email',exact:true}).waitFor()
+ await f.input('Endereço de email').waitFor()
+ assert.equal(p.url(),url)
+ assert.equal(f.joins,0)
+})
+
+
+for (const authenticated of [false,true]) test(`new invitation starts at password and uses the recipient stepper (sender signed in: ${authenticated})`, async t => {
+ const identity={...user,email:'sender@example.com'},f=await fixture(t,{user:identity,authenticated,state:{...workspace(),completed:true}}),p=f.page
+ const recipient='new-recipient@example.com',url=origin+'/?invite='+'bc'.repeat(32)
+ await p.route('**/api/onboarding/invitation/registration',async route=>{
+  const body=route.request().postDataJSON()
+  if(body.password){assert.equal(body.password,'new-recipient-password');identity.email=recipient;identity.id='new-recipient';f.authenticated=true;f.state=blank();return route.fulfill({json:{user:identity}})}
+  return route.fulfill({json:{email:recipient,step:'password'}})
+ })
+ await p.goto(url)
+ await p.getByRole('heading',{name:'Definir palavra-passe',exact:true}).waitFor()
+ assert.equal(await p.locator('.ob-progress button').count(),4)
+ assert.equal(await p.locator('.ob-progress').getAttribute('aria-label'),'Passo 1 de 4')
+ assert.equal(await p.locator('.ob-email, .ob-code, .ob-join').count(),0)
+ assert.equal(f.joins,0)
+ await p.locator('input[autocomplete="new-password"]').fill('new-recipient-password')
+ await f.button('Guardar palavra-passe').click()
+ await f.button('Aceitar convite').waitFor()
+ assert.equal(f.joins,0)
+ await f.button('Aceitar convite').click();await p.locator('.ob-profile').waitFor()
+ assert.equal(await p.locator('.ob-progress button').count(),4)
+ assert.equal(await p.locator('.ob-progress').getAttribute('aria-label'),'Passo 3 de 4')
+ assert.equal(await p.locator('.ob-progress').getByRole('button',{name:'Ambiente',exact:true}).count(),0)
+ assert.equal(f.calls.filter(c=>c.path.includes('email-otp')).length,0)
+ assert.equal(f.joins,1)
+ const storage=await p.evaluate(()=>JSON.stringify(localStorage)+JSON.stringify(sessionStorage));assert.ok(!storage.includes('new-recipient-password'))
+})
+
+
+test('invitation registration race falls back to existing-account login', async t => {
+ const f=await fixture(t,{authenticated:false}),p=f.page
+ await p.route('**/api/onboarding/invitation/registration',route=>route.request().postDataJSON().password
+  ? route.fulfill({status:409,json:{code:'INVITATION_ACCOUNT_EXISTS',message:'Email já registado. Início de sessão necessário.'}})
+  : route.fulfill({json:{email:user.email,step:'password'}}))
+ await p.goto(origin+'/?invite='+'bc'.repeat(32))
+ await p.getByRole('heading',{name:'Definir palavra-passe',exact:true}).waitFor()
+ await p.locator('input[autocomplete="new-password"]').fill('race-password-123');await f.button('Guardar palavra-passe').click()
+ await p.getByRole('heading',{name:'Iniciar sessão',exact:true}).waitFor()
+ assert.equal(await f.input('Endereço de email').inputValue(),user.email)
+ assert.equal(f.joins,0)
+ assert.ok(p.url().includes('invite='))
 })
