@@ -78,11 +78,9 @@ export default function Onboarding({ preview = false, session = null, onReady, o
   const [password, setPassword] = useState('')
   const imageGeneration = useRef(0)
   const [imagePending, setImagePending] = useState(false)
-  // The code and the password outlive a step change on the preview, so a screen already answered is
-  // not answered twice. The live flow still drops the credential the moment its screen is left, and
-  // a different email invalidates both everywhere.
-  useEffect(() => { if (!preview) { setPassword(''); setCode('') } }, [preview, draft.step])
-  useEffect(() => { setPassword(''); setCode('') }, [draft.email])
+  // Passwords stay only in component memory while moving between setup screens.
+  useEffect(() => { if (!preview) setCode('') }, [preview, draft.step])
+  useEffect(() => { setPassword(''); setCode('') }, [draft.email, background])
   useEffect(() => { imageGeneration.current++; setImagePending(false); return () => { imageGeneration.current++ } }, [draft.email])
   const [notice, setNotice] = useState('')
   const [fieldError, setFieldError] = useState<{ name: string; text: string } | null>(null)
@@ -161,7 +159,7 @@ export default function Onboarding({ preview = false, session = null, onReady, o
     event.preventDefault()
     if (!validate(event.currentTarget)) return
     if (!preview && draft.step === 'email') { if (draft.returning) { void live.login(password).then(success => { if (success) setPassword('') }) } else void live.start(); return }
-    if (draft.step === 'password') { if (preview) go('workspace'); else { void live.setPassword(password); setPassword('') }; return }
+    if (draft.step === 'password') { if (preview) go('workspace'); else void live.setPassword(password); return }
     if (draft.step === 'join') { if (preview) setNotice('Pré-visualização concluída'); else void live.acceptInvite(); return }
     if (!preview && draft.step === 'code') { void live.verify(code); return }
     if (!preview && draft.step === 'workspace') { live.save(false, true); return }
@@ -219,7 +217,7 @@ export default function Onboarding({ preview = false, session = null, onReady, o
     && (preview || !((live.busy || live.restoring) && authenticating))
     && (preview || !live.savingPassword || draft.step !== 'password')
     && (preview || !['email', 'code', 'password'].includes(draft.step) || i < progress || i === progress + 1)
-    && (preview || flow[i] !== 'workspace' || live.canEditWorkspace)
+    && (preview || flow[i] !== 'workspace' || !live.organizationId || live.canEditWorkspace)
     && (preview || flow[i] !== 'invites' || live.canInvite)
     && flow.slice(0, i).every((step, j) => j < progress || answered(step))
   function navigateStep(step: Step) {
