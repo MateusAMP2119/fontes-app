@@ -28,6 +28,7 @@ for (const engine of [chromium, webkit]) {
       const [current, total] = expected.match(/\d+/g).map(Number)
       assert.equal(await counter.locator('button').count(), total)
       assert.equal(await counter.locator('.past').count(), current - 1)
+      await counter.evaluate(el => Promise.all(el.parentElement.getAnimations({ subtree: true }).map(animation => animation.finished)))
       const dots = await counter.locator('button').evaluateAll(els => els.map(el => {
         const box = el.getBoundingClientRect()
         return { width: box.width, height: box.height }

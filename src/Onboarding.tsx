@@ -101,6 +101,7 @@ export default function Onboarding({ preview = false, session = null, onReady, o
   // callback, paint the brand and the first confirmed screen in the same commit.
   const screenShown = useRef(false)
   if (!live.restoring || !['start', 'email', 'code'].includes(draft.step)) screenShown.current = true
+  const form = useRef<HTMLFormElement>(null)
   const file = useRef<HTMLInputElement>(null)
   const patch = (value: Partial<Draft>) => setDraft(current => ({ ...current, ...value }))
   const go = (step: Step) => { if ((live.busy || live.restoring) && ['start', 'email', 'code'].includes(draft.step)) return; patch({ step }); setNotice(''); setError(null); setFieldError(null) }
@@ -194,8 +195,9 @@ export default function Onboarding({ preview = false, session = null, onReady, o
   useEffect(() => {
     const left = previousStep.current
     previousStep.current = draft.step
-    if (flow.indexOf(draft.step) > flow.indexOf(left)) setSettled(list => list.includes(left) ? list : [...list, left])
-  }, [draft.step, flow])
+    const passed = flow.slice(0, Math.max(0, flow.indexOf(left), progress))
+    setSettled(list => passed.every(step => list.includes(step)) ? list : [...new Set([...list, ...passed])])
+  }, [draft.step, flow, progress])
   useEffect(() => { setSettled([]) }, [draft.email])
   // A screen already answered does not have to be answered twice: a step ahead is reachable when
   // every screen before it is either behind us or already carries its value. The code and the
@@ -213,10 +215,22 @@ export default function Onboarding({ preview = false, session = null, onReady, o
   // the field never re-locks the road ahead, and nothing here waits on a save still in flight.
   const answered = (step: Step) => settled.includes(step) || filled[step]
   const reachable = (i: number) => i !== progress
-    && (preview || !['email', 'code', 'password'].includes(flow[i]))
+    && (preview || !((live.busy || live.restoring) && authenticating))
+    && (preview || !live.savingPassword || draft.step !== 'password')
+    && (preview || !['email', 'code', 'password'].includes(draft.step) || i < progress || i === progress + 1)
     && (preview || flow[i] !== 'workspace' || live.canEditWorkspace)
     && (preview || flow[i] !== 'invites' || live.canInvite)
     && flow.slice(0, i).every((step, j) => j < progress || answered(step))
+  function navigateStep(step: Step) {
+    // Forward authentication shortcuts must perform the same verification/save as
+    // the form button. A filled credential alone never completes authentication.
+    if (!preview && flow.indexOf(step) > progress && ['email', 'code', 'password'].includes(draft.step)
+      && (!settled.includes(draft.step) || filled[draft.step] || live.issue === draft.step)) {
+      form.current?.requestSubmit()
+      return
+    }
+    go(step)
+  }
   // The mark anchors the stage: it holds its place while each step's panel grows below it.
   const brand = preview ? <a className="ob-brand" href="/onboarding-preview" onClick={e => { e.preventDefault(); go('start') }} aria-label="Fontes, início"><img src="/mark.png" width="36" height="36" alt=""/></a> : <span className="ob-brand"><img src="/mark.png" width="36" height="36" alt="Fontes"/></span>
   const invitationFailures = live.invitationErrors.length > 0 && <div role="status">{live.invitationErrors.map(item => <div key={item.token}><p>{item.email}: {item.error}</p><button type="button" onClick={() => live.retryInvitation(item.token)}>Reenviar</button><button type="button" onClick={() => live.retryInvitation(item.token, true)}>Remover convite</button></div>)}</div>
@@ -225,7 +239,7 @@ export default function Onboarding({ preview = false, session = null, onReady, o
     {live.failed && <button type="button" onClick={live.retry}>Tentar novamente</button>}{invitationFailures}
   </div> : null
   if (!screenShown.current) return <OnboardingLayout pending />
-  return <OnboardingLayout brand={brand} progress={<div className="ob-progress-transition" data-loading={live.googleActive}><span className="ob-google-spinner" role="status" aria-label="Ligação ao Google em curso" aria-hidden={!live.googleActive}/>{(!draft.returning || !authenticating) && progress >= 0 && <nav className="ob-progress" aria-hidden={live.googleActive} aria-label={`Passo ${progress + 1} de ${flow.length}`}>{flow.map((step, i) => <button key={step} type="button" className={i === progress ? 'current' : i < progress ? 'past' : ''} aria-label={labels[steps.indexOf(step)]} aria-current={i === progress ? 'step' : undefined} disabled={live.googleActive || !reachable(i)} onClick={() => go(step)}/>)}</nav>}</div>} footer={preview && <aside className="ob-preview-bar" aria-label="Controlos da pré-visualização"><span>Pré-visualização</span><nav aria-label="Ecrãs">{steps.map((step, i) => <button key={step} aria-current={draft.step === step ? 'step' : undefined} onClick={() => go(step)}>{labels[i]}</button>)}</nav><button className="ob-reset" onClick={() => { setDraft(fresh); setCode(''); setNotice(''); setError(null); setFieldError(null) }}>Reiniciar</button></aside>}>
+  return <OnboardingLayout brand={brand} progress={<div className="ob-progress-transition" data-loading={live.googleActive}><span className="ob-google-spinner" role="status" aria-label="Ligação ao Google em curso" aria-hidden={!live.googleActive}/>{(!draft.returning || !authenticating) && progress >= 0 && <nav className="ob-progress" aria-hidden={live.googleActive} aria-label={`Passo ${progress + 1} de ${flow.length}`}>{flow.map((step, i) => <button key={step} type="button" className={i === progress ? 'current' : i < progress ? 'past' : ''} aria-label={labels[steps.indexOf(step)]} aria-current={i === progress ? 'step' : undefined} disabled={live.googleActive || !reachable(i)} onClick={() => navigateStep(step)}/>)}</nav>}</div>} footer={preview && <aside className="ob-preview-bar" aria-label="Controlos da pré-visualização"><span>Pré-visualização</span><nav aria-label="Ecrãs">{steps.map((step, i) => <button key={step} aria-current={draft.step === step ? 'step' : undefined} onClick={() => go(step)}>{labels[i]}</button>)}</nav><button className="ob-reset" onClick={() => { setDraft(fresh); setCode(''); setNotice(''); setError(null); setFieldError(null) }}>Reiniciar</button></aside>}>
       <StepPanel step={draft.step} frozen={live.googleActive}>
         <header className="ob-step-heading"><h1 id="ob-title" tabIndex={-1}>{titles[draft.step]}</h1>{descriptions[draft.step] && <p>{descriptions[draft.step]}</p>}</header>
         <div className="ob-step-content" key={draft.step}>
@@ -236,7 +250,7 @@ export default function Onboarding({ preview = false, session = null, onReady, o
           </>}
           <button className="ob-button ob-provider" disabled={live.busy || live.restoring} onClick={() => { patch({ provider: 'email' }); if (!preview) { void live.changeEmail(); return }; patch({ returning: false }); go('email') }}><Icon kind="email"/>Continuar com email</button>
           <p className="ob-account">Conta criada? <button className="ob-link" disabled={live.busy || live.restoring} onClick={() => { patch({ returning: true, provider: 'email' }); go('email') }}>Entrar</button></p>
-        </div> : <form onSubmit={submit} noValidate onInput={clearFieldError}>
+        </div> : <form ref={form} onSubmit={submit} noValidate onInput={clearFieldError}>
           {draft.step === 'email' && <><Field label="Endereço de email" name="email" error={fieldMessage('email')}><input {...fieldProps('email')} aria-label="Endereço de email" type="email" autoComplete="email" placeholder="Endereço de email" required maxLength={254} value={draft.email} onChange={e => patch({ email: e.target.value })}/></Field>{draft.returning && <PasswordField existing name="oldPassword" aside={<a className="ob-subtle ob-password-recovery" href={recoveryURL()}>Recuperar acesso<Icon kind="arrow"/></a>} error={fieldMessage('oldPassword')} value={password} onChange={setPassword}/>}<button disabled={live.busy || live.restoring} className="ob-button ob-primary ob-wide">{draft.returning ? 'Iniciar sessão' : 'Continuar com email'}</button>{draft.returning && (preview || GOOGLE_SIGN_IN_ENABLED) && <><div className="ob-divider"><span>ou</span></div><button type="button" className="ob-button ob-provider" disabled={live.busy || live.restoring} onClick={() => { if (!preview) { void live.google(); return }; setNotice('Pré-visualização concluída') }}><Google/>Continuar com Google</button></>}<p className="ob-account">{draft.returning ? 'Sem acesso?' : 'Conta criada?'} <button type="button" className="ob-link" disabled={live.busy || live.restoring} onClick={() => { patch({ returning: !draft.returning, provider: 'email' }); go('email') }}>{draft.returning ? 'Criar conta' : 'Entrar'}</button></p></>}
           {draft.step === 'code' && <><div className="ob-code-field"><div className="ob-code-head"><label htmlFor="ob-code-input">Código temporário</label><button type="button" className="ob-subtle ob-code-resend" disabled={live.busy || live.restoring} onClick={() => preview ? setNotice('Novo código enviado') : void live.start()}>Reenviar código<Icon kind="arrow"/></button></div><div className="ob-field"><input {...fieldProps('code')} id="ob-code-input" className="ob-code" inputMode="numeric" autoComplete="one-time-code" placeholder="Introduzir código" pattern="[0-9]{6}" maxLength={6} required value={code} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}/><FieldError id="ob-code-error" message={fieldMessage('code')} hint="O email pode ter sido entregue na pasta de spam." hintId="ob-code-hint"/></div></div><button disabled={live.busy || live.restoring} className="ob-button ob-primary ob-wide">Continuar com código</button><div className="ob-account-note"><p>Código para <span>{email}</span></p><button type="button" className="ob-subtle" onClick={() => { if (!preview) { void live.changeEmail(); return }; patch({ returning: false, provider: 'email' }); go('email') }}>Utilizar um email diferente</button></div></>}
           {draft.step === 'password' && <><PasswordField meter name="password" error={fieldMessage('password')} value={password} onChange={setPassword}/><button disabled={password.length < 8 || (!preview && live.savingPassword)} className="ob-button ob-primary ob-wide">Guardar palavra-passe</button><button className="ob-subtle" type="button" onClick={() => void live.changeEmail()}>Utilizar um email diferente</button></>}
