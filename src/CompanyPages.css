@@ -19,9 +19,9 @@
 .cp-page-link svg { flex-shrink: 0; }
 .cp .cp-page-link[aria-current="page"] { background: var(--tertiary); color: var(--foreground); }
 .cp .cp-add-page { color: var(--muted-foreground); }
-.cp-canvas { overflow: auto; min-width: 0; padding: 44px clamp(20px, 4vw, 64px); }
-.cp-page-heading, .cp-feed-heading, .cp-feed-topics { max-width: 780px; margin-inline: auto; }
-.cp-feed { max-width: 1112px; margin-inline: auto; container-type: inline-size; }
+.cp-canvas { overflow: auto; min-width: 0; padding: 44px 0 0; }
+/* The heading block lines up with the feed: same cap and gutter as .dashboard .make-feed. */
+.cp-page-heading, .cp-feed-heading, .cp-feed-topics { width: min(1020px, 100%); margin-inline: auto; padding-inline: 20px; box-sizing: border-box; }
 .cp-eyebrow { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted-foreground); margin-bottom: 16px; }
 .cp-page-heading h1 { font-size: 28px; font-weight: 600; line-height: 1.25; letter-spacing: -.6px; margin: 0 0 14px; overflow-wrap: anywhere; }
 .cp-page-heading p { font-size: 14px; line-height: 1.65; color: var(--muted-foreground); white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -31,8 +31,6 @@
 .cp-live i { width: 5px; height: 5px; border-radius: 50%; background: #6c9b77; }
 .cp-feed-topics { display: flex; flex-wrap: wrap; gap: 6px; padding-top: 12px; }
 .cp-feed-topics > span { font-size: 11px; background: var(--secondary); padding: 3px 7px; border-radius: 4px; }
-.dashboard .cp-feed .make-feed { width: auto; margin: 12px -20px 0; padding: 0 0 40px; }
-@container (max-width: 900px) { .cp-feed .feed-list { grid-template-columns: minmax(0, 1fr); } }
 .cp-inspector { border: 1px solid var(--border); border-radius: 8px; background: var(--background); display: flex; flex-direction: column; min-height: 0; overflow: auto; }
 .cp-tabs { display: flex; padding: 0 12px; border-bottom: 1px solid var(--border); gap: 14px; min-height: 48px; }
 .cp .cp-tabs button { border-radius: 0; padding: 0; font-size: 12px; color: var(--muted-foreground); border-bottom: 1px solid transparent; }
@@ -57,9 +55,9 @@
 .cp-notice { display: flex; align-items: center; gap: 8px; padding: 6px 16px; background: var(--secondary); font-size: 12px; }
 .cp-empty { display: grid; justify-items: start; gap: 16px; padding-top: 60px; }
 .cp-empty h1 { font-size: 24px; }.cp-empty p { color: var(--muted-foreground); }
-@media (max-width: 1100px) { .cp-document-body { grid-template-columns: 200px minmax(0, 1fr); }.cp-workbench[data-inspector="true"] { grid-template-columns: minmax(0, 1fr) 260px; }.cp-canvas { padding: 32px 24px; } }
+@media (max-width: 1100px) { .cp-document-body { grid-template-columns: 200px minmax(0, 1fr); }.cp-workbench[data-inspector="true"] { grid-template-columns: minmax(0, 1fr) 260px; }.cp-canvas { padding: 32px 0 0; } }
 @media (max-width: 800px) { .cp-workbench[data-inspector="true"] { grid-template-columns: minmax(0, 1fr); }.cp-inspector { max-height: 42dvh; }.cp-document { min-height: 380px; }.cp-toolbar > span { display: none; }.cp-toolbar > div { width: 100%; justify-content: flex-end; }.cp-document-body { grid-template-columns: 155px minmax(0, 1fr); }.cp-page-heading h1 { font-size: 23px; }.cp-live { display: none !important; } }
-@media (max-width: 520px) { .cp-document-body { grid-template-columns: minmax(0, 1fr); }.cp-tree { max-height: 160px; border-right: 0; border-bottom: 1px solid var(--border); flex-shrink: 0; }.cp-document-body { display: flex; flex-direction: column; }.cp-canvas { padding: 24px 16px; }.cp-toolbar button { font-size: 11px; }}
+@media (max-width: 520px) { .cp-document-body { grid-template-columns: minmax(0, 1fr); }.cp-tree { max-height: 160px; border-right: 0; border-bottom: 1px solid var(--border); flex-shrink: 0; }.cp-document-body { display: flex; flex-direction: column; }.cp-canvas { padding: 24px 0 0; }.cp-toolbar button { font-size: 11px; }}
 /* Scalar breadcrumb: muted section, workspace, separator and rounded feed action. */
 .dashboard-breadcrumb #company-feed-breadcrumb { display: flex; align-items: center; gap: 12px; padding: 0; overflow: hidden; min-width: 0; }
 .cp-crumb-divider { color: var(--border); font-size: 20px; font-weight: 400; }
