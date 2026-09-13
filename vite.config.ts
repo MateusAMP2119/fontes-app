@@ -5,6 +5,8 @@ import { fileURLToPath, URL } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
+const headers = { 'Cross-Origin-Opener-Policy': 'same-origin-allow-popups' }
+
 export default defineConfig(({ command }) => ({
   resolve: { alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) } },
   plugins: [react(), tailwindcss(), VitePWA({
@@ -39,8 +41,9 @@ export default defineConfig(({ command }) => ({
       cleanupOutdatedCaches: true,
     },
   })],
-  preview: { host: '127.0.0.1', port: 5173, strictPort: true },
+  preview: { headers, host: '127.0.0.1', port: 5173, strictPort: true },
   server: {
+    headers,
     host: '127.0.0.1', port: 5173, strictPort: true,
     origin: 'https://local.fonteslabs.com:5173',
     https: command === 'serve' ? {
