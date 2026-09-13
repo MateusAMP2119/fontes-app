@@ -4,8 +4,8 @@ import { setTimeout as delay } from 'node:timers/promises'
 import { chromium, webkit } from 'playwright'
 const origin = process.env.TEST_ORIGIN || 'http://127.0.0.1:5183'
 const user = { id:'flow-user',email:'person@example.com',name:'Pessoa',emailVerified:true,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString() }
-const blank = () => ({organization:null,project:null,profile:{name:'Pessoa'},revision:0,completed:false,changelog:false,daily:false,passwordRequired:false,canInvite:true,canEditWorkspace:true})
-const workspace = () => ({...blank(),organization:{id:'org',name:'Equipa',slug:'equipa'},project:{id:'project',organizationId:'org',name:'Projeto',createdAt:user.createdAt}})
+const blank = () => ({organization:null,project:null,profile:{name:'Pessoa'},revision:0,completed:false,changelog:false,daily:false,passwordRequired:false,canInvite:false,canEditWorkspace:false})
+const workspace = () => ({...blank(),canInvite:true,canEditWorkspace:true,organization:{id:'org',name:'Equipa',slug:'equipa'},project:{id:'project',organizationId:'org',name:'Projeto',createdAt:user.createdAt}})
 // API-failure simulations need route interception. WebKit service-worker fetches bypass
 // Playwright routing; service-worker behavior is verified separately in pwa.test.mjs.
 async function fixture(t, options={}) {
@@ -32,7 +32,7 @@ async function fixture(t, options={}) {
    f.writes.push(b)
    if (!b.name?.trim() || !/^[a-z0-9][a-z0-9-]{2,47}$/.test(b.slug || '') || !b.profileName?.trim()) return route.fulfill({status:400,json:{message:'Nome, URL ou perfil inválido.',step:'workspace'}})
    if(f.offline&&b.completed)return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},status:503,json:{message:'Indisponível.'}})
-   f.state={...f.state,organization:f.state.organization||workspace().organization,project:workspace().project,profile:{name:b.profileName,image:b.profileImage},revision:b.revision,operationId:b.operationId,completed:b.completed,changelog:b.changelog,daily:b.daily}
+   f.state={...f.state,canInvite:f.state.organization?f.state.canInvite:true,canEditWorkspace:f.state.organization?f.state.canEditWorkspace:true,organization:f.state.organization||workspace().organization,project:workspace().project,profile:{name:b.profileName,image:b.profileImage},revision:b.revision,operationId:b.operationId,completed:b.completed,changelog:b.changelog,daily:b.daily}
    return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:f.state})
   }
   if(path.endsWith('/reset-password')||path.endsWith('/request-password-reset')||path.endsWith('/set-password'))return route.fulfill({headers:{'access-control-allow-origin':origin,'access-control-allow-credentials':'true'},json:{status:true}})
@@ -1067,4 +1067,23 @@ for (const authenticated of [false,true]) test(`password account note and other 
  assert.equal(await p.locator('input[autocomplete="new-password"]').inputValue(),'')
  assert.equal(f.joins,0)
  assert.equal(f.calls.filter(c=>c.path==='/api/onboarding/invitation/registration'&&c.body.password).length,0)
+})
+
+
+for (const provider of ['email','google']) test(`new ${provider} account without workspace permissions keeps the workspace stepper visible`, async t => {
+ const f=await fixture(t,{state:blank()}),p=f.page
+ await p.addInitScript(({email,provider})=>sessionStorage.setItem('fontes:onboarding:v1:pending',JSON.stringify({draft:{step:'workspace',email,provider}})),{email:user.email,provider})
+ const total=provider==='google'?4:7
+ await p.goto(origin)
+ await p.getByRole('heading',{name:'Novo ambiente de trabalho',exact:true}).waitFor()
+ assert.equal(await p.locator('.ob-progress').getAttribute('aria-label'),provider==='google'?'Passo 1 de 4':'Passo 4 de 7')
+ assert.equal(await p.locator('.ob-progress button').count(),total)
+ await f.input('Nome').fill('Primeiro ambiente')
+ assert.equal(await p.locator('.ob-progress').isVisible(),true)
+ await p.reload()
+ await p.getByRole('heading',{name:'Novo ambiente de trabalho',exact:true}).waitFor()
+ assert.equal(await p.locator('.ob-progress button').count(),total)
+ await f.button('Criar ambiente').click();await p.locator('.ob-profile').waitFor()
+ assert.equal(await p.locator('.ob-progress button').count(),total)
+ assert.equal(await p.locator('.ob-progress').isVisible(),true)
 })
