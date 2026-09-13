@@ -103,10 +103,16 @@ button.cp-workspace-name svg { width: 12px; height: 12px; }
 button.cp-workspace-name:hover, button.cp-workspace-name[data-state="open"] { background: var(--secondary); }
 button.cp-workspace-name:focus-visible { outline: 1px solid var(--foreground); outline-offset: 1px; }
 /* Workspace menu uses the shared shadcn dropdown and dashboard typography. */
-.cp-workspace-picker.dashboard-menu { width: max(180px, var(--radix-dropdown-menu-trigger-width)); max-width: min(280px, calc(100vw - 24px)); padding: 3px; border: 1px solid var(--border); border-radius: 6px; background: var(--popover); color: var(--foreground); font-size: 14px; }
+.cp-workspace-picker.dashboard-menu { width: max-content; min-width: 0; max-width: min(280px, calc(100vw - 24px)); padding: 3px; border: 1px solid var(--border); border-radius: 6px; background: var(--popover); color: var(--foreground); font-size: 14px; }
 .cp-workspace-options { max-height: 288px; overflow-y: auto; }
-.cp-workspace-picker .cp-workspace-option { min-height: 28px; gap: 8px; padding: 4px 7px; font-size: 13px; line-height: 20px; cursor: pointer; }
+.cp-workspace-picker .cp-workspace-option { display: grid; grid-template-columns: minmax(0, 1fr) 12px; text-align: left; align-items: center; width: 100%; min-height: 24px; gap: 6px; padding: 2px 6px; font-size: 13px; line-height: 20px; cursor: pointer; }
 .cp-workspace-picker .cp-workspace-option > svg { width: 12px; height: 12px; }
 .cp-workspace-picker .cp-workspace-option[data-highlighted] { background: var(--secondary); color: var(--foreground); }
-.cp-workspace-option-copy { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 400; }
+.cp-workspace-option-copy { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 400; }
 .cp-workspace-empty { margin: 0; padding: 12px 8px; color: var(--muted-foreground); font-size: 13px; }
+
+.cp-workspace-leading { grid-column: 1; width: 12px; }
+.cp-workspace-option-copy { grid-column: 1; justify-self: start; }
+.cp-workspace-check { grid-column: 2; justify-self: end; }
+
+.cp-workspace-picker.dashboard-menu { animation: none !important; transition: none !important; }

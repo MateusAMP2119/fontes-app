@@ -124,7 +124,7 @@ export default function Dashboard({ path, session, project, organization = null,
     <main id="dashboard-content" className={`dashboard-panel${pages ? ' dashboard-panel-pages' : ''}`} tabIndex={-1}>
       {error && <p className="dashboard-error" role="alert">{error}</p>}
       <div hidden={settings || pages}><MakeApp session={session} /></div>
-      {(pages || pagesOpened) && <div hidden={!pages} style={{ height: '100%' }}><CompanyPages theme={resolved} session={session} project={project} organization={organization} onWorkspaceChange={onWorkspaceChange} /></div>}
+      {(pages || pagesOpened) && <div hidden={!pages} style={{ height: '100%' }}><CompanyPages key={session?.session.id ?? 'preview'} theme={resolved} session={session} project={project} organization={organization} onWorkspaceChange={onWorkspaceChange} /></div>}
       {settings && <div className="dashboard-settings">
         <nav className="dashboard-settings-nav" aria-label="Definições">
           <p>Área de trabalho</p>

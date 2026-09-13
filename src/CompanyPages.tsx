@@ -1,6 +1,6 @@
 import { cachedWorkspaces, invalidateWorkspaces, loadWorkspaces, workspaceCacheKey } from './workspaceCache'
 import { onboardingRequest, type Bootstrap } from './onboardingSync'
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from './components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from './components/ui/dropdown-menu'
 import { createPortal } from 'react-dom'
 import { useEffect, useRef, useState } from 'react'
 import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronRight, Copy, FileText, FolderOpen, Plus, Rss, Search, Settings2, Trash2, X } from 'lucide-react'
@@ -24,31 +24,46 @@ function readPages(key: string): Page[] {
 }
 export default function CompanyPages({ session, project, organization, onWorkspaceChange, theme }: { session: AuthSession | null; project: Project | null; organization: Bootstrap['organization']; theme: 'light' | 'dark'; onWorkspaceChange?: (state: Bootstrap) => void }) {
   const storageKey = `fontes:company-pages:v1:${session?.user.id ?? 'preview'}:${project?.id ?? organization?.id ?? 'local'}`
-  return <PagesEditor key={storageKey} storageKey={storageKey} session={session} company={organization?.name ?? 'Sem sessão ativa'} organization={organization} onWorkspaceChange={onWorkspaceChange} theme={theme} />
+  const [visited, setVisited] = useState<{ storageKey: string; organization: Bootstrap['organization'] }[]>([])
+  useEffect(() => {
+    setVisited(previous => [...previous.filter(entry => entry.storageKey !== storageKey), { storageKey, organization }])
+  }, [storageKey, organization])
+  const editors = [...visited.filter(entry => entry.storageKey !== storageKey), { storageKey, organization }]
+  return <>{editors.map(entry => <div key={entry.storageKey} hidden={entry.storageKey !== storageKey} style={{ height: '100%' }}>
+    <PagesEditor active={entry.storageKey === storageKey} storageKey={entry.storageKey} session={session} company={entry.organization?.name ?? 'Sem sessão ativa'} organization={entry.organization} onWorkspaceChange={onWorkspaceChange} theme={theme} />
+  </div>)}</>
+
 }
-function PagesEditor({ storageKey, session, company, organization, onWorkspaceChange, theme }: { storageKey: string; session: AuthSession | null; company: string; organization: Bootstrap['organization']; theme: 'light' | 'dark'; onWorkspaceChange?: (state: Bootstrap) => void }) {
+function PagesEditor({ active, storageKey, session, company, organization, onWorkspaceChange, theme }: { active: boolean; storageKey: string; session: AuthSession | null; company: string; organization: Bootstrap['organization']; theme: 'light' | 'dark'; onWorkspaceChange?: (state: Bootstrap) => void }) {
   const [pages, setPages] = useState(() => readPages(storageKey))
   const [activeId, setActiveId] = useState(() => pages[0]?.id)
   const [tab, setTab] = useState<'navigation' | 'feed' | 'settings'>('feed')
   const [inspector, setInspector] = useState(true)
   const [search, setSearch] = useState('')
+  const createDialog = useRef<HTMLDialogElement>(null)
+  const [workspaceName, setWorkspaceName] = useState('')
+  const [creatingWorkspace, setCreatingWorkspace] = useState(false)
+  const [createError, setCreateError] = useState('')
+  const createRequestId = useRef('')
   const [workspaceOpen, setWorkspaceOpen] = useState(false)
   const cacheKey = session ? workspaceCacheKey(session.user.id, session.session.id) : null
   const [workspaces, setWorkspaces] = useState<NonNullable<Bootstrap['organization']>[]>(() => (cacheKey && cachedWorkspaces(cacheKey)) || (organization ? [organization] : []))
   const [workspaceStatus, setWorkspaceStatus] = useState<'idle' | 'loading' | 'error' | 'switching'>('idle')
   useEffect(() => {
-    if (!workspaceOpen || !cacheKey) return
-    let active = true
+    if (!active || !cacheKey) return
+    let subscribed = true
     const cached = cachedWorkspaces(cacheKey)
     if (cached) { setWorkspaces(cached); setWorkspaceStatus('idle'); return }
     setWorkspaceStatus('loading')
     loadWorkspaces(cacheKey)
-      .then(result => { if (active) { setWorkspaces(result); setWorkspaceStatus('idle') } })
-      .catch(() => { if (active) setWorkspaceStatus('error') })
-    return () => { active = false }
-  }, [workspaceOpen, cacheKey])
+      .then(result => { if (subscribed) { setWorkspaces(result); setWorkspaceStatus('idle') } })
+      .catch(() => { if (subscribed) setWorkspaceStatus('error') })
+    return () => { subscribed = false }
+  }, [active, workspaceOpen, cacheKey])
   const selectWorkspace = async (id: string) => {
     if (id === organization?.id) { setWorkspaceOpen(false); return }
+    if (workspaceStatus === 'switching') return
+    setWorkspaceOpen(false)
     setWorkspaceStatus('switching')
     try {
       // Preserve current edits before leaving this workspace.
@@ -61,7 +76,21 @@ function PagesEditor({ storageKey, session, company, organization, onWorkspaceCh
     } catch {
       if (cacheKey) invalidateWorkspaces(cacheKey)
       setWorkspaceStatus('error')
+      setError('Não foi possível mudar o ambiente de trabalho. É possível tentar novamente.')
     }
+  }
+  const createWorkspace = async () => {
+    if (!session || !workspaceName.trim() || creatingWorkspace) return
+    setCreatingWorkspace(true); setCreateError('')
+    try {
+      localStorage.setItem(storageKey, JSON.stringify(pages))
+      const next = await onboardingRequest<Bootstrap>('/workspaces/create', { name: workspaceName.trim(), requestId: createRequestId.current })
+      if (!next.organization) throw new Error('workspace-creation')
+      if (cacheKey) invalidateWorkspaces(cacheKey)
+      createDialog.current?.close()
+      onWorkspaceChange?.(next)
+    } catch { setCreateError('Não foi possível criar o ambiente de trabalho. É possível tentar novamente.') }
+    finally { setCreatingWorkspace(false) }
   }
   const [topic, setTopic] = useState('')
   const nameDialog = useRef<HTMLDialogElement>(null)
@@ -113,19 +142,20 @@ function PagesEditor({ storageKey, session, company, organization, onWorkspaceCh
     setTopic('')
   }
   return <section className="cp" aria-label="Editor de páginas">
-    {headerTarget && createPortal(<>
+    {active && headerTarget && createPortal(<>
       <span className="cp-crumb-divider" aria-hidden="true">/</span>
       <DropdownMenu open={workspaceOpen} onOpenChange={setWorkspaceOpen}>
         <DropdownMenuTrigger asChild><button className="cp-workspace-name" aria-label="Mudar ambiente de trabalho">{company}<ChevronDown size={13} aria-hidden="true" /></button></DropdownMenuTrigger>
-        <DropdownMenuContent className="dashboard-menu cp-workspace-picker" data-theme={theme} align="start" sideOffset={4} collisionPadding={12}>
+        <DropdownMenuContent className="dashboard-menu cp-workspace-picker" data-theme={theme} align="start" sideOffset={4} collisionPadding={12} onCloseAutoFocus={event => { if (createDialog.current?.open) event.preventDefault() }}>
           {workspaceStatus === 'loading' && <p className="cp-workspace-empty" role="status">A carregar ambientes de trabalho…</p>}
           {workspaceStatus === 'error' && <p className="cp-workspace-empty" role="alert">Não foi possível carregar ou mudar o ambiente de trabalho. Fechar e voltar a abrir permite tentar novamente.</p>}
           <div className="cp-workspace-options">{workspaces.map(workspace => <DropdownMenuItem key={workspace.id} className="cp-workspace-option" aria-current={workspace.id === organization?.id ? 'true' : undefined} disabled={workspaceStatus === 'switching'} aria-label={`${workspace.name}${workspace.id === organization?.id ? ', ambiente de trabalho atual' : ''}`} onSelect={event => { event.preventDefault(); void selectWorkspace(workspace.id) }}>
             <span className="cp-workspace-option-copy">{workspace.name}</span>
-            {workspace.id === organization?.id && <Check size={18} aria-hidden="true" />}
+            {workspace.id === organization?.id && <Check className="cp-workspace-check" size={12} aria-hidden="true" />}
           </DropdownMenuItem>)}</div>
           {!workspaces.length && workspaceStatus === 'idle' && <p className="cp-workspace-empty" role="status">{session ? 'Nenhum ambiente de trabalho encontrado.' : 'Uma sessão ativa permite aceder aos ambientes de trabalho.'}</p>}
-          {workspaceStatus === 'switching' && <p className="cp-workspace-empty" role="status">A mudar de ambiente de trabalho…</p>}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem className="cp-workspace-option" disabled={!session || workspaceStatus === 'switching'} onSelect={() => { setWorkspaceName(''); setCreateError(''); createRequestId.current = crypto.randomUUID(); createDialog.current?.showModal() }}><span className="cp-workspace-option-copy">Criar ambiente</span><Plus className="cp-workspace-check" size={12} aria-hidden="true" /></DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
       <span className="cp-crumb-divider" aria-hidden="true">/</span>
@@ -133,6 +163,14 @@ function PagesEditor({ storageKey, session, company, organization, onWorkspaceCh
         <Rss size={12} aria-hidden="true" /><span>{page?.feedName || 'Novo feed'}</span>
       </button>
     </>, headerTarget)}
+    <dialog ref={createDialog} className="cp-name-dialog" aria-labelledby="cp-create-workspace-title" onCancel={e => { if (creatingWorkspace) e.preventDefault() }}>
+      <form onSubmit={e => { e.preventDefault(); void createWorkspace() }}>
+        <h2 id="cp-create-workspace-title">Criar ambiente de trabalho</h2>
+        <label className="cp-field">Nome<input autoFocus required maxLength={80} disabled={creatingWorkspace} value={workspaceName} onChange={e => setWorkspaceName(e.target.value)} /></label>
+        {createError && <p role="alert">{createError}</p>}
+        <div className="cp-name-actions"><button type="button" disabled={creatingWorkspace} onClick={() => createDialog.current?.close()}>Cancelar</button><button className="cp-save" disabled={creatingWorkspace || !workspaceName.trim()}>{creatingWorkspace ? 'A criar…' : 'Criar ambiente'}</button></div>
+      </form>
+    </dialog>
     <dialog ref={nameDialog} className="cp-name-dialog" aria-labelledby="cp-name-title" onClick={e => { if (e.target === e.currentTarget) nameDialog.current?.close() }}>
       <form onSubmit={e => { e.preventDefault(); saveNamedFeed() }}>
         <h2 id="cp-name-title">Guardar feed</h2>
@@ -142,7 +180,7 @@ function PagesEditor({ storageKey, session, company, organization, onWorkspaceCh
         <div className="cp-name-actions"><button type="button" onClick={() => nameDialog.current?.close()}>Cancelar</button><button className="cp-save" disabled={!feedName.trim()}>Guardar feed</button></div>
       </form>
     </dialog>
-    {actionsTarget && createPortal(<div className="cp-header-actions">
+    {active && actionsTarget && createPortal(<div className="cp-header-actions">
 
       <div>
         <button aria-label="Configuração" aria-pressed={inspector} onClick={() => setInspector(!inspector)}><Settings2 size={14} /><span>Configuração</span></button>
