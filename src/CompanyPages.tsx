@@ -3,7 +3,7 @@ import { onboardingRequest, type Bootstrap } from './onboardingSync'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator } from './components/ui/dropdown-menu'
 import { createPortal } from 'react-dom'
 import { useEffect, useRef, useState } from 'react'
-import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronRight, Copy, FileText, FolderOpen, Plus, Rss, Search, Settings2, Trash2, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, Check, ChevronDown, Copy, FileText, Plus, Rss, Settings2, Trash2, X } from 'lucide-react'
 import type { AuthSession } from './auth'
 import type { Project } from './projects'
 import Feed from './Feed'
@@ -39,7 +39,6 @@ function PagesEditor({ active, storageKey, session, company, organization, onWor
   const [activeId, setActiveId] = useState(() => pages[0]?.id)
   const [tab, setTab] = useState<'navigation' | 'feed' | 'settings'>('feed')
   const [inspector, setInspector] = useState(true)
-  const [search, setSearch] = useState('')
   const createDialog = useRef<HTMLDialogElement>(null)
   const [workspaceName, setWorkspaceName] = useState('')
   const [creatingWorkspace, setCreatingWorkspace] = useState(false)
@@ -192,18 +191,10 @@ function PagesEditor({ active, storageKey, session, company, organization, onWor
     <div className="cp-workbench" data-inspector={inspector}>
       <div className="cp-document">
         <div className="cp-document-body">
-          <aside className="cp-tree" aria-label="Navegação das páginas">
-            <label className="cp-search"><Search size={14} /><input aria-label="Pesquisar páginas" placeholder="Pesquisar" value={search} onChange={e => setSearch(e.target.value)} /></label>
-            <button className="cp-tree-settings" onClick={() => { setInspector(true); setTab('navigation') }}><FolderOpen size={15} />Navegação<ChevronRight size={14} /></button>
-            <button className="cp-tree-settings" onClick={() => { setInspector(true); setTab('settings') }}><Settings2 size={15} />Definições<ChevronRight size={14} /></button>
-            <div className="cp-tree-divider" />
-            {[...new Set(pages.map(p => p.group))].map(group => <div className="cp-group" key={group}>
-              <div className="cp-group-title"><span>{group || 'Páginas'}</span>{<button aria-label={`Adicionar página a ${group}`} onClick={() => { const next = { id: crypto.randomUUID(), title: 'Nova página', description: '', group, topics: [] }; setPages([...pages, next]); setActiveId(next.id); setSaved(false); setTab('settings'); setInspector(true) }}><Plus size={14} /></button>}</div>
-              {pages.filter(p => p.group === group && p.title.toLowerCase().includes(search.toLowerCase())).map(p => <button className="cp-page-link" key={p.id} aria-current={p.id === activeId ? 'page' : undefined} onClick={() => setActiveId(p.id)}><FileText size={14} /><span>{p.title || 'Sem título'}</span>{p.topics.length > 0 && <Rss size={12} />}</button>)}
-            </div>)}
-            {!pages.some(p => p.title.toLowerCase().includes(search.toLowerCase())) && <p className="cp-hint">Sem páginas.</p>}
-            {<button className="cp-add-page" onClick={add}><Plus size={14} />Adicionar página</button>}
-            <p className="cp-local">Guardado neste navegador</p>
+          <aside className="cp-tree" aria-label="Feeds">
+            {pages.map(p => <button className="cp-page-link" key={p.id} aria-current={p.id === activeId ? 'page' : undefined} onClick={() => setActiveId(p.id)}><FileText size={14} /><span>{p.title || 'Sem título'}</span>{p.topics.length > 0 && <Rss size={12} />}</button>)}
+            {!pages.length && <p className="cp-hint">Sem feeds.</p>}
+            <button className="cp-add-page" onClick={add}><Plus size={14} />Novo feed</button>
           </aside>
           <article className="cp-canvas">
             {page ? <>
