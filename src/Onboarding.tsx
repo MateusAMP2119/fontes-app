@@ -183,7 +183,8 @@ export default function Onboarding({ preview = false, session = null, onReady, o
   // Restored/OAuth flows may return to email, and an existing identity can still
   // need setup. Count the screens in the current phase, not a stale entry path.
   const authenticating = draft.step === 'email' || draft.step === 'code'
-  const invitedFlow = !preview && (new URL(location.href).searchParams.has('invite') || (live.organizationId && !live.canEditWorkspace))
+  const creatingWorkspace = draft.step === 'workspace' || draft.step === 'invites'
+  const invitedFlow = !preview && !creatingWorkspace && (new URL(location.href).searchParams.has('invite') || (live.organizationId && !live.canEditWorkspace))
   const flow: Step[] = invitedFlow ? (authenticating
     ? (draft.returning ? ['email', 'profile', 'updates'] : ['email', 'code', 'password', 'profile', 'updates'])
     : (draft.returning || draft.provider === 'google' ? ['profile', 'updates'] : ['password', 'profile', 'updates'])) : authenticating

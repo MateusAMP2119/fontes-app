@@ -1138,3 +1138,16 @@ test('failed invitation password save keeps profile edits and supports correctio
  await f.button('Continuar').click();await f.button('Começar').click();await p.locator('.make-shell').waitFor()
  assert.equal(f.state.profile.name,'Perfil preservado');assert.equal(attempts,2)
 })
+
+
+test('workspace creation keeps its stepper when the existing membership is read-only', async t => {
+ const f=await fixture(t,{state:{...workspace(),canEditWorkspace:false,canInvite:false}}),p=f.page
+ await p.addInitScript(email=>sessionStorage.setItem('fontes:onboarding:v1:pending',JSON.stringify({draft:{step:'workspace',email,provider:'email'}})),user.email)
+ await p.goto(origin)
+ await p.getByRole('heading',{name:'Novo ambiente de trabalho',exact:true}).waitFor()
+ assert.equal(await p.locator('.ob-progress').getAttribute('aria-label'),'Passo 4 de 7')
+ assert.equal(await p.locator('.ob-progress button').count(),7)
+ await f.input('Nome').fill('Outro ambiente')
+ assert.equal(await p.locator('.ob-progress').isVisible(),true)
+ await p.waitForFunction(()=>{const nav=document.querySelector('.ob-progress');return nav && getComputedStyle(nav).opacity==='1' && nav.getBoundingClientRect().top>=0})
+})
