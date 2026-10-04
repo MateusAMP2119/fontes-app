@@ -33,6 +33,13 @@ function readIds(key: string): string[] {
   try { const value = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(value) ? value.filter(id => typeof id === 'string') : [] }
   catch { return [] }
 }
+type InspectorTab = 'feed' | 'settings'
+const sidebarExpandedKey = 'fontes:sidebar-expanded'
+const inspectorKey = 'fontes:feed-inspector'
+function readInspector(): InspectorTab | null {
+  try { const value = localStorage.getItem(inspectorKey); return value === 'feed' || value === 'settings' ? value : null }
+  catch { return null }
+}
 function follow(event: MouseEvent<HTMLAnchorElement>) {
   if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
   event.preventDefault()
@@ -117,8 +124,12 @@ export default function Dashboard({ path, session, project, organization = null,
     for (const workspace of entries) migrateWorkspaceFavorites(workspace, basePath, workspace.id === (organization?.id ?? project?.id ?? 'local'))
   }, [entries, basePath, organization?.id, project?.id])
 
-  const [inspector, setInspector] = useState<{ id: string; tab: 'feed' | 'settings' } | null>(null)
-  const inspectorOpen = !!current && inspector?.id === current.id
+  // The open tab, shared by every feed; null while the panel is closed.
+  const [inspector, setInspector] = useState<InspectorTab | null>(readInspector)
+  useEffect(() => {
+    try { localStorage.setItem(inspectorKey, inspector ?? '') } catch { /* The panel state still applies to this session. */ }
+  }, [inspector])
+  const inspectorOpen = !!current && !!inspector
   useEffect(() => {
     if (!inspectorOpen) return
     const dismiss = (event: KeyboardEvent) => {
@@ -152,7 +163,7 @@ export default function Dashboard({ path, session, project, organization = null,
   useEffect(() => {
     if (creatingFeed || settings || isArticle || currentId || !ready || !redirect) return
     const timer = window.setTimeout(() => transitionView(() => {
-      if (path === '/pages' || path.startsWith('/pages/')) setInspector({ id: redirect.id, tab: 'feed' })
+      if (path === '/pages' || path.startsWith('/pages/')) setInspector('feed')
       history.replaceState(null, '', redirect.href + location.search + location.hash)
       dispatchEvent(new PopStateEvent('popstate'))
     }), 0)
@@ -189,7 +200,12 @@ export default function Dashboard({ path, session, project, organization = null,
   useEffect(() => {
     if (currentId) setOpenedWorkspaces(previous => previous.includes(currentId) ? previous : [...previous, currentId])
   }, [currentId])
-  const [sidebarExpanded, setSidebarExpanded] = useState(false)
+  const [sidebarExpanded, setSidebarExpanded] = useState(() => {
+    try { return localStorage.getItem(sidebarExpandedKey) === 'true' } catch { return false }
+  })
+  useEffect(() => {
+    try { localStorage.setItem(sidebarExpandedKey, String(sidebarExpanded)) } catch { /* The sidebar state still applies to this session. */ }
+  }, [sidebarExpanded])
   const sidebar = useRef<HTMLElement>(null)
   const [controlsRow, setControlsRow] = useState<string | null>(null)
   const requestedControlsRow = useRef<string | null>(null)
@@ -220,7 +236,7 @@ export default function Dashboard({ path, session, project, organization = null,
       if (event.code === 'KeyP' && (current ?? defaultWorkspace)) {
         event.preventDefault()
         const workspace = current ?? defaultWorkspace!
-        transitionView(() => { setInspector({ id: workspace.id, tab: 'feed' }); navigate(workspace.href) })
+        transitionView(() => { setInspector('feed'); navigate(workspace.href) })
       }
     }
     addEventListener('keydown', onKeyDown, true)
@@ -295,7 +311,7 @@ export default function Dashboard({ path, session, project, organization = null,
           <span className="dashboard-save-icon" aria-hidden="true">{saved ? <Sync className="size-4" /> : <SyncOff className="size-4" />}{saved && <Check className="dashboard-save-badge size-2.5" />}</span>
         </Button>
         <span className="sr-only" role="status">{saved ? 'Guardado' : 'Não guardado'}</span>
-        <Button variant="ghost" size="icon" aria-label="Configuração do feed" aria-keyshortcuts="Meta+P Control+P" aria-expanded={inspectorOpen} aria-controls="feed-inspector" onClick={() => transitionView(() => setInspector(inspectorOpen ? null : { id: current.id, tab: 'feed' }))}><IconSliders size={18} aria-hidden="true" /></Button>
+        <Button variant="ghost" size="icon" aria-label="Configuração do feed" aria-keyshortcuts="Meta+P Control+P" aria-expanded={inspectorOpen} aria-controls="feed-inspector" onClick={() => transitionView(() => setInspector(inspectorOpen ? null : 'feed'))}><IconSliders size={18} aria-hidden="true" /></Button>
       </div>}
     </header>
     <aside id="dashboard-sidebar" className="dashboard-rail" aria-label="Navegação principal" hidden={!sidebarExpanded}
@@ -343,7 +359,7 @@ export default function Dashboard({ path, session, project, organization = null,
       {creatingFeed && <FeedComposer key={userId} userId={userId} theme={resolved} token={session?.user.emailVerified ? session.session.token : undefined} />}
       {error && <p className="dashboard-error" role="alert">{error}</p>}
       {workspaces.filter(workspace => openedWorkspaces.includes(workspace.id) || current?.id === workspace.id).map(workspace => <Activity key={workspace.id} mode={current?.id === workspace.id ? 'visible' : 'hidden'}><div hidden={current?.id !== workspace.id} className="dashboard-feed-view" aria-label={`Feed de ${workspace.name}`}><MakeApp session={session} queries={workspace.feed.topics} /></div></Activity>)}
-      {current && inspectorOpen && <div id="feed-inspector" className="feed-inspector-content"><WorkspaceInspector key={current.id} feed={current.feed} saved={saved} tab={inspector!.tab} setTab={tab => setInspector({ id: current.id, tab })} change={patch => changeFeed(current, patch)} /></div>}
+      {current && inspectorOpen && <div id="feed-inspector" className="feed-inspector-content"><WorkspaceInspector key={current.id} feed={current.feed} saved={saved} tab={inspector!} setTab={setInspector} change={patch => changeFeed(current, patch)} /></div>}
       {article && <Article kind={article[1] === 'eventos' ? 'events' : 'stories'} itemKey={decodeURIComponent(article[2])} key={path} />}
       {!creatingFeed && !settings && !article && ready && !workspaces.length && <section className="dashboard-workspace-empty"><p>Sem ambientes visíveis.</p><Button variant="ghost" onClick={() => restoreWorkspaces(hidden)}>Mostrar ambientes</Button></section>}
       {settings && <div className="dashboard-settings">
