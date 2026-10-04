@@ -31,8 +31,9 @@
   grid-template-areas:
     "date date"
     "title thumb"
+    "tone thumb"
     "foot thumb";
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: auto auto auto 1fr;
   column-gap: 16px;
   align-items: start;
   min-height: 0;
@@ -41,8 +42,12 @@
   contain-intrinsic-size: auto 164px;
 }
 
-.m-story h3 {
+.m-story-body {
   grid-area: title;
+  min-width: 0;
+}
+
+.m-story h3 {
   margin: 0;
   max-width: none;
   font-size: 18px;

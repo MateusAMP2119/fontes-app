@@ -1,11 +1,10 @@
 import { NEWS_API as API } from './api'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { type AuthSession } from './auth'
-import Feed from './Feed'
+import NewsFeed from './NewsFeed'
 import Briefing from './Briefing'
-import Rankings from './Rankings'
 import AgentSetup from './AgentSetup'
-import { ArrowRight, History, Lightbulb, Search, X } from 'lucide-react'
+import { ArrowRight, History, Lightbulb, Search, X } from './components/icons'
 import { Button } from './components/ui/button'
 import './MakeApp.css'
 import './NewsSearch.css'
@@ -14,7 +13,8 @@ import './NewsSearch.css'
 /** The bit of GET /stories or GET /events a suggestion row needs. */
 type Hit = { id: number; slug: string | null; title: string }
 
-export default function MakeApp({ session }: { session: AuthSession | null }) {
+/** Workspace filters are combined with the temporary searches typed here. */
+export default function MakeApp({ session, queries = [] }: { session: AuthSession | null; queries?: string[] }) {
   /** Card plus the suggestion sheet under it; outside-click and scroll target. */
   const searchRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -38,14 +38,18 @@ export default function MakeApp({ session }: { session: AuthSession | null }) {
   useEffect(() => {
     const dialog = dialogRef.current
     if (!dialog) return
-    if (modal) {
-      dialog.showModal()
-      modalInputRef.current?.focus()
-    } else if (dialog.open) {
+    const close = () => {
+      if (!dialog.open) return
       restoringFocus.current = true
       dialog.close()
       restoringFocus.current = false
     }
+    if (modal) {
+      dialog.showModal()
+      modalInputRef.current?.focus()
+    } else close()
+    // A hidden main page must not leave a modal in the browser's top layer.
+    return close
   }, [modal])
 
   const [typed, setTyped] = useState('')
@@ -241,49 +245,38 @@ export default function MakeApp({ session }: { session: AuthSession | null }) {
   </>
 
   return (
-    <NewsStage session={session} queries={chips}>
-      <dialog ref={dialogRef} className="news-search-dialog" aria-label="Pesquisar notícias"
-        onCancel={event => { event.preventDefault(); setModal(false); setOpen(false) }}
-        onClose={() => { setModal(false); setOpen(false) }}
-        onClick={event => { if (event.target === event.currentTarget) { setModal(false); setOpen(false) } }}>
-        <div className="news-search-dialog-content">{modal && renderSearch(true)}</div>
-      </dialog>
-      <section className="make-hero">
-        <AgentSetup />
-        <div className="make-search" ref={searchRef} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false) }}>
-          {renderSearch(false)}
-          {chips.length > 0 && (
-            <div className="m-chips" role="list" aria-label="Pesquisas guardadas">
-              {chips.map((chip) => (
-                <span className="m-chip" role="listitem" key={chip}>
-                  <span>{chip}</span>
-                  <button
-                    type="button"
-                    aria-label={`Remover ${chip}`}
-                    onClick={() => setChips(chips.filter((other) => other !== chip))}
-                  >
-                    <X aria-hidden="true" size={12} />
-                  </button>
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-        <Briefing session={session} />
-        <Rankings session={session} />
-      </section>
-    </NewsStage>
-  )
-}
-
-/** Home's layout: whatever header the tab wants, then the feed. Shared so every
- *  tab renders the feed at the same width and with the same container queries. */
-export function NewsStage({ session, queries, children }: { session: AuthSession | null; queries: string[]; children?: ReactNode }) {
-  return (
     <div className="make-shell">
       <div className="make-stage">
-        {children}
-        <Feed session={session} queries={queries} />
+        <dialog ref={dialogRef} className="news-search-dialog" aria-label="Pesquisar notícias"
+          onCancel={event => { event.preventDefault(); setModal(false); setOpen(false) }}
+          onClose={() => { setModal(false); setOpen(false) }}
+          onClick={event => { if (event.target === event.currentTarget) { setModal(false); setOpen(false) } }}>
+          <div className="news-search-dialog-content">{modal && renderSearch(true)}</div>
+        </dialog>
+        <section className="make-hero">
+          <AgentSetup />
+          <div className="make-search" ref={searchRef} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false) }}>
+            {renderSearch(false)}
+            {chips.length > 0 && (
+              <div className="m-chips" role="list" aria-label="Pesquisas guardadas">
+                {chips.map((chip) => (
+                  <span className="m-chip" role="listitem" key={chip}>
+                    <span>{chip}</span>
+                    <button
+                      type="button"
+                      aria-label={`Remover ${chip}`}
+                      onClick={() => setChips(chips.filter((other) => other !== chip))}
+                    >
+                      <X aria-hidden="true" size={12} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+          <Briefing session={session} />
+        </section>
+        <NewsFeed session={session} queries={[...queries, ...chips]} />
       </div>
     </div>
   )

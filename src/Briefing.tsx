@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { API } from './api'
 import type { AuthSession } from './auth'
-import { Button } from './components/ui/button'
+import { retryRead } from './retryRead'
 import BriefingText, { BriefingSkeleton } from './BriefingText'
 import BriefingActions from './BriefingActions'
-import Reload from './components/briefing-icons/Reload'
+import { Reload } from './components/icons'
 import './Briefing.css'
 
 type Summary = {
@@ -55,8 +55,6 @@ function BriefingContent({ token, cacheKey }: { token?: string; cacheKey?: strin
   const [result, setResult] = useState<Result | null>(cached)
   const [revision, setRevision] = useState(0)
   const [pending, setPending] = useState(!!token && !cached)
-  const [error, setError] = useState('')
-  const [authFailed, setAuthFailed] = useState(false)
   const request = useRef<AbortController | null>(null)
 
   async function load() {
@@ -65,30 +63,29 @@ function BriefingContent({ token, cacheKey }: { token?: string; cacheKey?: strin
     const controller = new AbortController()
     request.current = controller
     setPending(true)
-    setError('')
     try {
-      const response = await fetch(`${API}/api/briefing`, {
-        headers: { Authorization: `Bearer ${token}` },
-        signal: AbortSignal.any([controller.signal, AbortSignal.timeout(20000)]),
-        cache: 'no-store',
-      })
-      if (controller.signal.aborted) return
-      if (response.status === 404) { setResult(null); saveCache(cacheKey, null); return }
-      if (response.status === 401 || response.status === 403) {
-        saveCache(cacheKey, null)
-        setAuthFailed(true)
-        setResult(null)
-        throw new Error('É necessária uma sessão ativa com email confirmado para consultar o resumo.')
-      }
-      if (response.status === 409) throw new Error('Já existe um resumo em preparação. Nova tentativa disponível dentro de alguns segundos.')
-      if (!response.ok) throw new Error('Não foi possível obter o resumo. Nova tentativa disponível.')
-      const data: Result = await response.json()
-      if (!validResult(data)) {
-        throw new Error('O resumo recebido não está disponível. Nova tentativa disponível.')
-      }
-      if (!controller.signal.aborted) { setResult(data); saveCache(cacheKey, data); setRevision(value => value + 1) }
-    } catch (cause) {
-      if (!controller.signal.aborted) setError(cause instanceof Error && cause.name === 'Error' ? cause.message : 'Não foi possível obter o resumo. Nova tentativa disponível.')
+      await retryRead(async () => {
+        const response = await fetch(`${API}/api/briefing`, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(20000)]),
+          cache: 'no-store',
+        })
+        if (controller.signal.aborted) return
+        if (response.status === 404) throw new Error('BRIEFING_PENDING')
+        if (response.status === 401 || response.status === 403) {
+          saveCache(cacheKey, null)
+          setResult(null)
+          throw new Error('É necessária uma sessão ativa com email confirmado para consultar o resumo.')
+        }
+        if (response.status === 409) throw new Error('Já existe um resumo em preparação. Nova tentativa disponível dentro de alguns segundos.')
+        if (!response.ok) throw new Error('Não foi possível obter o resumo. Nova tentativa disponível.')
+        const data: Result = await response.json()
+        if (!validResult(data)) {
+          throw new Error('O resumo recebido não está disponível. Nova tentativa disponível.')
+        }
+        if (!controller.signal.aborted) { setResult(data); saveCache(cacheKey, data); setRevision(value => value + 1) }
+      }, controller.signal)
+    } catch { /* Cancellation stops this view's retry loop. */
     } finally {
       if (!controller.signal.aborted) setPending(false)
     }
@@ -103,8 +100,7 @@ function BriefingContent({ token, cacheKey }: { token?: string; cacheKey?: strin
 
   const summary = result?.briefing
   return <section className="home-briefing" aria-label="Resumo do período" aria-busy={!!pending}>
-    {!token && <p className="home-briefing-status">Resumo disponível com uma sessão ativa e email confirmado.</p>}
-    {pending && !summary && <BriefingSkeleton />}
+    {token && !summary && <BriefingSkeleton />}
     {summary && <>
       <BriefingText key={revision} text={summary.text} segments={summary.segments} pending={pending} animate={!cached || revision > 0} />
       {summary.notes?.map(note => <p className="home-briefing-status" key={note.code}>{note.text}</p>)}
@@ -118,9 +114,5 @@ function BriefingContent({ token, cacheKey }: { token?: string; cacheKey?: strin
         <BriefingActions key={summary.generation_id ?? summary.generated_at} text={summary.text} generationId={summary.generation_id} token={token!} />
       </div>
     </>}
-    {token && !summary && !pending && !error && <p className="home-briefing-status">Ainda não existe um resumo disponível.</p>}
-    {error && <div role="alert"><p className="home-briefing-status">{error}</p>
-      {!authFailed && <Button variant="ghost" size="sm" disabled={!!pending} onClick={() => void load()}>Tentar novamente</Button>}
-    </div>}
   </section>
 }

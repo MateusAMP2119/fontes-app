@@ -1,12 +1,17 @@
+import { cachedPageFeed, loadPageFeed } from './pageFeedCache'
+import type { ArticleActivity } from './ArticleActivityChart'
 import { NEWS_API as API } from './api'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { AuthSession } from './auth'
 import { Sparkline } from './components/Sparkline'
 import { navigate } from './navigate'
+import { retryRead } from './retryRead'
+import { LiveStorySentiment, type Sentiment } from './Sentiment'
 import './Feed.css'
 
 /** One row of the external stories API, the engine's stories mirrored to the edge. */
-type Story = {
+export type Story = {
+  sentiment?: Sentiment
   id: number
   slug: string | null
   title: string
@@ -63,23 +68,26 @@ function warm(page: Story[]) {
   }
 }
 
-function Row({ story, index }: { story: Story; index: number }) {
+export function StoryRow({ story, index, period, showMetrics = true, showDate = true }: { story: Story; index: number; period?: { from: number; until: number }; showMetrics?: boolean; showDate?: boolean }) {
   return (
     <article className="m-story">
-      <time className="m-story-date" dateTime={story.latest_at}>{shortDay(story.latest_at)}</time>
-      {/* the title's link stretches over the whole row (Feed.css) */}
-      <h3>
-        <a
-          href={`/historias/${story.slug ?? story.id}`}
-          onClick={(click) => {
-            click.preventDefault()
-            navigate(`/historias/${story.slug ?? story.id}`)
-          }}
-        >
-          {story.title}
-        </a>
-      </h3>
-      {story.description?.trim() && <p className="m-story-summary">{story.description}</p>}
+      {showDate && <div className="m-story-date"><time dateTime={story.latest_at}>{shortDay(story.latest_at)}</time></div>}
+      {/* title and summary share one line budget (Dashboard.css) */}
+      <div className="m-story-body">
+        {/* the title's link stretches over the whole row (Feed.css) */}
+        <h3>
+          <a
+            href={`/historias/${story.slug ?? story.id}`}
+            onClick={(click) => {
+              click.preventDefault()
+              navigate(`/historias/${story.slug ?? story.id}`)
+            }}
+          >
+            {story.title}
+          </a>
+        </h3>
+        {story.description?.trim() && <p className="m-story-summary">{story.description}</p>}
+      </div>
       <div className="m-front-stack">
         {story.thumb || story.image ? (
           <img
@@ -96,9 +104,10 @@ function Row({ story, index }: { story: Story; index: number }) {
         ) : (
           <span className="m-front-media" aria-hidden="true" />
         )}
-        <Popularity story={story} />
-        {story.rank != null && <RankKpi rank={story.rank} change={story.rank_change} />}
+        {showMetrics && <Popularity story={story} />}
+        {showMetrics && story.rank != null && <RankKpi rank={story.rank} change={story.rank_change} />}
       </div>
+      {showMetrics && <div className="m-story-tone"><LiveStorySentiment id={story.id} value={story.sentiment} period={period} /></div>}
       <ul className="m-sources" aria-label={`${story.source_count} fontes`}>
         {(story.sources ?? [])
           .filter((source) => source.host)
@@ -208,17 +217,17 @@ function activityBuckets(detail: StoryDetail, count = 12): number[] {
   return buckets
 }
 
-function Skeleton() {
+export function StorySkeleton({ showMetrics = true, showDate = true }: { showMetrics?: boolean; showDate?: boolean }) {
   return (
     <div className="m-story m-story--skeleton" aria-hidden="true">
-      <span className="m-story-date m-card-skeleton" />
+      {showDate && <span className="m-story-date m-card-skeleton" />}
       <h3>
         <span className="m-card-skeleton" />
         <span className="m-card-skeleton" />
       </h3>
       <span className="m-front-stack">
         <span className="m-front-media m-card-skeleton" />
-        <span className="m-popularity m-card-skeleton" />
+        {showMetrics && <span className="m-popularity m-card-skeleton" />}
       </span>
       <span className="m-sources m-card-skeleton" />
     </div>
@@ -236,7 +245,7 @@ function snapshot(key: string) {
 function readStories(url: string): Promise<Story[]> {
   const cached = storyRequests.get(url)
   if (cached && cached.expires > Date.now()) return cached.promise
-  const promise = fetch(url).then(response => {
+  const promise = fetch(url, { signal: AbortSignal.timeout(20000) }).then(response => {
     if (!response.ok) throw new Error(`${response.status}`)
     return response.json() as Promise<Story[]>
   }).catch(error => { storyRequests.delete(url); throw error })
@@ -245,11 +254,19 @@ function readStories(url: string): Promise<Story[]> {
   return promise
 }
 
-export default function Feed({ session: _session, queries = [] }: { session: AuthSession | null; queries?: string[] }) {
-  const queryKey = JSON.stringify([...new Set(queries.map(q => q.trim()).filter(Boolean))].sort())
-  const stableQueries = useMemo<string[]>(() => JSON.parse(queryKey), [queryKey])
-  const [stories, setStories] = useState<Story[]>(() => snapshot(queryKey)?.stories ?? [])
-  const [status, setStatus] = useState<'loading' | 'more' | 'end' | 'error'>(() => snapshot(queryKey)?.status ?? 'loading')
+export default function Feed({ session: _session, queries = [], period, onTotal, onActivity }: {
+  session: AuthSession | null; queries?: string[]; period?: { from: number; until: number }; onTotal?: (total: number) => void; onActivity?: (activity: ArticleActivity[]) => void
+}) {
+  const topicsKey = JSON.stringify([...new Set(queries.map(q => q.trim()).filter(Boolean))].sort())
+  const queryKey = period ? `${topicsKey}:${period.from}:${period.until}` : topicsKey
+  const displayKey = `${topicsKey}:${period ? period.until - period.from : 'all'}`
+  const displayedKey = useRef(displayKey)
+  const displayedStories = useRef<Story[]>([])
+  const stableQueries = useMemo<string[]>(() => JSON.parse(topicsKey), [topicsKey])
+  const requestScope = useRef<AbortController | null>(null)
+  const [stories, setStories] = useState<Story[]>(() => snapshot(queryKey)?.stories ?? (period ? cachedPageFeed(stableQueries, period.until - period.from)?.stories : undefined) ?? [])
+  const [status, setStatus] = useState<'loading' | 'more' | 'end' | 'error'>(() => snapshot(queryKey)?.status ?? (period && cachedPageFeed(stableQueries, period.until - period.from) ? (stories.length < PAGE ? 'end' : 'more') : 'loading'))
+  displayedStories.current = stories
   const sentinelRef = useRef<HTMLDivElement>(null)
   // Bumped per query so a slow page for the old one is dropped, not shown.
   const generation = useRef(0)
@@ -261,28 +278,39 @@ export default function Feed({ session: _session, queries = [] }: { session: Aut
 
   const fetchPage = useCallback(
     async (offset: number): Promise<Story[]> => {
-      // Browsing reads the external news API page by
-      // page. Searches ask the engine once per stored term and merge the
-      // answers, newest first; the engine matches whole words, so
-      // "vice-presidente" must go up as two.
-      // ponytail: one page of 100 per term, no paging; page when a term passes that.
-      let page: Story[]
-      if (stableQueries.length) {
-        const answers = await Promise.all(
-          stableQueries.map((term) => readStories(`${API}/stories?limit=100&q=${encodeURIComponent(term.replace(/[^\p{L}\p{N}]+/gu, ' '))}`)),
-        )
-        const seen = new Set<number>()
-        page = answers
-          .flat()
-          .filter((story) => !seen.has(story.id) && seen.add(story.id))
-          .sort((a, b) => Date.parse(b.latest_at) - Date.parse(a.latest_at))
-      } else {
-        page = await readStories(`${API}/stories?limit=${PAGE}&offset=${offset}`)
-      }
-      warm(page)
-      return page
+      const signal = requestScope.current!.signal
+      return retryRead(async () => {
+        // Browsing reads the external news API page by
+        // page. Searches ask the engine once per stored term and merge the
+        // answers, newest first; the engine matches whole words, so
+        // "vice-presidente" must go up as two.
+        // ponytail: one page of 100 per term, no paging; page when a term passes that.
+        let page: Story[]
+        if (period) {
+          const mine = generation.current
+          const data = await loadPageFeed(stableQueries, period, offset)
+          page = data.stories
+          if (!signal.aborted && mine === generation.current && offset === 0) { onTotal?.(data.total_articles); onActivity?.(data.activity) }
+          warm(page)
+          return page
+        }
+        if (stableQueries.length) {
+          const answers = await Promise.all(
+            stableQueries.map((term) => readStories(`${API}/stories?limit=100&q=${encodeURIComponent(term.replace(/[^\p{L}\p{N}]+/gu, ' '))}`)),
+          )
+          const seen = new Set<number>()
+          page = answers
+            .flat()
+            .filter((story) => !seen.has(story.id) && seen.add(story.id))
+            .sort((a, b) => Date.parse(b.latest_at) - Date.parse(a.latest_at))
+        } else {
+          page = await readStories(`${API}/stories?limit=${PAGE}&offset=${offset}`)
+        }
+        warm(page)
+        return page
+      }, signal)
     },
-    [stableQueries],
+    [stableQueries, period, onTotal, onActivity],
   )
 
   const prefetch = useCallback(
@@ -305,14 +333,15 @@ export default function Feed({ session: _session, queries = [] }: { session: Aut
       const page = await pending
       if (mine !== generation.current) return
       const offset = nextOffset.current
-      const nextStatus = page.length < PAGE || stableQueries.length ? 'end' : 'more'
+      const searchOnly = stableQueries.length > 0 && !period
+      const nextStatus = page.length < PAGE || searchOnly ? 'end' : 'more'
       setStories(previous => {
         const next = offset ? [...previous, ...page] : page
         if (feedSnapshots.size >= 30 && !feedSnapshots.has(queryKey)) feedSnapshots.delete(feedSnapshots.keys().next().value!)
         feedSnapshots.set(queryKey, { stories: next, status: nextStatus, expires: Date.now() + FEED_CACHE_MS })
         return next
       })
-      if (page.length < PAGE || stableQueries.length) {
+      if (page.length < PAGE || searchOnly) {
         setStatus('end')
         return
       }
@@ -321,22 +350,38 @@ export default function Feed({ session: _session, queries = [] }: { session: Aut
     } catch {
       if (mine === generation.current) setStatus('error')
     }
-  }, [prefetch, stableQueries.length, queryKey])
+  }, [prefetch, stableQueries.length, period, queryKey])
 
   useEffect(() => {
     generation.current += 1
+    const controller = new AbortController()
+    requestScope.current = controller
+    const keepVisible = displayedKey.current === displayKey && displayedStories.current.length > 0
+    displayedKey.current = displayKey
     const cached = snapshot(queryKey)
     if (cached) {
+      // Activity resumes effects when returning to a main page. Restore the full
+      // paginated snapshot, not just page one, so the scroll position survives.
       setStories(cached.stories)
       setStatus(cached.status)
       if (cached.status === 'more') prefetch(cached.stories.length)
+    } else if (keepVisible && period) {
+      // Revalidate a new time window without clearing rows or adding skeletons.
+      const mine = generation.current
+      nextPage.current = null
+      void fetchPage(0).then(page => {
+        if (controller.signal.aborted || mine !== generation.current) return
+        setStories(page)
+        setStatus(page.length < PAGE ? 'end' : 'more')
+        if (page.length >= PAGE) prefetch(page.length)
+      }).catch(() => { /* Keep readable content when a background refresh fails. */ })
     } else {
       setStories([])
       prefetch(0)
       void advance()
     }
-    return () => { generation.current += 1 }
-  }, [queryKey, prefetch, advance])
+    return () => { generation.current += 1; controller.abort() }
+  }, [queryKey, prefetch, advance, period, displayKey, fetchPage])
 
   // Infinite scroll: the buffered page goes in well before the tail is reached.
   useEffect(() => {
@@ -353,18 +398,16 @@ export default function Feed({ session: _session, queries = [] }: { session: Aut
   }, [status, advance])
 
   return (
-    <section className="make-feed" aria-label="Histórias">
+    <section className="make-feed" aria-label="Histórias" aria-busy={status === 'loading' || status === 'error'}>
       <div className="feed-list">
         {stories.map((story, index) => (
-          <Row story={story} index={index} key={story.id} />
+          <StoryRow story={story} index={index} period={period} key={story.id} />
         ))}
-        {!stories.length && status === 'loading' &&
-          Array.from({ length: SKELETON_ROWS }, (_, index) => <Skeleton key={index} />)}
+        {(status === 'loading' || status === 'error') &&
+          Array.from({ length: stories.length ? 2 : SKELETON_ROWS }, (_, index) => <StorySkeleton key={`loading-${index}`} />)}
       </div>
       <div className="m-feed-sentinel" ref={sentinelRef}>
-        {status === 'loading' && stories.length > 0 && <span className="m-feed-loading">A carregar…</span>}
-        {/* ponytail: a failed later page ends the list quietly; no retry control */}
-        {stories.length === 0 && (status === 'end' || status === 'error') && (
+        {stories.length === 0 && status === 'end' && (
           <p className="m-feed-empty">Não foram encontradas histórias</p>
         )}
       </div>

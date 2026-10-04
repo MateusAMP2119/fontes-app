@@ -1,7 +1,10 @@
 import { NEWS_API as API } from './api'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { navigate } from './navigate'
-import { mountKicker } from './kicker'
+import { createPortal } from 'react-dom'
+import { Share2 } from './components/icons'
+import { Button } from './components/ui/button'
+import { SentimentMeter, isDictionarySentiment, type Sentiment } from './Sentiment'
+import { retryRead } from './retryRead'
 import './Article.css'
 
 
@@ -9,13 +12,14 @@ type Entity = { id: number; kind: 'person' | 'org' | 'location'; name: string; s
 
 /** One member article; `image` is its preview picture when the publisher gave one. */
 type Clip = {
-  id: string
+  id: string | number
   url: string
   title: string | null
   summary: string | null
   source: string
   image: string | null
   discovered_at: string
+  sentiment?: Sentiment
 }
 
 /** GET /events/{key}: the headline, its two sentences on one line, the key entities the summarizer named, and the member articles newest first. */
@@ -28,13 +32,14 @@ type EventDetail = {
   latest_at: string
   entities: Entity[]
   articles: Clip[]
+  sentiment?: Sentiment
 }
 
 /** GET /stories/{key}: the headline, two paragraphs, and the member events newest first, each shaped like GET /events/{key}. */
-type StoryDetail = { id: number; slug: string | null; title: string; description: string; summarized_at: string; events: EventDetail[] }
+type StoryDetail = { id: number; slug: string | null; title: string; description: string; summarized_at: string; events: EventDetail[]; sentiment?: Sentiment }
 
 /** What the page draws, from either an event or a story; `events` lists a story's members, an event lists none. */
-type Page = { title: string; date: string; paragraphs: string[]; entities: Entity[]; articles: Clip[]; events: EventDetail[] }
+type Page = { title: string; date: string; paragraphs: string[]; entities: Entity[]; articles: Clip[]; events: EventDetail[]; sentiment?: Sentiment }
 
 const paragraphs = (text: string) => text.split(/\n\s*\n/)
 
@@ -44,6 +49,7 @@ const fromEvent = (event: EventDetail): Page => ({
   paragraphs: paragraphs(event.description),
   entities: event.entities,
   articles: event.articles,
+  sentiment: event.sentiment,
   events: [],
 })
 
@@ -55,6 +61,7 @@ const fromStory = (story: StoryDetail): Page => {
   const seen = new Set<string>()
   return {
     title: story.title,
+    sentiment: story.sentiment,
     date: story.events.map((event) => event.latest_at).sort().at(-1) ?? story.summarized_at,
     paragraphs: paragraphs(story.description),
     entities: story.events.flatMap((event) => event.entities).filter((entity) => !seen.has(plain(entity.name)) && seen.add(plain(entity.name))),
@@ -204,7 +211,7 @@ function Mentions({ entities, articles }: { entities: Entity[]; articles: Clip[]
                       strokeLinecap="round"
                     />
                     {(hover != null || axis.count === 1) && (
-                      <circle cx={x(hover ?? 0)} cy={y(line.counts[hover ?? 0])} r={4} fill={line.color} stroke="#fff" strokeWidth={2} />
+                      <circle cx={x(hover ?? 0)} cy={y(line.counts[hover ?? 0])} r={4} fill={line.color} className="article-dot" />
                     )}
                   </g>
                 )
@@ -282,6 +289,7 @@ function EventRow({ event }: { event: EventDetail }) {
         <time dateTime={event.first_at}>{when(event.first_at)}</time>
       </div>
       <p className="article-event-title">{event.title}</p>
+      <div className="article-event-tone"><SentimentMeter value={event.sentiment} /></div>
       <ul className="article-event-links">
         {shown.map((clip) => (
           <li key={clip.url}>
@@ -354,50 +362,6 @@ function Skeleton() {
         </ol>
       </section>
     </>
-  )
-}
-
-const EMAIL = 'mateus@fontes-lab.com'
-
-/** The site's kicker pill with its running border light (kicker.ts). */
-function Kicker({ children }: { children: string }) {
-  const pill = useRef<HTMLSpanElement>(null)
-  useEffect(() => (pill.current ? mountKicker(pill.current) : undefined), [])
-  return (
-    <span className="m-kick" ref={pill}>
-      <i className="m-kick-glow" aria-hidden="true" />
-      <span className="m-kick-plate">{children}</span>
-    </span>
-  )
-}
-
-/** fonteslabs.com's footer plate (fontes-spa Footer.astro, mono): the open-collaboration call and the coverage links. */
-function Footer() {
-  return (
-    <footer className="m-foot">
-      <div className="m-foot-panel">
-        <img className="m-foot-art" src="/art/arches.png" alt="" />
-        <section className="m-foot-development" aria-labelledby="footer-development">
-          <div>
-            <Kicker>Plataforma em desenvolvimento</Kicker>
-            <h2 id="footer-development">Colaborações abertas</h2>
-            <p>Procuram-se colaborações editoriais, técnicas e institucionais para as próximas fases da Fontes.</p>
-          </div>
-          <a className="m-cta" href={`mailto:${EMAIL}?subject=Proposta%20de%20colabora%C3%A7%C3%A3o`}>
-            Propor colaboração
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10M7 17 17 7" /></svg>
-          </a>
-        </section>
-        <section className="m-foot-coverage" aria-label="Cobertura em desenvolvimento">
-          <p>Fontes, temas e eventos ainda não representados podem ser sinalizados por correio eletrónico.</p>
-          <nav aria-label="Contributos para a cobertura">
-            <a href={`mailto:${EMAIL}?subject=Fonte%20em%20falta`}>Sinalizar fonte</a>
-            <a href={`mailto:${EMAIL}?subject=Sugest%C3%A3o%20de%20tema`}>Sugerir tema</a>
-            <a href={`mailto:${EMAIL}?subject=Contributo%20para%20a%20Fontes`}>Outro contributo</a>
-          </nav>
-        </section>
-      </div>
-    </footer>
   )
 }
 
@@ -477,14 +441,46 @@ function markEntities(text: string, entities: Entity[]): React.ReactNode[] {
 
 const longDay = new Intl.DateTimeFormat('pt-PT', { day: 'numeric', month: 'long', year: 'numeric' })
 
+const articlePages = new Map<string, Page>()
+const articleRequests = new Map<string, { expires: number; pending: boolean; signal: AbortSignal; promise: Promise<Page> }>()
+const ARTICLE_CACHE_MS = 5 * 60 * 1000
+function readArticle(url: string, kind: 'events' | 'stories', signal: AbortSignal, refresh = false): Promise<Page> {
+  const cached = articleRequests.get(url)
+  // Effect cleanup aborts synchronously, before the rejected promise leaves the cache.
+  if (!refresh && cached && (cached.pending ? !cached.signal.aborted : cached.expires > Date.now())) return cached.promise
+  const promise = fetch(url, { signal }).then(response => {
+    if (!response.ok) throw response.status
+    return response.json()
+  }).then(detail => {
+    const page = kind === 'events' ? fromEvent(detail as EventDetail) : fromStory(detail as StoryDetail)
+    if (articlePages.size >= 100 && !articlePages.has(url)) articlePages.delete(articlePages.keys().next().value!)
+    articlePages.set(url, page)
+    return page
+  }).finally(() => {
+    const request = articleRequests.get(url)
+    if (request?.promise === promise) request.pending = false
+  }).catch(error => { if (articleRequests.get(url)?.promise === promise) articleRequests.delete(url); throw error })
+  if (articleRequests.size >= 100) articleRequests.delete(articleRequests.keys().next().value!)
+  articleRequests.set(url, { expires: Date.now() + ARTICLE_CACHE_MS, pending: true, signal, promise })
+  return promise
+}
+
 /** One event or story as a plain news article: the date, the headline, the clips, the summary with the key entities dotted. */
 export default function Article({ kind, itemKey }: { kind: 'events' | 'stories'; itemKey: string }) {
-  const [page, setPage] = useState<Page | 'missing' | 'failed' | null>(null)
+  const url = `${API}/${kind}/${encodeURIComponent(itemKey)}`
+  const [result, setResult] = useState<{ url: string; page: Page | null }>(() => ({ url, page: articlePages.get(url) ?? null }))
+  const page = result.url === url ? result.page : articlePages.get(url) ?? null
   const [shareLabel, setShareLabel] = useState('Partilhar')
+  const shell = useRef<HTMLDivElement>(null)
+  /** The dashboard header's breadcrumb slot; the headline goes there once it is known. */
+  const [crumb, setCrumb] = useState<HTMLElement | null>(null)
+  useEffect(() => setCrumb(document.getElementById('article-breadcrumb')), [])
+  // the panel keeps the feed's scroll position; a new story starts at its top
+  useLayoutEffect(() => { shell.current?.closest('.dashboard-panel')?.scrollTo(0, 0) }, [kind, itemKey])
 
   /** fontes-spa's share: the native sheet where there is one, else the link goes to the clipboard. */
   const share = async () => {
-    if (!page || typeof page === 'string') return
+    if (!page) return
     const shareData = { title: page.title, url: location.href }
     try {
       if (navigator.share && navigator.canShare?.(shareData)) {
@@ -501,64 +497,43 @@ export default function Article({ kind, itemKey }: { kind: 'events' | 'stories';
 
   useEffect(() => {
     const controller = new AbortController()
-    fetch(`${API}/${kind}/${encodeURIComponent(itemKey)}`, { signal: controller.signal })
-      .then((response) => (response.ok ? response.json() : Promise.reject(response.status)))
-      .then((detail) => setPage(kind === 'events' ? fromEvent(detail as EventDetail) : fromStory(detail as StoryDetail)), (error: unknown) => {
-        if ((error as Error)?.name !== 'AbortError') setPage(error === 404 ? 'missing' : 'failed')
-      })
-    return () => controller.abort()
-  }, [kind, itemKey])
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const cached = articlePages.get(url)
+    setResult({ url, page: cached ?? null })
+    const refresh = async (force = false) => {
+      try {
+        const next = await retryRead(() => readArticle(url, kind, controller.signal, force), controller.signal)
+        if (controller.signal.aborted) return
+        setResult({ url, page: next })
+        const delay = isDictionarySentiment(next.sentiment) && (next.sentiment?.status === 'ready' || next.sentiment?.status === 'empty') ? ARTICLE_CACHE_MS : 5000
+        timer = setTimeout(() => void refresh(true), delay)
+      } catch { /* Cancellation ends retries; loaded content remains visible. */ }
+    }
+    void refresh()
+    return () => { controller.abort(); clearTimeout(timer) }
+  }, [url, kind])
 
+  const label = page ? page.title : kind === 'events' ? 'Evento' : 'História'
   return (
-    <main className="make-shell">
-      <header className="make-header">
-        <div className="make-rail">
-          <a
-            className="make-brand"
-            href="/"
-            aria-label="Fontes, página inicial"
-            onClick={(click) => {
-              click.preventDefault()
-              navigate('/')
-            }}
-          >
-            <img className="make-mark" src="/mark.png" alt="" width={34} height={34} />
-          </a>
-        </div>
-      </header>
+    <div className="make-shell article-shell" ref={shell}>
+      {crumb && createPortal(label, crumb)}
       <article className="article">
-        {page === 'missing' ? (
-          <p className="article-empty">Não foi encontrada esta história</p>
-        ) : page === 'failed' ? (
-          <p className="article-empty">Não foi possível carregar a história</p>
-        ) : page ? (
+        {page ? (
           <>
-            {/* the story column, with the events beside it from the headline down on a desk and under it on a phone */}
+            {/* the story column, with the events beside it from the headline down on a wide panel and under it on a phone */}
             <div className="article-main">
-              <div className="article-nav">
-                <a
-                  className="m-cta m-cta--dark article-back"
-                  href="/"
-                  onClick={(click) => {
-                    click.preventDefault()
-                    navigate('/')
-                  }}
-                >
-                  <svg viewBox="0 0 20 20"><path d="m8.3 4.8-5.2 5.2 5.2 5.2M3.1 10h13.8" /></svg>
-                  Voltar
-                </a>
-                <time className="article-date" dateTime={page.date}>{longDay.format(new Date(page.date))}</time>
-              </div>
+              <time className="article-date" dateTime={page.date}>{longDay.format(new Date(page.date))}</time>
               <h1>{page.title}</h1>
+              <div className="article-tone"><SentimentMeter value={page.sentiment} /></div>
               <Clips articles={page.articles} />
               {page.paragraphs.map((paragraph) => (
                 <p className="article-lede" key={paragraph}>{markEntities(paragraph, page.entities)}</p>
               ))}
               <Mentions entities={page.entities} articles={page.articles} />
-              <button className="m-cta m-cta--dark article-share" type="button" onClick={() => void share()}>
+              <Button variant="outline" className="article-share" onClick={() => void share()}>
+                <Share2 />
                 {shareLabel}
-                <svg viewBox="0 0 20 20"><path d="M14.5 6.5 10 2 5.5 6.5M10 2v11M4 11v5h12v-5" /></svg>
-              </button>
+              </Button>
             </div>
             <Events events={page.events} />
           </>
@@ -566,7 +541,6 @@ export default function Article({ kind, itemKey }: { kind: 'events' | 'stories';
           <Skeleton />
         )}
       </article>
-      <Footer />
-    </main>
+    </div>
   )
 }
