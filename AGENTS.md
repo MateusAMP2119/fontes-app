@@ -73,6 +73,12 @@ Controls participating in these updates must disable inherited CSS transitions, 
 
 Page names use a dynamic edge fade only when they overflow and remain stationary on hover and focus. Do not reintroduce looping or scrolling name animations. Sidebar page icons are display-only; icon editing remains in the main page header.
 
+Exception, user request of 2026-10-04: the feed prompt field in `WorkspaceInspector` animates its own height as lines are added or removed. Do not extend this to other controls.
+
+## No focus effects
+
+Persistent user instruction, saved 2026-10-04: never use a focus effect. Do not add focus or focus-within styling to inputs, buttons or their containers: no outline, ring, border-colour change, shadow or glow on focus. New controls must also switch off any focus styling they would inherit from shared rules.
+
 ## Fontes copy: no motivational or filler headings
 
 Persistent user instruction, saved 2026-09-22: motivational, rhetorical, and generic filler titles or subtitles are forbidden in Fontes product copy. Examples to avoid include “O que está a acontecer” and “Temas que marcam a atualidade”. Prefer actual news headlines, specific factual content, and necessary functional labels. Do not add introductory slogans or explanatory filler above content.

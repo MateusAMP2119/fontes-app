@@ -117,6 +117,44 @@ export function mountQueryIcon(canvas: HTMLCanvasElement, mode: ModeKey, active:
   };
 }
 
+// fonteslabs.com's prompt bar glyph (fontes-spa app-scenes.ts): one 800ms sweep
+const PROMPT_ICON_LOOP_MS = 800;
+
+/** The prompt bar's glyph: it sweeps once when it mounts and each time the input takes focus, never when focus leaves. */
+export function mountPromptGlyph(input: HTMLInputElement | HTMLTextAreaElement, canvas: HTMLCanvasElement, mode: ModeKey): () => void {
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  let frameTimer = 0;
+  let startedAt = 0;
+
+  const rest = () => {
+    window.clearInterval(frameTimer);
+    frameTimer = 0;
+    paintIcon(canvas, mode, 1000, false);
+  };
+  const paint = () => {
+    const elapsed = performance.now() - startedAt;
+    if (!frameTimer || elapsed >= PROMPT_ICON_LOOP_MS) rest();
+    else paintIcon(canvas, mode, elapsed, true);
+  };
+  const sweep = () => {
+    rest();
+    if (reducedMotion.matches) return;
+    startedAt = performance.now();
+    frameTimer = window.setInterval(paint, FRAME_MS);
+  };
+
+  const resize = new ResizeObserver(paint);
+  resize.observe(canvas);
+  input.addEventListener('focus', sweep);
+  sweep();
+
+  return () => {
+    resize.disconnect();
+    input.removeEventListener('focus', sweep);
+    window.clearInterval(frameTimer);
+  };
+}
+
 export function mountQuery(card: HTMLElement): () => void {
   const input = card.querySelector<HTMLTextAreaElement>('[data-q-input]');
   const buttons = Array.from(card.querySelectorAll<HTMLButtonElement>('[data-q-mode]'));

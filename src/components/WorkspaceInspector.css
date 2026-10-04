@@ -12,22 +12,26 @@
 .wi-tabs button[aria-pressed="true"] { color: var(--foreground); font-weight: 500; background: var(--background); box-shadow: 0 1px 3px #00000014, 0 0 0 1px var(--border); }
 .wi-body { padding: 20px 16px; }
 .wi-hint { color: var(--muted-foreground); font-size: 12px; line-height: 1.6; margin: 0 0 20px; }
-.wi-label { display: block; font-size: 10px; color: var(--text-tertiary); margin-bottom: 8px; font-weight: 500; }
-.wi-prompt-wrap { position: relative; }
-.wi-prompt-form { display: grid; min-height: 116px; padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--background); box-shadow: 0 1px 2px #0000000d; }
-.wi-prompt-form:focus-within { border-color: color-mix(in oklab, var(--foreground) 28%, var(--border)); }
-.wi-prompt-form textarea { width: 100%; min-width: 0; border: 0; padding: 0 0 8px; background: none; color: var(--foreground); font-size: 12px; line-height: 1.55; resize: none; outline: none; }
-.wi-prompt-form textarea::placeholder { color: var(--text-tertiary); }
-.wi-prompt-form button { justify-self: end; justify-content: center; width: 26px; height: 26px; padding: 0; border-radius: 50%; background: var(--foreground); color: var(--background); }
-.wi-prompt-form button:hover { background: var(--foreground); opacity: .82; }
-.wi-prompt-form button:disabled { background: var(--secondary); color: var(--text-tertiary); opacity: 1; }
-.wi-prompt-suggestions { position: absolute; z-index: 4; top: calc(100% + 5px); left: 0; right: 0; padding: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--popover); box-shadow: 0 8px 24px #00000018; }
+.wi-prompt-wrap { position: relative; margin: auto 16px 16px; }
+/* The news search's frame (MakeApp.css .news-search-bar and .news-search-line): a quiet outer border around the filled field. */
+.wi-query { padding: 4px; border: 1px solid var(--border); border-radius: 16px; }
+/* Anchored to its bottom edge: the glyph and the send hold still while the box grows upward over the text. This height transition is the requested exception to the shared cross-fade (AGENTS.md). */
+.wi-query-line { display: grid; grid-template-columns: 20px minmax(0, 1fr) 24px; grid-template-areas: "glyph text send"; align-items: end; align-content: end; column-gap: 8px; box-sizing: border-box; min-height: 48px; padding: 11px 12px; overflow: hidden; border: 1px solid var(--border); border-radius: 12px; background: var(--secondary); cursor: text; transition: height 220ms cubic-bezier(.22, 1, .36, 1); }
+.wi-query-line[data-multiline="true"] { grid-template-areas: "text text text" "glyph . send"; row-gap: 12px; }
+@media (prefers-reduced-motion: reduce) { .wi-query-line { transition: none; } }
+.wi-query canvas { grid-area: glyph; width: 20px; height: 20px; margin-bottom: 2px; }
+.wi-query textarea { grid-area: text; width: 100%; min-width: 0; max-height: 200px; margin-bottom: 2px; border: 0; padding: 0; outline: none; resize: none; background: none; color: var(--foreground); font-size: 14px; line-height: 20px; }
+.wi-query .wi-run { grid-area: send; justify-content: center; width: 24px; height: 24px; padding: 0; border-radius: 50%; background: var(--foreground); color: var(--background); box-shadow: 0 0 .5px #00000052, 0 0 1px #00000014, 0 1px 1.5px #00000014; }
+.wi-query .wi-run:hover { background: var(--foreground); opacity: .82; }
+.wi-query .wi-run:disabled { background: color-mix(in oklab, var(--foreground) 8%, transparent); color: var(--text-tertiary); box-shadow: none; opacity: 1; }
+.wi-query :focus-visible { outline: none; }
+@media (max-width: 700px) { .wi-query textarea { font-size: 16px; } }
+.wi-prompt-suggestions { position: absolute; z-index: 4; bottom: calc(100% + 5px); left: 0; right: 0; padding: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--popover); box-shadow: 0 8px 24px #00000018; }
 .wi-prompt-suggestions button { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; width: 100%; gap: 7px; padding: 6px; font-size: 11px; }
 .wi-prompt-suggestions button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .wi-prompt-suggestions button small { color: var(--text-tertiary); font-size: 10px; }
 .wi-suggestions-skeleton { display: grid; gap: 8px; padding: 8px; }
 .wi-suggestions-skeleton span { height: 12px; border-radius: 3px; background: var(--secondary); }
-.wi-prompt-note { margin-top: 10px; }
 .wi-field { display: grid; gap: 8px; font-size: 12px; margin: 20px 0; }
 .wi-field input, .wi-field textarea { width: 100%; min-width: 0; border: 1px solid var(--border); border-radius: 4px; background: transparent; padding: 8px; resize: vertical; }
 .wi-footer { margin-top: auto; padding: 16px; color: var(--muted-foreground); font-size: 11px; }
