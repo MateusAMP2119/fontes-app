@@ -13,7 +13,7 @@ Dashboard visualization fixtures remain mocked.
 - Vite + React 19 + TypeScript
 - `motion` for the board cross-fade; everything else is CSS transitions
 - Plain CSS: `src/index.css` (tokens) and `src/App.css` (everything else)
-- `oxlint` for linting. Auth UI checks use Node’s test runner and Playwright.
+- `oxlint` for linting.
 
 ## Scripts
 
@@ -118,9 +118,7 @@ service worker cache. Icons use the existing Fontes mark.
 
 New versions wait until all Fontes windows/tabs are closed before activating, so
 an update does not reload an active workspace. The worker is disabled in Vite dev
-mode. To verify installation and offline behavior locally, run `npm run build`,
-then `npm run preview`, then `node scripts/pwa.test.mjs` in a second terminal.
-The browser check mocks external APIs and does not create accounts or send email.
+mode.
 
 ## Deployment
 
@@ -140,19 +138,6 @@ GitHub checks that Cloudflare accepted the build; build and deployment completio
 are reported in Cloudflare's build history. The hook URL is never committed.
 For a manual deployment, run `npm run deploy`.
 
-## Auth UI regression checks
-
-With Vite running, `node --test scripts/onboarding-background.test.mjs` verifies
-workspace confirmation, URL collisions and completion during a sync outage.
-`node scripts/onboarding-mobile.test.mjs` checks mobile layout
-stability and input sizing. `node scripts/onboarding-progress.test.mjs` covers
-restored flows and step counts in Chromium and WebKit.
-
-With the dev server running, run `node --test scripts/auth-regression.test.mjs`.
-These browser tests mock auth responses and never create accounts or send email.
-The flow suite in `scripts/onboarding-flows.test.mjs` covers password setup, login,
-reset, invitation acceptance, sync recovery and return destinations. They do not complete a real Google login.
-
 ## Signup and onboarding
 
 The shared `Onboarding.tsx` screens serve `/` and `/login`. New email accounts
@@ -166,12 +151,7 @@ submission and final completion wait for server confirmation. Pending
 changes are scoped to the account and workspace; passwords and OTPs are never
 stored in the onboarding draft. Existing workspaces resume setup, invitation
 acceptance is explicit, and failed invitation deliveries can be retried or removed
-individually. See [onboarding reliability](docs/onboarding-reliability.md) for the
-full behavior, tests and API-first release order.
-
-Onboarding regression tests intercept API calls outside the application code.
-Run `scripts/onboarding-flows.test.mjs` against a test server with `TEST_ORIGIN`.
-These tests do not send email or create remote accounts.
+individually.
 
 The profile screen's mark comes from DiceBear's nine face-only styles, `adventurerNeutral`,
 `avataaarsNeutral`, `bigEarsNeutral`, `botttsNeutral`, `croodlesNeutral`, `loreleiNeutral`,
