@@ -1,6 +1,11 @@
-// ponytail: History-API navigation for two pages; main.tsx listens to popstate and swaps them inside a view transition
+import { transitionView } from './viewTransition'
+
+// Commit the URL and the screen together. A later navigation must not be
+// overwritten by an earlier inspector/sidebar update still awaiting its swap.
 export function navigate(to: string) {
-  if (`${location.pathname}${location.search}${location.hash}` === to) return
-  history.pushState(null, '', to)
-  dispatchEvent(new PopStateEvent('popstate'))
+  transitionView(() => {
+    if (`${location.pathname}${location.search}${location.hash}` === to) return
+    history.pushState(null, '', to)
+    dispatchEvent(new PopStateEvent('popstate'))
+  })
 }

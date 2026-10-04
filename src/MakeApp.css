@@ -385,10 +385,8 @@ body {
   background-size: 16px 16px;
 }
 
-/* login ⇄ landing swap (main.tsx): a plain root cross-fade. Both pages carry the
-   same .make-background, so it reads as still. Do not give it a
-   view-transition-name: a named group is lifted above the page for the whole
-   animation, and this one is opaque, so it would hide the header and card. */
+/* Shared root crossfade: the outgoing snapshot fades over live, interactive
+   content. Do not separately name the opaque background or other descendants. */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation-duration: 0.2s;
@@ -570,3 +568,6 @@ body {
     animation: none;
   }
 }
+
+/* Cross-fade snapshots must not receive clicks or native text-selection gestures. */
+::view-transition { pointer-events: none; user-select: none; -webkit-user-select: none; }
