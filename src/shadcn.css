@@ -1,8 +1,24 @@
 /* Keep Tailwind's reset out of the existing onboarding and article screens. */
 @layer theme, base, components, utilities;
+/* Kumo's named tokens, not its standalone reset or unrelated component CSS. */
+@import "@cloudflare/kumo/styles/theme-kumo";
 @import "tailwindcss/theme.css" layer(theme);
 @import "tailwindcss/utilities.css" layer(utilities);
+@source "../node_modules/@cloudflare/kumo/dist/chunks/button-*.js";
+@source "../node_modules/@cloudflare/kumo/dist/chunks/input-*.js";
 @custom-variant dark (&:is([data-theme="dark"] *));
+/* Kumo's non-default @theme beats Tailwind defaults regardless of import order.
+   Retain the app's existing scale; FeedComposer.css scopes Kumo's four sizes. */
+@theme {
+  --text-xs: 0.75rem;
+  --text-xs--line-height: calc(1 / 0.75);
+  --text-sm: 0.875rem;
+  --text-sm--line-height: calc(1.25 / 0.875);
+  --text-base: 1rem;
+  --text-base--line-height: calc(1.5 / 1);
+  --text-lg: 1.125rem;
+  --text-lg--line-height: calc(1.75 / 1.125);
+}
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

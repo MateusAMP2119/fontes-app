@@ -1,0 +1,69 @@
+/* Feedly research surface with the existing Fontes mode selector. */
+.feed-composer .fs-search {
+  --fs-surface: #fff;
+  --fs-border: #ddd;
+  --fs-ink: #262626;
+  --fs-muted: #888;
+  --fs-send: var(--make-accent, #266df0);
+  --fs-send-ink: #fff;
+  --fs-disabled: #e5e5e5;
+  color: var(--fs-ink);
+  font-family: "InterVariable", Inter, sans-serif;
+  font-weight: 400;
+  line-height: 1.5;
+}
+.feed-composer .fs-search:focus-within { border-color: var(--border, #dfdfdf); box-shadow: none; }
+.feed-composer[data-mode="dark"] .fs-search {
+  --fs-surface: #1a1a1a;
+  --fs-border: #333;
+  --fs-ink: #dedede;
+  --fs-muted: #888;
+  --fs-disabled: #444;
+}
+.feed-composer .fs-search .fs-query {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 120px;
+  padding: 12px;
+  border: 1px solid var(--fs-border);
+  border-radius: 12px;
+  background: var(--fs-surface);
+}
+.feed-composer .fs-search .fs-query-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  max-height: 200px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: var(--fs-ink);
+  font: inherit;
+  font-size: 14px;
+  line-height: 20px;
+}
+.feed-composer .fs-search .fs-query-input::placeholder { color: var(--fs-muted); opacity: 1; }
+.feed-composer .fs-search .fs-query-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 36px; }
+.feed-composer .fs-tabs { --segment-count: 2; height: 44px; box-sizing: border-box; }
+.feed-composer .fs-tabs[data-mode="build"]::before { transform: translateX(100%); }
+.feed-composer .fs-tabs::before, .feed-composer .fs-tabs button { transition: none; }
+.feed-composer .fs-tabs button { gap: 6px; font-weight: 500; }
+.feed-composer .fs-search .fs-tab canvas { display: block; flex: none; width: 20px; height: 20px; }
+.feed-composer .fs-search .fs-tab:not([aria-selected="true"]) canvas { opacity: .6; }
+.feed-composer .fs-search .fs-run { display: grid; place-items: center; flex: 0 0 36px; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 50%; background: var(--fs-send); color: var(--fs-send-ink); transition: background-color 200ms ease, color 200ms ease, opacity 200ms ease; }
+.feed-composer .fs-search .fs-run:disabled { background: var(--fs-disabled); color: var(--fs-muted); opacity: 1; }
+.feed-composer .fs-search .fs-run:not(:disabled):hover { opacity: .85; }
+.feed-composer .fs-search button:focus-visible { outline: 2px solid var(--fc-green); outline-offset: 3px; }
+@container feed-composer (max-width: 600px) {
+  .feed-composer .fs-search .fs-query-input { font-size: 16px; line-height: 22px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feed-composer .fs-search .fs-run { transition: none; }
+}

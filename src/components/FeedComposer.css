@@ -1,0 +1,6 @@
+.feed-composer { --fc-green: #2bb24c; --fc-green-strong: #199b38; --fc-ink: #333; --fc-muted: #888; --fc-border: #ddd; container: feed-composer / inline-size; width: 100%; height: 100%; min-height: 0; overflow-y: auto; color: var(--fc-ink); background: #fff; color-scheme: light; font-family: Arial, Helvetica, sans-serif; }
+.feed-composer, .feed-composer *, .feed-composer *::before, .feed-composer *::after { transition: none; animation: none; }
+.feed-composer svg { --icon-default-color: currentColor; flex-shrink: 0; }
+.feed-composer button { cursor: pointer; }
+.feed-composer button:disabled { cursor: default; opacity: .45; }
+.feed-composer button:focus-visible, .feed-composer input:focus-visible, .feed-composer a:focus-visible, .feed-composer select:focus-visible { outline: 2px solid var(--fc-green); outline-offset: 3px; }
