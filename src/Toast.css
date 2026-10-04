@@ -1,0 +1,13 @@
+.ob-toasts{position:fixed;bottom:calc(24px + env(safe-area-inset-bottom,0px));left:0;right:0;width:fit-content;max-width:min(420px,calc(100% - 32px));margin-inline:auto;z-index:7;display:flex;flex-direction:column;gap:8px;max-height:50svh;overflow:auto}
+.ob-toast{display:flex;align-items:center;gap:8px;padding:7px 8px 7px 12px;border:1px solid #ffffff14;border-radius:12px;background:#202022;color:var(--ob-text,var(--foreground));box-shadow:0 8px 28px #0003;font-size:13px;line-height:1.5;text-align:left;animation:toast-enter .3s ease-out}
+.ob-toast p{margin:0;min-width:0;overflow-wrap:anywhere}
+.ob-toast-icon{flex:none;width:16px;height:16px;color:var(--ob-muted,var(--muted-foreground))}
+.ob-toasts .ob-toast button{display:grid;place-items:center;flex:none;width:22px;height:22px;padding:0;border:0;border-radius:6px;background:transparent;color:var(--ob-muted,var(--muted-foreground));cursor:pointer}
+.ob-toasts .ob-toast button:hover{background:#ffffff08;color:var(--ob-text,var(--foreground))}
+.ob-toasts .ob-toast button:focus-visible{outline:2px solid #95c1fb;outline-offset:2px}
+[data-theme=light] .ob-toast{background:#fff;border-color:#e4e4e7;box-shadow:0 8px 28px #00000012}
+[data-theme=light] .ob-toasts .ob-toast button:hover{background:#00000005}
+
+.ob-toasts .ob-toast .ob-toast-action{width:auto;padding-inline:6px;font:inherit;color:inherit;white-space:nowrap}
+@keyframes toast-enter{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.ob-toast{animation:none}}

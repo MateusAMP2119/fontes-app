@@ -52,3 +52,27 @@ The trailing visualization or statistics section must remain on the final column
 - Mobile widget height must derive from the live card content width using the metric-specific mobile aspect ratio.
 - Measure the true content width after side padding so internal typography and charts receive the same width the card visibly has.
 - Keep the gap between desktop and mobile frames equal to the outer canvas edge spacing (`14px` in the current layout).
+
+## Canonical fontes-app checkout
+
+Persistent user instruction, saved 2026-09-13: the actual fontes-app folder is `/Users/mateuscosta/Development/iris-fontes/fontes-app`. Use this checkout for Fontes app changes. Do not use the copy under `Fontes general work/work/fontes-app`. Work directly in the actual folder without creating a new worktree unless explicitly requested.
+
+## News loading and failures
+
+Persistent user instruction, saved 2026-09-13: news counts, articles, rankings and briefings must show skeletons while loading or unavailable, and retry read requests automatically. Do not display loading/failure messages or manual retry buttons for these reads. Keep already loaded content visible. Cancel pending retries when their view or query is replaced.
+
+## UI icons
+
+Use OpenAI Apps SDK UI icons exclusively for application controls and navigation. Import them through `src/components/icons.tsx`. The unmodified upstream SVG components and MIT license are in `src/components/openai-icons/`. Add missing icons from that same pack. Do not introduce Lucide, another icon pack, or hand-drawn UI glyphs. Brand logos, publisher favicons, data visualizations and canvas drawings are content and retain their own rendering.
+
+## UI update animations
+
+Project-wide user requirement: visible state and layout updates use the shared 200 ms cross-fade through `transitionView` in `src/viewTransition.ts`. This includes rename commits, entering or leaving inline editing, sidebar changes, and configuration tabs. Keep related updates in one transition. Do not replace this with sliding, scaling, or independent CSS layout animations. Keep typing and caret movement immediate, and preserve the shared reduced-motion behavior.
+
+Controls participating in these updates must disable inherited CSS transitions, including shared button `transition-all` styles. Width, height, padding, position, and transforms must change immediately inside the shared cross-fade, with no additional movement, resizing, scaling, or component entrance/exit animation. Check computed styles and animations when expanding or collapsing sidebars, including newly added controls.
+
+Page names use a dynamic edge fade only when they overflow and remain stationary on hover and focus. Do not reintroduce looping or scrolling name animations. Sidebar page icons are display-only; icon editing remains in the main page header.
+
+## Fontes copy: no motivational or filler headings
+
+Persistent user instruction, saved 2026-09-22: motivational, rhetorical, and generic filler titles or subtitles are forbidden in Fontes product copy. Examples to avoid include “O que está a acontecer” and “Temas que marcam a atualidade”. Prefer actual news headlines, specific factual content, and necessary functional labels. Do not add introductory slogans or explanatory filler above content.

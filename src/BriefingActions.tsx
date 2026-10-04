@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { API } from './api'
-import Copy from './components/briefing-icons/Copy'
-import ThumbMixed from './components/briefing-icons/ThumbMixed'
+import { Copy } from './components/icons'
+import { ThumbMixed } from './components/icons'
 import { Popover } from 'radix-ui'
-import Check from './components/briefing-icons/Check'
-import ThumbUp from './components/briefing-icons/ThumbUp'
-import ThumbDown from './components/briefing-icons/ThumbDown'
-import ThumbUpFilled from './components/briefing-icons/ThumbUpFilled'
-import ThumbDownFilled from './components/briefing-icons/ThumbDownFilled'
+import { Check } from './components/icons'
+import { ThumbUp } from './components/icons'
+import { ThumbDown } from './components/icons'
+import { ThumbUpFilled } from './components/icons'
+import { ThumbDownFilled } from './components/icons'
 
 type Rating = 'up' | 'down' | null
 

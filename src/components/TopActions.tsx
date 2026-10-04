@@ -4,7 +4,7 @@ import {
   type PageTheme,
   type PageTimeRange,
 } from './EditToolbar'
-import { IconCloud, IconShare, IconSliders } from './icons'
+import { IconCollaborate, IconShare, IconSliders } from './icons'
 
 export type { PageTheme, PageTimeRange } from './EditToolbar'
 
@@ -68,7 +68,7 @@ export function TopActions({
       </div>
       <div className="pill glass" aria-label="Share and collaboration">
         <button type="button" className="pill-btn" title="Collaborate" tabIndex={-1}>
-          <IconCloud />
+          <IconCollaborate />
           <span className="sr-only">Collaborate</span>
         </button>
         <button type="button" className="pill-btn" title="Share" tabIndex={-1}>

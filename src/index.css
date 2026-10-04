@@ -1,4 +1,5 @@
 :root {
+  --icon-default-color: #919191;
   --canvas: #fbfcfe;
   --grid-minor: rgba(74, 134, 220, 0.08);
   --grid-major: rgba(74, 134, 220, 0.16);
@@ -46,6 +47,17 @@
   padding: 0;
 }
 
+}
+
+/* Hide scrollbar chrome throughout the platform without disabling scrolling. */
+*,
+*::before,
+*::after {
+  scrollbar-width: none;
+}
+
+*::-webkit-scrollbar {
+  display: none;
 }
 
 html,

@@ -67,13 +67,6 @@
 .ob-preference input{appearance:none;position:relative;width:31px;height:19px;flex-shrink:0;border:0;border-radius:99px;background:#505057;cursor:pointer;transition:background .15s}.ob-preference input:before{content:'';position:absolute;top:3px;left:3px;width:13px;height:13px;border-radius:50%;background:#fff;box-shadow:0 1px 2px #0005;transition:transform .15s}.ob-preference input:checked{background:#3e8ef7}.ob-preference input:checked:before{transform:translateX(12px)}.ob-preference input:focus-visible{outline:2px solid #95c1fb;outline-offset:4px}
 .ob-notice{font-size:12px;color:#9ec7fb;line-height:1.6;margin-top:8px}
 /* Notifications sit outside the animated form so their position stays fixed. */
-.ob-toasts{position:fixed;bottom:calc(24px + env(safe-area-inset-bottom,0px));left:0;right:0;width:fit-content;max-width:min(420px,calc(100% - 32px));margin-inline:auto;z-index:7;display:flex;flex-direction:column;gap:8px;max-height:50svh;overflow:auto}
-.ob-toast{display:flex;align-items:center;gap:8px;padding:7px 8px 7px 12px;border:1px solid #ffffff14;border-radius:12px;background:#202022;color:var(--ob-text);box-shadow:0 8px 28px #0003;font-size:13px;line-height:1.5;text-align:left;animation:ob-enter .3s ease-out}
-.ob-toast p{margin:0;min-width:0;overflow-wrap:anywhere}
-.ob-toast-icon{flex:none;width:16px;height:16px;color:var(--ob-muted)}
-.ob-toast button{display:grid;place-items:center;flex:none;width:22px;height:22px;padding:0;border:0;border-radius:6px;background:transparent;color:var(--ob-muted);cursor:pointer}
-.ob-toast button:hover{background:#ffffff08;color:var(--ob-text)}
-.ob-toast button:focus-visible{outline:2px solid #95c1fb;outline-offset:2px}
 @keyframes ob-enter{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:600px){.ob-page{padding:0 25px 115px}.ob-stage{min-height:530px;padding-bottom:30px}.ob-panel h1{font-size:23px}.ob-panel header p{font-size:13px}.ob-panel form,.ob-start-actions,.ob-wide{display:flex;width:100%;margin-inline:auto}.ob-panel header{width:100%;margin-inline:auto}}
 @media(prefers-reduced-motion:reduce){.ob-panel,.ob-step-content,.ob-toast{animation:none}.ob-page *{transition:none!important}}
@@ -96,8 +89,6 @@
 .ob-page[data-theme=light] .ob-preference input{background:#c9c9d0}
 .ob-page[data-theme=light] .ob-preference input:checked{background:#3e8ef7}
 .ob-page[data-theme=light] .ob-notice{color:#2f6bb9}
-.ob-page[data-theme=light] .ob-toast{background:#fff;border-color:#e4e4e7;box-shadow:0 8px 28px #00000012}
-.ob-page[data-theme=light] .ob-toast button:hover{background:#00000005}
 .ob-page[data-theme=light] .ob-brand{background:#fff;box-shadow:0 0 56px #00000014,0 0 20px #0000000d,0 0 0 1px #26262612}
 .ob-button:disabled{opacity:.5;cursor:default}
 

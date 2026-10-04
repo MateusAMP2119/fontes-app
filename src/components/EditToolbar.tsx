@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { IconClock, IconDatabasePlus, IconSparkles } from './icons'
+import { IconClock, IconDatabasePlus, IconSparkles, BarChart, Chart, Analytics, Card, TableCellsFilled } from './icons'
 
 export type EditorView = 'page' | 'card'
 export type PageTheme = 'light' | 'warm' | 'cool'
@@ -20,83 +20,19 @@ const VISUAL_TYPES = [
 ] as const
 
 function VisualGlyph({ type }: { type: (typeof VISUAL_TYPES)[number] }) {
-  const fill = { fill: 'currentColor' }
-
-  switch (type) {
-    case 'Stacked bar':
-      return (
-        <svg viewBox="0 0 16 16" {...fill}>
-          <rect x="1" y="2" width="10" height="3" />
-          <rect x="1" y="6.5" width="13" height="3" />
-          <rect x="1" y="11" width="7" height="3" />
-        </svg>
-      )
-    case 'Stacked column':
-      return (
-        <svg viewBox="0 0 16 16" {...fill}>
-          <rect x="2" y="5" width="3" height="10" />
-          <rect x="6.5" y="1" width="3" height="14" />
-          <rect x="11" y="8" width="3" height="7" />
-        </svg>
-      )
-    case 'Clustered bar':
-      return (
-        <svg viewBox="0 0 16 16" {...fill}>
-          <rect x="1" y="1" width="11" height="2.4" />
-          <rect x="1" y="4" width="6" height="2.4" />
-          <rect x="1" y="9" width="13" height="2.4" />
-          <rect x="1" y="12" width="8" height="2.4" />
-        </svg>
-      )
-    case 'Clustered column':
-      return (
-        <svg viewBox="0 0 16 16" {...fill}>
-          <rect x="1.5" y="6" width="2.6" height="9" />
-          <rect x="4.6" y="3" width="2.6" height="12" />
-          <rect x="9" y="8" width="2.6" height="7" />
-          <rect x="12.1" y="1" width="2.6" height="14" />
-        </svg>
-      )
-    case 'Line':
-      return (
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
-          <path d="M1 12l4-5 3 3 6-7" />
-        </svg>
-      )
-    case 'Area':
-      return (
-        <svg viewBox="0 0 16 16" {...fill}>
-          <path d="M1 14V11l4-5 3 3 6-7v12z" />
-        </svg>
-      )
-    case 'Pie':
-      return (
-        <svg viewBox="0 0 16 16" {...fill}>
-          <path d="M8 1a7 7 0 1 1-7 7h7z" />
-          <path d="M7 0a7 7 0 0 0-7 7h7z" opacity="0.45" />
-        </svg>
-      )
-    case 'Donut':
-      return (
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="3">
-          <circle cx="8" cy="8" r="5.5" strokeDasharray="26 9" transform="rotate(-90 8 8)" />
-        </svg>
-      )
-    case 'Card':
-      return (
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4">
-          <rect x="1.5" y="3" width="13" height="10" rx="1.5" />
-          <path d="M4 9.5h5" strokeWidth="2" />
-        </svg>
-      )
-    case 'Table':
-      return (
-        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3">
-          <rect x="1.5" y="2" width="13" height="12" rx="1" />
-          <path d="M1.5 6h13M1.5 10h13M8 2v12" />
-        </svg>
-      )
-  }
+  const Component = {
+    'Stacked bar': BarChart,
+    'Stacked column': BarChart,
+    'Clustered bar': BarChart,
+    'Clustered column': BarChart,
+    Line: Chart,
+    Area: Chart,
+    Pie: Analytics,
+    Donut: Analytics,
+    Card,
+    Table: TableCellsFilled,
+  }[type]
+  return <Component size={16} />
 }
 
 function FieldChip({ label }: { label: string }) {

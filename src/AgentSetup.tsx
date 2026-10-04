@@ -6,7 +6,7 @@ const context = `# Contexto do projeto: fontes-app
 ## Repositório
 https://github.com/MateusAMP2119/fontes-app
 Frontend Fontes para exploração de notícias e áreas de trabalho.
-Stack: React 19, TypeScript, Vite, CSS, Radix UI e lucide-react.
+Stack: React 19, TypeScript, Vite, CSS, Radix UI e ícones OpenAI Apps SDK UI (src/components/icons.tsx).
 
 ## Orientação inicial
 Leitura de AGENTS.md e README.md antes de qualquer alteração.

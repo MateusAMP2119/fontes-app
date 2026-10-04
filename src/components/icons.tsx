@@ -1,248 +1,182 @@
-/** Inline stroke icons */
+import GlobeSvg from './openai-icons/Globe'
+import MinusSvg from './openai-icons/Minus'
+import StarSvg from './openai-icons/Star'
+import StarFilledSvg from './openai-icons/StarFilled'
+import DotsHorizontalSvg from './openai-icons/DotsHorizontal'
+import ArrowUpRightSvg from './openai-icons/ArrowUpRight'
+import DotsVerticalSvg from './openai-icons/DotsVertical'
+import RegenerateSvg from './openai-icons/Regenerate'
+import RegenerateOffSvg from './openai-icons/RegenerateOff'
+import type { ComponentType, SVGProps } from 'react'
+import AddSourcesSvg from './openai-icons/AddSources'
+import AllGizmosSvg from './openai-icons/AllGizmos'
+import AnalyticsSvg from './openai-icons/Analytics'
+import ArrowDownSvg from './openai-icons/ArrowDown'
+import ArrowRightSvg from './openai-icons/ArrowRight'
+import ArrowUpSvg from './openai-icons/ArrowUp'
+import BarChartSvg from './openai-icons/BarChart'
+import CameraSvg from './openai-icons/Camera'
+import CardSvg from './openai-icons/Card'
+import ChartSvg from './openai-icons/Chart'
+import CheckSvg from './openai-icons/Check'
+import MembersSvg from './openai-icons/Members'
+import ChevronRightSvg from './openai-icons/ChevronRight'
+import ClockSvg from './openai-icons/Clock'
+import CopySvg from './openai-icons/Copy'
+import DesktopSvg from './openai-icons/Desktop'
+import DownloadSvg from './openai-icons/Download'
+import EditPencilSvg from './openai-icons/EditPencil'
+import EmailSvg from './openai-icons/Email'
+import ExclamationMarkCircleSvg from './openai-icons/ExclamationMarkCircle'
+import ExitLogoutSvg from './openai-icons/ExitLogout'
+import FileDocumentSvg from './openai-icons/FileDocument'
+import FileBlankSvg from './openai-icons/FileBlank'
+import FolderSvg from './openai-icons/Folder'
+import FolderOpenSvg from './openai-icons/FolderOpen'
+import FolderPlusSvg from './openai-icons/FolderPlus'
+import HistorySvg from './openai-icons/History'
+import HomeSvg from './openai-icons/Home'
+import LightbulbSvg from './openai-icons/Lightbulb'
+import LinkSvg from './openai-icons/Link'
+import LockSvg from './openai-icons/Lock'
+import MobileSvg from './openai-icons/Mobile'
+import MoonSvg from './openai-icons/Moon'
+import PlusSvg from './openai-icons/Plus'
+import RadioSelectedSvg from './openai-icons/RadioSelected'
+import ReloadSvg from './openai-icons/Reload'
+import SearchSvg from './openai-icons/Search'
+import NewsPaperSvg from './openai-icons/NewsPaper'
+import SettingsCogSvg from './openai-icons/SettingsCog'
+import SettingsSliderSvg from './openai-icons/SettingsSlider'
+import ShareSvg from './openai-icons/Share'
+import SidebarLeftSvg from './openai-icons/SidebarLeft'
+import SidebarOpenLeftSvg from './openai-icons/SidebarOpenLeft'
+import SparklesSvg from './openai-icons/Sparkles'
+import StickyNoteSvg from './openai-icons/StickyNote'
+import SunSvg from './openai-icons/Sun'
+import TableCellsFilledSvg from './openai-icons/TableCellsFilled'
+import TagSvg from './openai-icons/Tag'
+import ThumbDownSvg from './openai-icons/ThumbDown'
+import ThumbDownFilledSvg from './openai-icons/ThumbDownFilled'
+import ThumbMixedSvg from './openai-icons/ThumbMixed'
+import ThumbUpSvg from './openai-icons/ThumbUp'
+import ThumbUpFilledSvg from './openai-icons/ThumbUpFilled'
+import TrashSvg from './openai-icons/Trash'
+import XSvg from './openai-icons/X'
 
-const stroke = {
-  fill: 'none' as const,
-  stroke: 'currentColor',
-  strokeWidth: 1.75,
-  strokeLinecap: 'round' as const,
-  strokeLinejoin: 'round' as const,
+export type IconProps = SVGProps<SVGSVGElement> & { size?: number | string }
+
+function icon(Component: ComponentType<SVGProps<SVGSVGElement>>) {
+  return function Icon({ size, width = size ?? '1em', height = size ?? '1em', color, style, ...props }: IconProps) {
+    return <Component width={width} height={height} style={{ ...style, color: style?.color ?? color ?? 'var(--icon-default-color, #919191)' }} aria-hidden={props['aria-label'] || props['aria-labelledby'] ? undefined : true} focusable="false" {...props} />
+  }
 }
 
-type IconProps = { size?: number; className?: string }
+export const Sync = icon(RegenerateSvg)
+export const SyncOff = icon(RegenerateOffSvg)
+export const AddSources = icon(AddSourcesSvg)
+export const AllGizmos = icon(AllGizmosSvg)
+export const Analytics = icon(AnalyticsSvg)
+export const ArrowDown = icon(ArrowDownSvg)
+export const Globe = icon(GlobeSvg)
+export const ArrowRight = icon(ArrowRightSvg)
+export const ArrowUp = icon(ArrowUpSvg)
+export const BarChart = icon(BarChartSvg)
+export const Camera = icon(CameraSvg)
+export const Card = icon(CardSvg)
+export const Chart = icon(ChartSvg)
+export const Check = icon(CheckSvg)
+export const Members = icon(MembersSvg)
+export const ChevronRight = icon(ChevronRightSvg)
+export const Clock = icon(ClockSvg)
+export const Copy = icon(CopySvg)
+export const Desktop = icon(DesktopSvg)
+export const Download = icon(DownloadSvg)
+export const EditPencil = icon(EditPencilSvg)
+export const Email = icon(EmailSvg)
+export const ExclamationMarkCircle = icon(ExclamationMarkCircleSvg)
+export const ExitLogout = icon(ExitLogoutSvg)
+export const FileDocument = icon(FileDocumentSvg)
+export const FileBlank = icon(FileBlankSvg)
+export const Folder = icon(FolderSvg)
+export const FolderOpen = icon(FolderOpenSvg)
+export const FolderPlus = icon(FolderPlusSvg)
+export const History = icon(HistorySvg)
+export const Home = icon(HomeSvg)
+export const Lightbulb = icon(LightbulbSvg)
+export const Link = icon(LinkSvg)
+export const Lock = icon(LockSvg)
+export const Mobile = icon(MobileSvg)
+export const Moon = icon(MoonSvg)
+export const Plus = icon(PlusSvg)
+export const RadioSelected = icon(RadioSelectedSvg)
+export const Reload = icon(ReloadSvg)
+export const Search = icon(SearchSvg)
+export const NewsPaper = icon(NewsPaperSvg)
+export const SettingsCog = icon(SettingsCogSvg)
+export const SettingsSlider = icon(SettingsSliderSvg)
+export const Share = icon(ShareSvg)
+export const SidebarLeft = icon(SidebarLeftSvg)
+export const SidebarOpenLeft = icon(SidebarOpenLeftSvg)
+export const Sparkles = icon(SparklesSvg)
+export const StickyNote = icon(StickyNoteSvg)
+export const Sun = icon(SunSvg)
+export const TableCellsFilled = icon(TableCellsFilledSvg)
+export const Tag = icon(TagSvg)
+export const ThumbDown = icon(ThumbDownSvg)
+export const ThumbDownFilled = icon(ThumbDownFilledSvg)
+export const ThumbMixed = icon(ThumbMixedSvg)
+export const ThumbUp = icon(ThumbUpSvg)
+export const ThumbUpFilled = icon(ThumbUpFilledSvg)
+export const Trash = icon(TrashSvg)
+export const X = icon(XSvg)
+export const Settings = SettingsCog
+export const Monitor = Desktop
+export const LogOut = ExitLogout
+export const Share2 = Share
+export const FileText = FileDocument
+export const PanelLeftOpen = SidebarLeft
+export const PanelLeftClose = SidebarOpenLeft
+export const Rss = NewsPaper
+export const Trash2 = Trash
+export const CheckIcon = Check
+export const ChevronRightIcon = ChevronRight
+export const CircleIcon = RadioSelected
+export const IconTrash = ({ size = 18, ...props }: IconProps) => <Trash size={size} {...props} />
+export const IconClose = ({ size = 18, ...props }: IconProps) => <X size={size} {...props} />
+export const IconSticky = ({ size = 18, ...props }: IconProps) => <StickyNote size={size} {...props} />
+export const IconPen = ({ size = 18, ...props }: IconProps) => <EditPencil size={size} {...props} />
+export const IconPlus = ({ size = 18, ...props }: IconProps) => <Plus size={size} {...props} />
+export const IconShare = ({ size = 18, ...props }: IconProps) => <Share size={size} {...props} />
+export const IconSliders = ({ size = 18, ...props }: IconProps) => <SettingsSlider size={size} {...props} />
+export const IconGridDots = ({ size = 18, ...props }: IconProps) => <AllGizmos size={size} {...props} />
+export const IconFolder = ({ size = 18, ...props }: IconProps) => <Folder size={size} {...props} />
+export const IconFolderPlus = ({ size = 18, ...props }: IconProps) => <FolderPlus size={size} {...props} />
+export const IconTag = ({ size = 18, ...props }: IconProps) => <Tag size={size} {...props} />
+export const IconSearch = ({ size = 18, ...props }: IconProps) => <Search size={size} {...props} />
+export const IconArrowUp = ({ size = 18, ...props }: IconProps) => <ArrowUp size={size} {...props} />
+export const IconX = ({ size = 18, ...props }: IconProps) => <X size={size} {...props} />
+export const IconPhone = ({ size = 18, ...props }: IconProps) => <Mobile size={size} {...props} />
+export const IconCollaborate = ({ size = 18, ...props }: IconProps) => <Members size={size} {...props} />
+export const IconDatabasePlus = ({ size = 18, ...props }: IconProps) => <AddSources size={size} {...props} />
+export const IconClock = ({ size = 18, ...props }: IconProps) => <Clock size={size} {...props} />
+export const IconSparkles = ({ size = 18, ...props }: IconProps) => <Sparkles size={size} {...props} />
 
-function Svg({ size = 18, className, children }: IconProps & { children: React.ReactNode }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      className={className}
-      aria-hidden="true"
-    >
-      {children}
-    </svg>
-  )
+export function IconSidebarToggle({ open, size = 18, ...props }: IconProps & { open: boolean }) {
+  const Component = open ? SidebarOpenLeft : SidebarLeft
+  return <Component size={size} {...props} />
 }
 
-/** Sidebar glyph whose left panel fills in while the boards panel is open. */
-export function IconSidebarToggle({ size, open }: IconProps & { open: boolean }) {
-  return (
-    <Svg size={size} className={`sidebar-toggle-icon${open ? ' is-open' : ''}`}>
-      <rect
-        className="sidebar-toggle-fill"
-        x="4.6"
-        y="5.6"
-        width="3.4"
-        height="12.8"
-        rx="0.9"
-        fill="currentColor"
-      />
-      <rect x="3" y="4" width="18" height="16" rx="2" {...stroke} />
-      <path d="M9 4v16" {...stroke} />
-    </Svg>
-  )
+export function IconLock({ locked, size = 18, ...props }: IconProps & { locked: boolean }) {
+  const Component = locked ? Lock : EditPencil
+  return <Component size={size} {...props} />
 }
 
-export function IconTrash({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      <path d="M4 7h16" {...stroke} />
-      <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" {...stroke} />
-      <path d="M7 7l1 12a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2l1-12" {...stroke} />
-    </Svg>
-  )
-}
+export const DotsVertical = icon(DotsVerticalSvg)
 
-export function IconClose({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      <path d="M6 6l12 12M18 6L6 18" {...stroke} />
-    </Svg>
-  )
-}
+export const Star = icon(StarSvg)
+export const StarFilled = icon(StarFilledSvg)
+export const DotsHorizontal = icon(DotsHorizontalSvg)
+export const ArrowUpRight = icon(ArrowUpRightSvg)
 
-export function IconSticky({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      <path d="M5 4h10l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z" {...stroke} />
-      <path d="M14 4v5h5" {...stroke} />
-    </Svg>
-  )
-}
-
-export function IconPen({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      <path d="M12 19l7-7 2 2-7 7H12v-2z" {...stroke} />
-      <path d="M16.5 9.5l2 2" {...stroke} />
-      <path d="M4 20h4" {...stroke} />
-    </Svg>
-  )
-}
-
-export function IconPlus({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      <path d="M12 6v12M6 12h12" {...stroke} />
-    </Svg>
-  )
-}
-
-export function IconShare({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      <circle cx="18" cy="6" r="2.5" {...stroke} />
-      <circle cx="6" cy="12" r="2.5" {...stroke} />
-      <circle cx="18" cy="18" r="2.5" {...stroke} />
-      <path d="M8.2 10.8l7.6-3.6M8.2 13.2l7.6 3.6" {...stroke} />
-    </Svg>
-  )
-}
-
-export function IconSliders({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      <path d="M4 6h4M12 6h8M4 12h9M17 12h3M4 18h2M10 18h10" {...stroke} />
-      <circle cx="10" cy="6" r="2" {...stroke} />
-      <circle cx="15" cy="12" r="2" {...stroke} />
-      <circle cx="8" cy="18" r="2" {...stroke} />
-    </Svg>
-  )
-}
-
-/** 3x3 dot lattice — the dashboard grid-overlay toggle. */
-export function IconGridDots({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      {[5, 12, 19].flatMap((y) =>
-        [5, 12, 19].map((x) => (
-          <circle key={`${x}-${y}`} cx={x} cy={y} r="1.4" fill="currentColor" />
-        )),
-      )}
-    </Svg>
-  )
-}
-
-/** Layout lock — open while cards can move, closed while movement is locked. */
-export function IconLock({ size, locked }: IconProps & { locked: boolean }) {
-  return (
-    <Svg size={size}>
-      <rect x="5" y="10" width="14" height="10" rx="2" {...stroke} />
-      {locked ? (
-        <path d="M8 10V7a4 4 0 0 1 8 0v3" {...stroke} />
-      ) : (
-        <path d="M16 10V7a4 4 0 0 0-7.75-1.4" {...stroke} />
-      )}
-      <path d="M12 14v2" {...stroke} />
-    </Svg>
-  )
-}
-
-export function IconFolder({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      <path
-        d="M3.5 6.5a1.5 1.5 0 0 1 1.5-1.5h4l2 2.5h8a1.5 1.5 0 0 1 1.5 1.5v8.5a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5v-11z"
-        {...stroke}
-      />
-    </Svg>
-  )
-}
-
-export function IconFolderPlus({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      <path
-        d="M3.5 6.5a1.5 1.5 0 0 1 1.5-1.5h4l2 2.5h8a1.5 1.5 0 0 1 1.5 1.5v8.5a1.5 1.5 0 0 1-1.5 1.5H5a1.5 1.5 0 0 1-1.5-1.5v-11z"
-        {...stroke}
-      />
-      <path d="M12 11v5M9.5 13.5h5" {...stroke} />
-    </Svg>
-  )
-}
-
-export function IconTag({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      <path
-        d="M4 5.5A1.5 1.5 0 0 1 5.5 4h5.3a1.5 1.5 0 0 1 1.06.44l7.2 7.2a1.5 1.5 0 0 1 0 2.12l-5.3 5.3a1.5 1.5 0 0 1-2.12 0l-7.2-7.2A1.5 1.5 0 0 1 4 10.8V5.5z"
-        {...stroke}
-      />
-      <circle cx="9" cy="9" r="1.25" {...stroke} />
-    </Svg>
-  )
-}
-
-export function IconSearch({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      <circle cx="10.75" cy="10.75" r="5.75" {...stroke} />
-      <path d="M15 15l4.5 4.5" {...stroke} />
-    </Svg>
-  )
-}
-
-export function IconArrowUp({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      <path d="M12 19V5M6 11l6-6 6 6" {...stroke} />
-    </Svg>
-  )
-}
-
-export function IconX({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      <path d="M7 7l10 10M17 7L7 17" {...stroke} />
-    </Svg>
-  )
-}
-
-export function IconPhone({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      <rect x="7" y="3" width="10" height="18" rx="2.5" {...stroke} />
-      <path d="M10.5 5.5h3" {...stroke} />
-    </Svg>
-  )
-}
-
-export function IconCloud({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      <path
-        d="M7.5 18h9a4 4 0 0 0 .5-8 5.5 5.5 0 0 0-10.7 1.5A3.5 3.5 0 0 0 7.5 18z"
-        {...stroke}
-      />
-    </Svg>
-  )
-}
-
-export function IconDatabasePlus({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      <ellipse cx="10" cy="6" rx="6" ry="2.5" {...stroke} />
-      <path d="M4 6v5c0 1.4 2.7 2.5 6 2.5M16 6v4" {...stroke} />
-      <path d="M4 11v5c0 1.4 2.7 2.5 6 2.5h1" {...stroke} />
-      <path d="M17 13v7M13.5 16.5h7" {...stroke} />
-    </Svg>
-  )
-}
-
-export function IconClock({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      <circle cx="12" cy="12" r="8" {...stroke} />
-      <path d="M12 7v5l3.5 2" {...stroke} />
-    </Svg>
-  )
-}
-
-export function IconSparkles({ size }: IconProps) {
-  return (
-    <Svg size={size}>
-      <path d="M12 3l1.2 3.8L17 8l-3.8 1.2L12 13l-1.2-3.8L7 8l3.8-1.2L12 3z" {...stroke} />
-      <path d="M18.5 13l.7 2.3 2.3.7-2.3.7-.7 2.3-.7-2.3-2.3-.7 2.3-.7.7-2.3zM5.5 13l.6 1.9 1.9.6-1.9.6-.6 1.9-.6-1.9-1.9-.6 1.9-.6.6-1.9z" {...stroke} />
-    </Svg>
-  )
-}
+export const Minus = icon(MinusSvg)
