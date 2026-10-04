@@ -4,35 +4,24 @@ import PasswordRecovery from './Password'
 import PwaConnection from './PwaConnection'
 import { StrictMode, useEffect, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { flushSync } from 'react-dom'
+import { transitionView } from './viewTransition'
 import './index.css'
 import Dashboard from './Dashboard'
 import './shadcn.css'
-import Article from './Article.tsx'
 import Onboarding from './Onboarding.tsx'
-import { authClient, type AuthSession } from './auth'
-import { type Project } from './projects'
+import { authClient } from './auth'
 import { type Bootstrap } from './onboardingSync'
 
 function usePath() {
   const [path, setPath] = useState(location.pathname)
   useEffect(() => {
     const sync = () => {
-      const swap = () => flushSync(() => setPath(location.pathname))
-      if (document.startViewTransition) document.startViewTransition(swap)
-      else swap()
+      transitionView(() => setPath(location.pathname))
     }
     addEventListener('popstate', sync)
     return () => removeEventListener('popstate', sync)
   }, [])
   return path
-}
-
-// ponytail: routes matched by hand; add a router when one needs more than a single key
-function Routes({ path, session, project, organization = null, onWorkspaceChange }: { path: string; session: AuthSession | null; project: Project | null; organization?: Bootstrap['organization']; onWorkspaceChange?: (state: Bootstrap) => void }) {
-  const item = path.match(/^\/(eventos|historias)\/(.+)$/)
-  if (item) return <Article kind={item[1] === 'eventos' ? 'events' : 'stories'} itemKey={decodeURIComponent(item[2])} />
-  return <Dashboard path={path} session={session} project={project} organization={organization} onWorkspaceChange={onWorkspaceChange} />
 }
 
 /** Session confirmation remains authoritative; screen navigation is local. */
@@ -46,7 +35,7 @@ function Gate({ path }: { path: string }) {
   const opened = !!session && ready?.userId === session.user.id
   return <>
     <Onboarding session={session} background={opened} onBlocked={() => setReady(null)} onReady={state => { if (session) { setReady({ userId: session.user.id, state }); restoreDestination() } }} />
-    {opened && <Routes path={path} session={session} project={ready.state.project} organization={ready.state.organization} onWorkspaceChange={state => { if (session) setReady({ userId: session.user.id, state }) }} />}
+    {opened && <Dashboard key={session.session.id} path={path} session={session} project={ready.state.project} organization={ready.state.organization} onWorkspaceChange={state => { if (session) setReady({ userId: session.user.id, state }) }} />}
   </>
 }
 

@@ -1,0 +1,40 @@
+.workspace-controls { font-size: 13px; color: var(--foreground); }
+.workspace-controls button, .workspace-controls input, .workspace-controls textarea { font: inherit; color: inherit; transition: none; animation: none; }
+.workspace-controls button { display: inline-flex; align-items: center; gap: 7px; border: 0; background: transparent; cursor: pointer; border-radius: 4px; padding: 6px 8px; text-align: left; }
+.workspace-controls button:hover { background: var(--secondary); }
+.workspace-controls button:disabled { opacity: .35; cursor: default; }
+.workspace-controls :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.workspace-controls h2 { font-size: 13px; font-weight: 500; margin: 0 0 10px; }
+.workspace-inspector { display: flex; flex-direction: column; gap: 8px; min-width: 0; min-height: 0; height: 100%; }
+.wi-panel { flex: 1; border: 1px solid var(--border); border-radius: 8px; background: var(--background); display: flex; flex-direction: column; min-height: 0; overflow: auto; }
+.wi-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); flex-shrink: 0; padding: 3px; border: 1px solid var(--border); border-radius: 8px; background: var(--secondary); }
+.wi-tabs button { justify-content: center; min-width: 0; min-height: 24px; border-radius: 5px; padding: 2px; font-size: 12px; line-height: 20px; color: var(--muted-foreground); }
+.wi-tabs button[aria-pressed="true"] { color: var(--foreground); font-weight: 500; background: var(--background); box-shadow: 0 1px 3px #00000014, 0 0 0 1px var(--border); }
+.wi-body { padding: 20px 16px; }
+.wi-hint { color: var(--muted-foreground); font-size: 12px; line-height: 1.6; margin: 0 0 20px; }
+.wi-label { display: block; font-size: 10px; color: var(--text-tertiary); margin-bottom: 8px; font-weight: 500; }
+.wi-prompt-wrap { position: relative; }
+.wi-prompt-form { display: grid; min-height: 116px; padding: 10px; border: 1px solid var(--border); border-radius: 10px; background: var(--background); box-shadow: 0 1px 2px #0000000d; }
+.wi-prompt-form:focus-within { border-color: color-mix(in oklab, var(--foreground) 28%, var(--border)); }
+.wi-prompt-form textarea { width: 100%; min-width: 0; border: 0; padding: 0 0 8px; background: none; color: var(--foreground); font-size: 12px; line-height: 1.55; resize: none; outline: none; }
+.wi-prompt-form textarea::placeholder { color: var(--text-tertiary); }
+.wi-prompt-form button { justify-self: end; justify-content: center; width: 26px; height: 26px; padding: 0; border-radius: 50%; background: var(--foreground); color: var(--background); }
+.wi-prompt-form button:hover { background: var(--foreground); opacity: .82; }
+.wi-prompt-form button:disabled { background: var(--secondary); color: var(--text-tertiary); opacity: 1; }
+.wi-prompt-suggestions { position: absolute; z-index: 4; top: calc(100% + 5px); left: 0; right: 0; padding: 4px; border: 1px solid var(--border); border-radius: 8px; background: var(--popover); box-shadow: 0 8px 24px #00000018; }
+.wi-prompt-suggestions button { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; width: 100%; gap: 7px; padding: 6px; font-size: 11px; }
+.wi-prompt-suggestions button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wi-prompt-suggestions button small { color: var(--text-tertiary); font-size: 10px; }
+.wi-suggestions-skeleton { display: grid; gap: 8px; padding: 8px; }
+.wi-suggestions-skeleton span { height: 12px; border-radius: 3px; background: var(--secondary); }
+.wi-prompt-note { margin-top: 10px; }
+.wi-field { display: grid; gap: 8px; font-size: 12px; margin: 20px 0; }
+.wi-field input, .wi-field textarea { width: 100%; min-width: 0; border: 1px solid var(--border); border-radius: 4px; background: transparent; padding: 8px; resize: vertical; }
+.wi-footer { margin-top: auto; padding: 16px; color: var(--muted-foreground); font-size: 11px; }
+.wi-footer svg { display: inline; margin-right: 5px; }
+.wi-footer span { display: block; margin-top: 4px; font-size: 10px; color: var(--text-tertiary); }
+.workspace-name-dialog { margin: auto; width: min(400px, calc(100vw - 32px)); border: 1px solid var(--border); border-radius: 10px; padding: 24px; background: var(--background); color: var(--foreground); box-shadow: 0 20px 80px #0003; }
+.workspace-name-dialog::backdrop { background: #0006; }
+.workspace-name-dialog h2 { font-size: 17px; }
+.workspace-name-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.workspace-controls .wi-save { background: var(--primary); color: var(--primary-foreground); padding: 4px 10px; font-weight: 500; }

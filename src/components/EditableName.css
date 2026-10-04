@@ -1,0 +1,6 @@
+.editable-page-name { position: relative; display: inline-flex; min-width: 0; max-width: 100%; align-items: center; vertical-align: bottom; }
+.editable-page-name > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-right: 2px; }
+.editable-page-name[data-editing="true"] > .editable-page-name-label { visibility: hidden; white-space: pre; }
+.editable-page-name input { position: absolute; inset: 0; box-sizing: border-box; width: 100%; min-width: 0; height: 100%; margin: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: inherit; font: inherit; letter-spacing: inherit; line-height: inherit; appearance: none; }
+.dashboard .editable-page-name input, .dashboard .editable-page-name input:focus, .dashboard .editable-page-name input:focus-visible, .dashboard .editable-page-name-label:focus, .dashboard .editable-page-name-label:focus-visible { outline: none; box-shadow: none; }
+

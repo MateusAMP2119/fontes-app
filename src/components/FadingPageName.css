@@ -1,0 +1,2 @@
+.fading-page-name { display: block; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: clip !important; }
+.fading-page-name[data-fade-end="true"] { mask-image: linear-gradient(to right, #000 calc(100% - 20px), transparent); }

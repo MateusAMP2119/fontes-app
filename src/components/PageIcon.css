@@ -1,0 +1,11 @@
+.page-icon-picker { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 3px; background: transparent; color: inherit; cursor: pointer; vertical-align: middle; }
+.page-icon-picker:hover { background: var(--secondary); }
+.page-icon-picker:focus-visible, .page-icon-grid button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.page-icon-popover { z-index: 100; width: 246px; max-width: calc(100vw - 24px); padding: 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--popover); color: var(--foreground); box-shadow: 0 4px 16px rgb(0 0 0 / 12%); }
+.page-icon-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.page-icon-grid button { display: flex; align-items: center; justify-content: center; height: 32px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: inherit; cursor: pointer; }
+.page-icon-grid button:hover, .page-icon-grid button[aria-pressed="true"] { background: var(--secondary); }
+.page-icon-popover p { margin-top: 8px; font-size: 12px; }
+.dashboard-breadcrumb [aria-current="page"]:has(> .page-icon-picker) { display: flex; align-items: center; gap: 4px; }
+
+.page-icon-picker, .page-icon-popover, .page-icon-grid button { transition: none; animation: none; }
